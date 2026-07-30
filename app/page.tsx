@@ -1496,17 +1496,21 @@ function Landing({
                   per-option descriptions live in the title tooltips. */}
               <div className="row">
                 <div className="paste-actions">
-                  <button
-                    type="button"
-                    className="composer-btn"
-                    onClick={() => fileRef.current?.click()}
-                    title="Upload a PDF — try a synthetic visit summary or pathology report. I'll read the text."
-                  >
-                    <span className="composer-btn__ic" aria-hidden>
-                      ⬆
-                    </span>
-                    Upload PDF
-                  </button>
+                  {/* Upload PDF is hidden until the feature is ready — restore the
+                      button below to re-enable it (the file input + onPdf wiring stays). */}
+                  {false && (
+                    <button
+                      type="button"
+                      className="composer-btn"
+                      onClick={() => fileRef.current?.click()}
+                      title="Upload a PDF — try a synthetic visit summary or pathology report. I'll read the text."
+                    >
+                      <span className="composer-btn__ic" aria-hidden>
+                        ⬆
+                      </span>
+                      Upload PDF
+                    </button>
+                  )}
                   <input
                     ref={fileRef}
                     type="file"
