@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "eval": "node --test evals/*.test.ts",
+    "eval:model": "node evals/ledger.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

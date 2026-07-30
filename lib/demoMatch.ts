@@ -22,18 +22,22 @@ import { deriveStatus, metCountOf } from "@/lib/verdict";
 type DemoMatchResponse = {
   conditionQuery: string;
   summary: string;
-  counts: { poolTotal: number; reasoned: number; eligible: number; uncertain: number; near: number; screened: number };
+  counts: { poolTotal: number; reasoned: number; eligible: number; uncertain: number; near: number; screened: number; excluded: number };
+  coverage: { terms: { term: string; added: number; error: string | null }[]; triaged: boolean };
   location: { applied: boolean; label: string; travel: "local" | "regional" | "any" | null; inRange: number };
   matches: TrialMatch[];
 };
 
+/** `remediable` defaults to false: it is only read on a "fails" verdict, and
+ *  false is the conservative reading there ("this is a no", not "not yet"). */
 const c = (
   kind: "incl" | "excl",
   verdict: Criterion["verdict"],
   requirement: string,
   evidence: string,
   provenance: Criterion["provenance"] = "note",
-): Criterion => ({ kind, verdict, requirement, evidence, provenance });
+  remediable = false,
+): Criterion => ({ kind, verdict, requirement, evidence, provenance, remediable });
 
 const DFCI = { facility: "Dana-Farber Cancer Institute", city: "Boston", state: "Massachusetts", country: "United States", status: "RECRUITING", contacts: [] };
 const MGH = { facility: "Massachusetts General Hospital", city: "Boston", state: "Massachusetts", country: "United States", status: "RECRUITING", contacts: [] };
@@ -78,6 +82,7 @@ function mk(t: Seed): TrialMatch {
     eligibilityCriteria: "See ClinicalTrials.gov for the full verbatim inclusion/exclusion criteria.",
     sex: "FEMALE",
     minimumAge: "18 Years",
+    maximumAge: "",
     stdAges: ["ADULT", "OLDER_ADULT"],
     locations,
     url: `https://clinicaltrials.gov/study/${t.nctId}`,
@@ -99,11 +104,14 @@ function mk(t: Seed): TrialMatch {
     randomized: true,
     interventional: true,
     nearestSite: "Boston, Massachusetts",
-    proximityScore: 3,
+    nearestSiteActive: true,
+    proximityScore: 4, // same city — see lib/geo for the band scale
     burdenProxy: 1,
     withinRange: null,
     locationUnknown: false,
     enrollmentWindow: t.enrollmentWindow,
+    registryAgeDays: 0,
+    registryStale: false,
   };
   return {
     ...base,
@@ -114,6 +122,8 @@ function mk(t: Seed): TrialMatch {
     total: criteria.length,
     brief: t.brief,
     factors,
+    structuralExclusion: null,
+    triageScore: null,
   };
 }
 
@@ -254,7 +264,10 @@ const SEEDS: Seed[] = [
     headline: "Ruled out: this is a first-line study and you have already received a CDK4/6 inhibitor for metastatic disease.",
     criteria: [
       c("incl", "meets", "PIK3CA-mutated HR-positive, HER2-negative breast cancer", "PIK3CA H1047R positive; ER/PR+, HER2 IHC 1+.", "note"),
-      c("excl", "fails", "No prior CDK4/6 inhibitor in the advanced/metastatic setting", "Received palbociclib as first-line therapy for metastatic disease (2024).", "note"),
+      // Not remediable: prior exposure is a fact of the treatment history and
+      // nothing the patient does from here can undo it. This is a "no", not a
+      // "not yet" — the distinction the ruled-out section is sorted on.
+      c("excl", "fails", "No prior CDK4/6 inhibitor in the advanced/metastatic setting", "Received palbociclib as first-line therapy for metastatic disease (2024).", "note", false),
       c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note"),
       c("incl", "meets", "Measurable or evaluable metastatic disease", "Stage IV metastatic disease.", "note"),
     ],
@@ -283,7 +296,11 @@ export function margaretDemoMatch(summary?: string): DemoMatchResponse {
       uncertain: matches.filter((m) => m.status === "uncertain").length,
       near: matches.filter((m) => m.status === "near").length,
       screened: 0,
+      excluded: 0,
     },
+    // The fixture is authored, not retrieved — say so rather than fabricating
+    // the search legs a live run would report.
+    coverage: { terms: [], triaged: false },
     location: { applied: false, label: "Boston, MA", travel: null, inRange: 0 },
     matches,
   };

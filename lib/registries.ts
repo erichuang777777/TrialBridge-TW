@@ -110,3 +110,109 @@ export async function searchRegistries(opts: SearchOptions): Promise<Trial[]> {
   }
   return merged;
 }
+
+/** What one leg of an expanded search contributed — reported to the caller so
+ *  the coverage of a search is inspectable rather than folded into one number. */
+export type SearchLeg = {
+  /** The condition term, or the term plus the location that was searched. */
+  term: string;
+  /** Studies this leg returned that no earlier leg had already returned. */
+  added: number;
+  /** Set when this leg failed; the search as a whole still proceeds. */
+  error?: string;
+};
+
+export type ExpandedSearch = {
+  trials: Trial[];
+  legs: SearchLeg[];
+};
+
+/**
+ * Run several condition terms (and, optionally, one location-boosted leg) and
+ * merge the results into a single de-duplicated pool.
+ *
+ * Why: `query.cond` is keyword matching, so ONE term is a hard ceiling on what
+ * can ever be found. A biomarker-selected basket study registers under "advanced
+ * solid tumor", not "breast cancer", and is unreachable from the narrow term no
+ * matter how good the downstream reasoning is. Recall lost here cannot be
+ * recovered later — nothing downstream can reason about a study it never saw.
+ *
+ * Every leg is additive and failures are non-fatal: a leg that errors is
+ * recorded and skipped. The whole search only fails when the FIRST (primary)
+ * term fails, since that is indistinguishable from the registry being down.
+ */
+export async function searchExpanded(opts: {
+  terms: string[];
+  pageSize: number;
+  studyTypes?: SearchOptions["studyTypes"];
+  /** Optional location term for one extra, additive leg on the primary term. */
+  locn?: string;
+  /** Stop once the pool reaches this many distinct studies. */
+  cap: number;
+}): Promise<ExpandedSearch> {
+  const terms = dedupeTerms(opts.terms);
+  if (terms.length === 0) throw new Error("At least one condition term is required.");
+
+  const legs: SearchLeg[] = [];
+  const seen = new Set<string>();
+  const trials: Trial[] = [];
+
+  const absorb = (label: string, found: Trial[]) => {
+    let added = 0;
+    for (const t of found) {
+      if (trials.length >= opts.cap) break;
+      const key = t.nctId || `${t.registry}:${t.title}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      trials.push(t);
+      added++;
+    }
+    legs.push({ term: label, added });
+  };
+
+  const plan: { label: string; opts: SearchOptions }[] = terms.map((cond) => ({
+    label: cond,
+    opts: { cond, pageSize: opts.pageSize, studyTypes: opts.studyTypes },
+  }));
+  // One additive location-boosted leg on the primary term: the registry ranks
+  // location matches its own way, so this surfaces nearby sites that the plain
+  // relevance ordering buries. It can only add studies, never remove any.
+  if (opts.locn?.trim()) {
+    plan.push({
+      label: `${terms[0]} @ ${opts.locn.trim()}`,
+      opts: { cond: terms[0], pageSize: opts.pageSize, studyTypes: opts.studyTypes, locn: opts.locn.trim() },
+    });
+  }
+
+  const settled = await Promise.allSettled(plan.map((p) => searchRegistries(p.opts)));
+
+  settled.forEach((result, i) => {
+    if (result.status === "rejected") {
+      const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      legs.push({ term: plan[i].label, added: 0, error: message });
+      // The primary term failing means the registry is unreachable, not that the
+      // patient has no matches — surface it instead of returning a thin pool.
+      if (i === 0) throw result.reason instanceof Error ? result.reason : new Error(message);
+      return;
+    }
+    absorb(plan[i].label, result.value);
+  });
+
+  return { trials, legs };
+}
+
+/** Case-insensitive de-duplication that preserves the caller's ordering, so the
+ *  primary term always stays first. */
+function dedupeTerms(terms: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of terms) {
+    const term = (raw ?? "").trim();
+    if (!term) continue;
+    const key = term.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(term);
+  }
+  return out;
+}

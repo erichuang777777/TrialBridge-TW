@@ -505,6 +505,12 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .crow .ck.excl{background:var(--agent);color:var(--agent-ink);border-radius:4px;padding:1px 5px;}
 .crow .ck.incl{background:var(--surface-2);border-radius:4px;padding:1px 5px;}
 .crow .ev{display:block;color:var(--ink-3);font-size:12px;margin-top:3px;line-height:1.5;}
+/* On a failing criterion: is this a "no" or a "not yet"? The soft variant reads
+   as an open item; the hard variant reads as settled. Never louder than the
+   requirement text it annotates. */
+.crow .cfix{font-family:var(--mono);font-size:10px;border-radius:4px;padding:1px 5px;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;vertical-align:1px;}
+.crow .cfix.soft{color:var(--uncertain);border:1px solid color-mix(in srgb,var(--uncertain) 40%,var(--line));background:var(--uncertain-bg);}
+.crow .cfix.hard{color:var(--ink-3);border:1px solid var(--line-soft);background:var(--surface-2);}
 .match .live-flag{font-family:var(--mono);font-size:10px;color:var(--eligible);border:1px solid color-mix(in srgb,var(--eligible) 45%,var(--line));border-radius:5px;padding:1px 5px;margin-left:6px;letter-spacing:.05em;text-transform:uppercase;}
 
 /* ============================================================================
@@ -635,6 +641,8 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .screened-row .mono{font-size:11px;color:var(--ink-3);}
 .sr-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);}
 .sr-phase{margin-left:auto;}
+/* The reason a structural gate ruled a study out — stated, never implied. */
+.sr-why{margin-left:auto;color:var(--ink-3);font-size:12px;text-align:right;}
 
 /* Ruled-out trials: collapsed to a compact row by default (like "Not yet
    reasoned"), expanding to the full card details (its header is suppressed —

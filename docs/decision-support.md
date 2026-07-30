@@ -79,7 +79,31 @@ tell the patient what to choose.
 ## What's approximate / out of scope
 
 - **Proximity** is an approximate city/state match against the patient's stated location, not a
-  geocoded distance — and it's labelled as such in the UI.
+  geocoded distance — and it's labelled as such in the UI. It now resolves *neighboring states*
+  as their own band, so "within a few hours" no longer quietly means "anywhere in the country."
 - **Burden** is a rough estimate from study type and phase, surfaced honestly.
-- Not addressed in this pass (separate feedback themes): a formal **eval harness**, **HIPAA /
-  compliance** readiness, and deep **clinical-workflow** integration.
+- **Registry freshness** is a proxy, not a fact: a stale record may still be enrolling and a
+  fresh one may not be. It is shown as an age, never as a status.
+- An **eval harness** now exists (`npm run eval` / `npm run eval:model`, see the README), but its
+  gold expectations are authored rather than clinically adjudicated. It catches regressions; it
+  is not evidence of clinical validity.
+- Still not addressed: **HIPAA / compliance** readiness (the existing privacy audit explicitly
+  covers FTC/MHMD and *not* HIPAA), audit logging, and deep **clinical-workflow** integration.
+
+## Ranking: what changed and why
+
+The results list used to order trials by `metCount / total`. That ratio is not comparable across
+trials — the criteria are segmented by the model, so one study yields 8 atomic requirements and
+another yields 25 from prose of the same substance. A study that happened to be split finely
+ranked below one split coarsely, purely as an artifact of segmentation. It looked like a score
+and behaved like a bug.
+
+Ranking is now lexicographic over quantities that mean the same thing everywhere: status, then
+**hard failures** (fixed for this patient), then **open items** (the coordinator's actual
+workload), then remediable failures, then registry staleness. Every term is a code-derived count
+or a registry date. None of it is a model's self-reported confidence — the invariant this layer
+existed to protect in the first place.
+
+The `remediable` flag on each criterion is what makes "ruled out" legible: a washout that will
+elapse is a *not yet*, an irreversible prior therapy is a *no*, and a coordinator triages those
+two piles completely differently. It is descriptive — it never changes a verdict or a status.

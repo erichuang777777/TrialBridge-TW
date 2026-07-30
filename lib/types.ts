@@ -39,6 +39,8 @@ export type Trial = {
   eligibilityCriteria: string;
   sex: string;
   minimumAge: string;
+  /** Upper age bound, e.g. "75 Years", or "" when the study sets none. */
+  maximumAge: string;
   stdAges: string[];
   locations: TrialLocation[];
   /** Deep link to the study on ClinicalTrials.gov. */
@@ -90,11 +92,25 @@ export type Criterion = {
   requirement: string;
   evidence: string;
   provenance: CriterionProvenance;
+  /** Only meaningful when verdict === "fails". true = the patient could come to
+   *  meet this (a washout that elapses, a scan that gets ordered, a lab that is
+   *  redrawn); false = it is fixed for this patient (sex, age band, disease type,
+   *  an irreversible prior therapy). Drives the "possibly resolvable" vs
+   *  "definitively ruled out" split that a coordinator actually triages on.
+   *  Descriptive only — it never changes the verdict or the derived status. */
+  remediable: boolean;
 };
 
-/** Overall standing of a trial for this patient. "screened" = passed structural
- *  gates but not yet reasoned over (we deep-reason the top N per search). */
-export type MatchStatus = "eligible" | "near" | "uncertain" | "screened";
+/** Overall standing of a trial for this patient.
+ *  - "eligible"  : every extracted criterion is satisfied.
+ *  - "uncertain" : no failures, but open "confirm" items remain.
+ *  - "near"      : at least one failing criterion (see Criterion.remediable for
+ *                  whether the failures are resolvable).
+ *  - "screened"  : passed the structural gates but was not reasoned over this
+ *                  pass (we deep-reason the top N per search).
+ *  - "excluded"  : ruled out by a DETERMINISTIC structural gate (age band, sex)
+ *                  before any model call — no ledger, no ambiguity. */
+export type MatchStatus = "eligible" | "near" | "uncertain" | "screened" | "excluded";
 
 /** A patient-facing decision brief — grounded in the trial's real attributes and
  *  the eligibility ledger. Non-directive: it frames the choice, never makes it. */
@@ -118,7 +134,13 @@ export type DecisionFactors = {
   interventional: boolean;
   /** Human label for the closest site, e.g. "Boston, Massachusetts" or "No nearby site". */
   nearestSite: string;
-  /** 3 same city · 2 same state · 1 same country · 0 unknown/none. */
+  /** false when the closest site we could name is NOT itself recruiting (the
+   *  study is open but that particular site is withdrawn/suspended/completed).
+   *  The UI must caveat the site line when this is false — otherwise we send a
+   *  patient to a closed door. */
+  nearestSiteActive: boolean;
+  /** 4 same city · 3 same state · 2 neighboring state · 1 same country ·
+   *  0 unknown/none. Approximate — we place sites at city/state granularity. */
   proximityScore: number;
   /** Rough 0 (low) … 2 (higher) burden estimate from study type + phase. Approximate. */
   burdenProxy: number;
@@ -130,6 +152,13 @@ export type DecisionFactors = {
   /** Human-readable, explicitly-estimated enrollment window, e.g.
    *  "Open now · est. closes ~Mar 2026". "" when no dates are published. */
   enrollmentWindow: string;
+  /** Days since the registry record was last updated, or null when unpublished.
+   *  A study can sit at RECRUITING long after it stopped enrolling; how fresh
+   *  the record is, is the only published signal a patient has about that. */
+  registryAgeDays: number | null;
+  /** true when the record has not been touched in over ~6 months. Surfaced in
+   *  the UI and de-prioritized in ranking — never used to hide a trial. */
+  registryStale: boolean;
 };
 
 /** A trial plus its per-criterion reasoning and decision-support layer —
@@ -144,4 +173,12 @@ export type TrialMatch = Trial & {
   brief: DecisionBrief | null;
   /** Deterministic factors for the at-a-glance row and preference re-ranking. */
   factors: DecisionFactors;
+  /** Set only when status === "excluded": the plain-language reason a code-level
+   *  structural gate ruled this study out before any model call, e.g.
+   *  "Enrolls females only". null for every other status. */
+  structuralExclusion: string | null;
+  /** 0 = unlikely · 1 = possible · 2 = likely, from the cheap triage pass that
+   *  decides WHICH trials get deep reasoning. null when triage did not run.
+   *  Ordering signal only — it never contributes to a verdict or a status. */
+  triageScore: number | null;
 };

@@ -22,7 +22,7 @@ import HeroVideo from "@/app/components/HeroVideo";
 import NavAuth from "@/app/components/NavAuth";
 import ProductCarousel from "@/app/components/ProductCarousel";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
-import { deriveStatus, metCountOf } from "@/lib/verdict";
+import { deriveStatus, metCountOf, hardFailCountOf, compareMatches } from "@/lib/verdict";
 
 /* ---- API response shapes ---- */
 type FieldSource = "fhir" | "note" | "you";
@@ -30,6 +30,10 @@ type ProfileField = { label: string; value: string; clinical: boolean; gap: bool
 type Clarification = { id: string; question: string; rationale: string; gloss: string; options: string[] };
 type Profile = {
   conditionQuery: string;
+  /** Extra condition terms the extractor proposed; unioned with conditionQuery
+   *  at search time so a study registered under a synonym or a broader umbrella
+   *  is still reachable. */
+  conditionQueries?: string[];
   summary: string;
   fields: ProfileField[];
   clarifications: Clarification[];
@@ -41,9 +45,25 @@ type Counts = {
   uncertain: number;
   near: number;
   screened: number;
+  /** Ruled out by a deterministic structural gate (age band, sex) before any
+   *  model call. Reported, never hidden. */
+  excluded: number;
 };
+/** How the candidate pool was assembled — one entry per search term, so the
+ *  coverage of a search is inspectable rather than implied by a single number. */
+type Coverage = { terms: { term: string; added: number; error: string | null }[]; triaged: boolean };
+/** One re-judged criterion coming back from /api/reconfirm. `remediable` is
+ *  optional so an older response shape still applies cleanly. */
+type Reverdict = { verdict: Verdict; evidence: string; remediable?: boolean };
 type LocationInfo = { applied: boolean; label: string; travel: TravelPref | null; inRange: number };
-type MatchResponse = { conditionQuery: string; summary: string; counts: Counts; location: LocationInfo; matches: TrialMatch[] };
+type MatchResponse = {
+  conditionQuery: string;
+  summary: string;
+  counts: Counts;
+  coverage?: Coverage;
+  location: LocationInfo;
+  matches: TrialMatch[];
+};
 
 type PortalMode = "patient" | "clinician" | "partner";
 type Phase = "home" | "landing" | "connect" | "capture" | "clarify" | "confirm" | "reason" | "results" | "fork" | "refer";
@@ -460,6 +480,7 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conditionQuery: profile.conditionQuery,
+          conditionQueries: profile.conditionQueries ?? [],
           summary: profile.summary,
           fields: profile.fields.map((f) => ({ label: f.label, value: f.value })),
           location: survey.location.trim(),
@@ -511,13 +532,13 @@ export default function Page() {
       body: JSON.stringify({
         profile: { summary: updatedProfile.summary, fields: updatedProfile.fields.map((f) => ({ label: f.label, value: f.value })) },
         trial: { nctId: trial.nctId, title: trial.title, phase: trial.phase },
-        criteria: [{ kind: crit.kind, requirement: crit.requirement, evidence: crit.evidence }],
+        criteria: [{ kind: crit.kind, requirement: crit.requirement, evidence: crit.evidence, remediable: crit.remediable }],
         answer,
       }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Couldn't update this item.");
-    const nv = (data.verdicts?.[0] ?? null) as { verdict: Verdict; evidence: string } | null;
+    const nv = (data.verdicts?.[0] ?? null) as Reverdict | null;
     if (!nv) throw new Error("No verdict returned.");
 
     setMatch((prev) => applyReverdicts(prev, nctId, [critIndex], [nv]));
@@ -545,12 +566,12 @@ export default function Page() {
           body: JSON.stringify({
             profile: { summary: updatedProfile.summary, fields: updatedProfile.fields.map((f) => ({ label: f.label, value: f.value })) },
             trial: { nctId: t.nctId, title: t.title, phase: t.phase },
-            criteria: open.map((x) => ({ kind: x.c.kind, requirement: x.c.requirement, evidence: x.c.evidence })),
+            criteria: open.map((x) => ({ kind: x.c.kind, requirement: x.c.requirement, evidence: x.c.evidence, remediable: x.c.remediable })),
           }),
         });
         if (!res.ok) return;
         const data = await res.json();
-        const verdicts = (data.verdicts ?? []) as { verdict: Verdict; evidence: string }[];
+        const verdicts = (data.verdicts ?? []) as Reverdict[];
         changed += open.reduce((n, _x, k) => n + (verdicts[k] && verdicts[k].verdict !== "confirm" ? 1 : 0), 0);
         setMatch((prev) =>
           applyReverdicts(
@@ -2181,7 +2202,7 @@ const PREFS: { key: PrefKey; label: string; hint: string }[] = [
 
 function prefScore(m: TrialMatch, prefs: Set<PrefKey>): number {
   let s = 0;
-  if (prefs.has("near")) s += m.factors.proximityScore * 2; // 0..6
+  if (prefs.has("near")) s += m.factors.proximityScore * 2; // 0..8 (see lib/geo bands)
   if (prefs.has("established")) s += m.factors.phaseRank; // 0..4
   if (prefs.has("open")) s += m.factors.randomized ? 0 : 3;
   if (prefs.has("burden")) s += 2 - m.factors.burdenProxy; // 0..2
@@ -2191,8 +2212,9 @@ function prefScore(m: TrialMatch, prefs: Set<PrefKey>): number {
 function prefReasons(m: TrialMatch, prefs: Set<PrefKey>): string[] {
   const r: string[] = [];
   if (prefs.has("near")) {
-    if (m.factors.proximityScore >= 3) r.push(`site in ${m.factors.nearestSite}`);
-    else if (m.factors.proximityScore === 2) r.push("a site in your state");
+    if (m.factors.proximityScore >= 4) r.push(`site in ${m.factors.nearestSite}`);
+    else if (m.factors.proximityScore === 3) r.push("a site in your state");
+    else if (m.factors.proximityScore === 2) r.push("a site in a neighboring state");
   }
   if (prefs.has("established") && m.factors.phaseRank >= 3) r.push(`later-phase (${m.phase})`);
   if (prefs.has("open") && !m.factors.randomized) r.push("open-label, no randomization");
@@ -2200,9 +2222,6 @@ function prefReasons(m: TrialMatch, prefs: Set<PrefKey>): string[] {
   return r;
 }
 
-function ratioOf(m: TrialMatch): number {
-  return m.total === 0 ? 0 : m.metCount / m.total;
-}
 function passesStudyFilter(m: TrialMatch, f: StudyFilter): boolean {
   if (f === "all") return true;
   return f === "treatment" ? m.interventional : !m.interventional;
@@ -2222,15 +2241,28 @@ function passesFacets(m: TrialMatch, studyFilter: StudyFilter, phaseFilter: Set<
 function limitK<T>(list: T[], k: TopK): T[] {
   return k === "all" ? list : list.slice(0, k);
 }
+/* What each band actually resolves to. Kept truthful to lib/geo's thresholds:
+   we place sites at city/state granularity, so "within a few hours" is honestly
+   reported as your state or one bordering it — not as a mileage we cannot
+   compute, and no longer as the whole country. */
 function travelLabel(t: TravelPref | null): string {
-  return t === "local" ? "in your state" : t === "regional" ? "in your country" : "anywhere";
+  return t === "local" ? "in your state" : t === "regional" ? "in or next to your state" : "anywhere";
 }
 
-/** The four summary buckets — canonical counts, always reconcile to the pool total. */
+/** Coarse age of a registry record, for the staleness chip. Deliberately blunt
+ *  — the point is "this may not be current", not a precise interval. */
+function monthsAgo(days: number): string {
+  const months = Math.floor(days / 30);
+  if (months >= 24) return `${Math.floor(months / 12)} yrs`;
+  return `${months} mo`;
+}
+
+/** The summary buckets — canonical counts, always reconcile to the pool total. */
 const COUNT_BUCKETS: { key: MatchStatus; cls: string; label: string }[] = [
   { key: "eligible", cls: "eligible", label: "eligible" },
   { key: "uncertain", cls: "uncertain", label: "pending" },
   { key: "near", cls: "near", label: "ruled out" },
+  { key: "excluded", cls: "near", label: "not open to you" },
   { key: "screened", cls: "", label: "not yet reasoned" },
 ];
 
@@ -3127,29 +3159,43 @@ function Results({
   // have open questions (surfaced inline on the card); ruled-out trials are moot.
   const eligibleCount = matches.filter((m) => m.status === "eligible").length;
 
-  // Canonical counts (from the single source of truth on the server). These four
+  // Canonical counts (from the single source of truth on the server). These
   // buckets ALWAYS sum to poolTotal, so the header and buckets can never disagree.
+  const excludedCount = counts.excluded ?? 0;
+  // Which terms actually contributed studies — a failed or empty leg is not
+  // coverage and must not be counted as if it were.
+  const searchTerms = (data.coverage?.terms ?? []).filter((t) => !t.error && t.added > 0).map((t) => t.term);
   const bucketCounts: Record<MatchStatus, number> = {
     eligible: counts.eligible,
     uncertain: counts.uncertain,
     near: counts.near,
     screened: counts.screened,
+    excluded: excludedCount,
   };
-  const reconTotal = counts.eligible + counts.uncertain + counts.near + counts.screened;
+  const reconTotal = counts.eligible + counts.uncertain + counts.near + counts.screened + excludedCount;
 
   // Shared refine facets (search · study type · phase) apply to every section.
   const facet = (m: TrialMatch) => passesFacets(m, studyFilter, phaseFilter, query);
   const statusOk = (m: TrialMatch) => statusFilter === "all" || m.status === statusFilter;
 
   const consider = matches.filter((m) => (m.status === "eligible" || m.status === "uncertain") && facet(m) && statusOk(m));
-  const ruledOut = matches.filter((m) => m.status === "near" && facet(m) && statusOk(m));
   const screened = matches.filter((m) => m.status === "screened" && facet(m) && statusOk(m));
+  const excluded = matches.filter((m) => m.status === "excluded" && facet(m) && statusOk(m));
+
+  // Within "ruled out", a study the patient could still come to qualify for (a
+  // washout that elapses, a scan that gets ordered) is worth reading before one
+  // that is fixed shut. Sorting on hard failures surfaces the workable ones.
+  const ruledOut = matches
+    .filter((m) => m.status === "near" && facet(m) && statusOk(m))
+    .sort((a, b) => hardFailCountOf(a.criteria) - hardFailCountOf(b.criteria));
 
   // Fully-eligible studies always rank first for clear visibility; within the same
   // status, the existing preference/fit ranking still applies.
   const statusRank = (m: TrialMatch) => (m.status === "eligible" ? 0 : 1);
   const ordered = [...consider].sort(
-    (a, b) => statusRank(a) - statusRank(b) || (active ? prefScore(b, prefs) - prefScore(a, prefs) : 0) || ratioOf(b) - ratioOf(a),
+    // Final tiebreak uses the SAME comparator the server ranked with, so a
+    // client-side re-sort can never disagree with the order the results arrived in.
+    (a, b) => statusRank(a) - statusRank(b) || (active ? prefScore(b, prefs) - prefScore(a, prefs) : 0) || compareMatches(a, b),
   );
 
   // Geography: when the server actually ran distance filtering, split the ranked
@@ -3167,7 +3213,7 @@ function Results({
   // an empty list behind a collapsed "Farther" toggle — auto-open it and say so.
   const emptyInRange = grouped && inRangeAll.length === 0 && fartherAll.length > 0;
 
-  const totalShown = inRange.length + farther.length + ruledOut.length + screened.length;
+  const totalShown = inRange.length + farther.length + ruledOut.length + screened.length + excluded.length;
   const filtersActive = statusFilter !== "all" || studyFilter !== "all" || phaseFilter.size > 0 || query.trim().length > 0;
 
   const card = (m: TrialMatch, i: number) => (
@@ -3218,8 +3264,22 @@ function Results({
 
         {/* Stat line leads — the counts that matter, not a paragraph of prose. */}
         <p className="board-sub">
-          Screened <b>{counts.poolTotal} recruiting trials</b> for <span className="mono">{conditionQuery}</span> · reasoned the top{" "}
-          <b>{counts.reasoned}</b> in depth
+          Screened <b>{counts.poolTotal} recruiting trials</b> for <span className="mono">{conditionQuery}</span>
+          {/* How wide the net was is part of the claim: "we searched" means
+              little without saying across how many terms. */}
+          {searchTerms.length > 1 ? (
+            <>
+              {" "}
+              <span title={searchTerms.join(" · ")}>and {searchTerms.length - 1} related terms</span>
+            </>
+          ) : null}{" "}
+          · reasoned the top <b>{counts.reasoned}</b> in depth
+          {excludedCount > 0 ? (
+            <>
+              {" "}
+              · <b>{excludedCount}</b> ruled out on published age/sex criteria
+            </>
+          ) : null}
           {filtersActive ? (
             <>
               {" "}
@@ -3375,6 +3435,26 @@ function Results({
                 </div>
               </details>
             ))}
+          </>
+        )}
+
+        {/* Structural exclusions: decided from the registry's own age/sex fields,
+            in code, before any model call. Listed with the reason rather than
+            hidden — "we looked and here is why not" is the honest form. */}
+        {excluded.length > 0 && (statusFilter === "all" || statusFilter === "excluded") && (
+          <>
+            <div className="section-h">
+              Not open to you ({excluded.length}) <span>— the study&apos;s published age or sex criteria rule these out; no AI judgment involved</span>
+            </div>
+            <div className="screened-list">
+              {excluded.map((m) => (
+                <a key={m.nctId} className="screened-row" href={m.url} target="_blank" rel="noopener noreferrer">
+                  <span className="mono">{m.nctId}</span>
+                  <span className="sr-title">{m.title}</span>
+                  <span className="sr-why">{m.structuralExclusion}</span>
+                </a>
+              ))}
+            </div>
           </>
         )}
 
@@ -3556,6 +3636,21 @@ const DecisionCard = memo(function DecisionCard({
             location not verified
           </span>
         )}
+        {/* A study can be RECRUITING while every listed site is withdrawn,
+            suspended or finished. Say so — otherwise the site line above reads
+            as an invitation to a door that is shut. */}
+        {!m.factors.nearestSiteActive && !m.factors.locationUnknown && (
+          <span className="fchip warn" title="The registry lists no site whose own status is currently recruiting. Confirm with the study contact before travelling.">
+            no site listed as recruiting
+          </span>
+        )}
+        {/* Registry freshness: a stale record is the only published signal that a
+            study may have stopped enrolling without updating its status. */}
+        {m.factors.registryStale && m.factors.registryAgeDays !== null && (
+          <span className="fchip warn" title="ClinicalTrials.gov records are updated by the study team. A record this old may not reflect whether the study is still enrolling.">
+            registry entry {monthsAgo(m.factors.registryAgeDays)} old
+          </span>
+        )}
         {!m.interventional && <span className="fchip">Observational</span>}
       </div>
 
@@ -3723,6 +3818,14 @@ function LedgerRow({
         <span className={`ck ${c.kind}`}>{c.kind}</span>
         <span className="cx">
           {c.requirement}
+          {/* On a failure, the coordinator's first question is whether this is a
+              "no" or a "not yet". Say which — it is the difference between
+              abandoning a study and diarising it. */}
+          {c.verdict === "fails" && (
+            <span className={`cfix ${c.remediable ? "soft" : "hard"}`}>
+              {c.remediable ? "could change" : "fixed for you"}
+            </span>
+          )}
           {c.evidence ? <span className="ev">{c.evidence}</span> : null}
         </span>
         {resolvable ? (
@@ -3808,7 +3911,7 @@ function applyReverdicts(
   prev: MatchResponse | null,
   nctId: string,
   indices: number[],
-  verdicts: { verdict: Verdict; evidence: string }[],
+  verdicts: Reverdict[],
 ): MatchResponse | null {
   if (!prev) return prev;
   const matches = prev.matches.map((m) => {
@@ -3816,7 +3919,14 @@ function applyReverdicts(
     const criteria = m.criteria.map((c, i) => {
       const at = indices.indexOf(i);
       if (at === -1 || !verdicts[at]) return c;
-      return { ...c, verdict: verdicts[at].verdict, evidence: verdicts[at].evidence || c.evidence };
+      return {
+        ...c,
+        verdict: verdicts[at].verdict,
+        evidence: verdicts[at].evidence || c.evidence,
+        // Keep the prior reading when the re-judge didn't supply one, rather
+        // than defaulting a newly-failing criterion to "definitively out".
+        remediable: verdicts[at].remediable ?? c.remediable,
+      };
     });
     return { ...m, criteria, status: deriveStatus(criteria), metCount: metCountOf(criteria), total: criteria.length };
   });
@@ -3825,7 +3935,7 @@ function applyReverdicts(
 
 /* Keep the header status buckets honest after a criterion flips a trial's status. */
 function recomputeCounts(base: Counts, matches: TrialMatch[]): Counts {
-  const reasoned = matches.filter((m) => m.status !== "screened");
+  const reasoned = matches.filter((m) => m.status !== "screened" && m.status !== "excluded");
   return {
     ...base,
     eligible: reasoned.filter((m) => m.status === "eligible").length,
