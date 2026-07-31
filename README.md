@@ -61,18 +61,19 @@ the deterministic `enrollmentWindow` + proximity factors for the time-sensitivit
 | `app/api/connect-records` | `GET` picker · `POST` pull one patient's chart via SMART on FHIR → provenance-delimited document |
 | `app/api/trials` | `POST {cond}` → normalized recruiting trials (ClinicalTrials.gov proxy). POST because a condition is a diagnosis, and a query string is written to request logs and history |
 | `app/api/match` | `POST` profile → ranked trials with per-criterion ledgers (Claude, one call per trial) |
+| `app/api/screen` | `POST` one NCT id + N patient profiles → a per-patient eligibility matrix for that trial (the mirror of `/api/match`) |
 | `app/api/reconfirm` | `POST` re-judge open "confirm" criteria after the patient adds info (shared verdict rules) |
 | `app/api/fork-options` | `POST` profile → plausible next treatment lines (Claude) + two fixed options in code |
 | `app/api/fork` | `POST` a next treatment × open trials → stays-open / closes per trial, citing the criterion |
 | `lib/fhir/client.ts` | SMART on FHIR R4 sandbox client — minimized resource pull, `DocumentReference`→`Binary`, compose |
 | `lib/fhir/testPatients.ts` | Bundled mCODE R4 oncology test patients (carry the notes the open sandbox lacks) |
-| `lib/ctgov.ts` | ClinicalTrials.gov v2 fetch + normalization |
+| `lib/ctgov.ts` | ClinicalTrials.gov v2 fetch + normalization (search a condition, or fetch one study by NCT id) |
 | `lib/registries.ts` | Registry adapters + the multi-term union search (`searchExpanded`) |
 | `lib/reason.ts` | The per-trial reasoning prompt and call — shared by the route and the eval harness |
 | `lib/structuralGate.ts` | Age-band / sex gates decided in code from the registry's own structured fields |
 | `lib/geo.ts` | Approximate proximity (city → state → neighboring state → country) + travel bands |
 | `lib/factors.ts` | Deterministic decision factors: nearest **open** site, burden, registry freshness |
-| `lib/verdict.ts` | The verdict meaning system, fail-closed status derivation, and the ranking comparator |
+| `lib/verdict.ts` | The verdict meaning system, fail-closed status derivation, and the ranking comparators (trials-for-a-patient and patients-for-a-trial) |
 | `lib/schemas.ts` | Zod schemas that constrain Claude's structured output |
 | `lib/anthropic.ts` | Anthropic client + pinned models |
 | `evals/` | The eval harness — a deterministic suite and a model-tier scorecard |
@@ -161,6 +162,42 @@ records untouched for ~6 months are flagged stale and ranked below fresh ones.
 
 The tuning knobs (`PER_TERM_PAGE`, `CANDIDATE_POOL`, `TRIAGE_BATCH`, `DEEP_REASON_COUNT`,
 `CONCURRENCY`) are named constants at the top of `app/api/match/route.ts`.
+
+### Cohort screening — turning the arrow around
+
+`/api/match` runs profile → trials. A coordinator's actual daily job runs the other direction:
+*"this study is open — who on today's list might fit?"* `/api/screen` is that route, and it is
+built as the mirror image rather than a new pipeline, because the engine is patient-independent
+and transfers directly — segmenting one study's eligibility prose into atomic criteria doesn't
+care which axis you're iterating over.
+
+The request is one NCT id plus up to `MAX_COHORT` (25) patient profiles. `getTrial()` (`lib/ctgov.ts`)
+fetches that one study from the same v2 endpoint and the same `fields=` allowlist `searchTrials`
+uses, so a single study record is normalized identically whether it arrived via a condition search
+or a direct id. Per patient, the same deterministic structural gate runs first — a patient outside
+the study's age band or sex is reported **with the reason** and never reaches the model, exactly as
+an out-of-band trial is reported in `/api/match`. The rest are reasoned with `reasonTrial()` — the
+identical prompt and function `/api/match` and the eval harness use, not a copy — at bounded
+concurrency.
+
+There is no per-cohort location (a coordinator's patient list isn't "near" anywhere in particular),
+so proximity is deliberately inert: the geo context is built with an unknown patient location and
+a zero travel threshold, which is the documented no-op state the factors layer already supports.
+
+The response carries the trial **once** — a small summary plus counts — because it is identical
+for every row; returning the full trial payload per patient would be pure waste. Each patient row
+carries its own status, headline, and **full criteria array**, because the ledger is the evidence
+and has to stay inspectable, not summarized away.
+
+Sorting is the mirror of `/api/match`'s ranking, not a new scheme: `compareCohortPatients`
+(`lib/verdict.ts`) reuses `openCountOf`/`hardFailCountOf` to seat eligible patients first, then
+whoever has the fewest open "confirm" items, then whoever has the fewest settled hard failures —
+never a met/total ratio, for the same reason `/api/match` doesn't rank trials on one: the criteria
+are segmented by the model, so that denominator is an artifact of how finely one patient's prose
+happened to split.
+
+This ships as engine + API only; the clinician-facing cohort screen is a separate, later piece of
+work.
 
 ## Two readers, two information architectures
 

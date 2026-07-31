@@ -117,6 +117,45 @@ export async function searchTrials(opts: SearchOptions): Promise<Trial[]> {
   return (data.studies ?? []).map(normalizeStudy).filter((t): t is Trial => t !== null);
 }
 
+/* ---- fetch one study by NCT id (cohort screening, §C1) ----
+   The v2 API serves a single study at GET /studies/{nctId} with the same
+   `fields=` allowlist as the list endpoint, so we reuse FIELDS and
+   normalizeStudy rather than keeping a second copy of either in sync. */
+
+/** An NCT id is "NCT" followed by 8 digits. Reject anything else rather than
+ *  forwarding an arbitrary path segment to the registry. */
+export function isValidNctId(id: string): boolean {
+  return /^NCT\d{8}$/.test(id.trim());
+}
+
+/** Fetch and normalize one study by its NCT id. Returns null when the registry
+ *  has no such record (404) — a real, expected answer, not an error. Throws on
+ *  any other non-OK response, same as searchTrials. */
+export async function getTrial(nctId: string): Promise<Trial | null> {
+  const id = nctId.trim();
+  if (!isValidNctId(id)) {
+    throw new Error(`Invalid NCT id: "${nctId}". Expected the form NCT followed by 8 digits.`);
+  }
+
+  const params = new URLSearchParams();
+  params.set("fields", FIELDS);
+
+  const res = await fetch(`${BASE}/${id}?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+    // Same reasoning as searchTrials: a stale cached page could hide a status
+    // change (a study closing, a criterion amendment) between screenings.
+    cache: "no-store",
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`ClinicalTrials.gov responded ${res.status} ${res.statusText}`);
+  }
+
+  const data = (await res.json()) as RawStudy;
+  return normalizeStudy(data);
+}
+
 /* ---- normalization ---- */
 
 // Minimal shapes for the modules we read. Everything is optional because the

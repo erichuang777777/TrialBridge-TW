@@ -16,8 +16,16 @@ import assert from "node:assert/strict";
 import { derivePatientLoc, proximity, travelThreshold, travelLabel } from "../lib/geo.ts";
 import { computeFactors, ageInDays, STALE_AFTER_DAYS, type GeoContext } from "../lib/factors.ts";
 import { derivePatientDemographics, structuralExclusion } from "../lib/structuralGate.ts";
-import { deriveStatus, hardFailCountOf, remediableFailCountOf, openCountOf, compareMatches } from "../lib/verdict.ts";
-import { siteIsRecruiting } from "../lib/ctgov.ts";
+import {
+  deriveStatus,
+  hardFailCountOf,
+  remediableFailCountOf,
+  openCountOf,
+  compareMatches,
+  compareCohortPatients,
+  cohortCounts,
+} from "../lib/verdict.ts";
+import { siteIsRecruiting, isValidNctId } from "../lib/ctgov.ts";
 import { trial, site, criterion } from "./fixtures.ts";
 
 const NOW = Date.UTC(2026, 6, 30); // 2026-07-30, fixed so ages never drift
@@ -243,4 +251,82 @@ test("a stale registry record sinks below a fresh one that is otherwise identica
   const fresh = { status: "eligible" as const, criteria: [criterion({ verdict: "meets" })], factors: { registryStale: false } };
   const stale = { status: "eligible" as const, criteria: [criterion({ verdict: "meets" })], factors: { registryStale: true } };
   assert.ok(compareMatches(fresh, stale) < 0);
+});
+
+/* ---- cohort screening (§C1) ---------------------------------------------- */
+
+test("a well-formed NCT id is accepted; anything else is rejected before it reaches the registry", () => {
+  // NCT + 8 digits is the registry's own id shape. Forwarding anything else as
+  // a path segment would mean sending arbitrary input straight to the
+  // registry's URL — this is the check that stops that.
+  assert.equal(isValidNctId("NCT12345678"), true);
+  assert.equal(isValidNctId("  NCT12345678  "), true, "surrounding whitespace from a pasted id is trimmed, not rejected");
+  assert.equal(isValidNctId("NCT1234567"), false, "7 digits — one short of the registry's shape");
+  assert.equal(isValidNctId("NCT123456789"), false, "9 digits — one over");
+  assert.equal(isValidNctId("nct12345678"), false, "lowercase is not the registry's own casing");
+  assert.equal(isValidNctId("NCT12345678/../../etc"), false, "a path-traversal payload must not read as a valid id");
+  assert.equal(isValidNctId(""), false);
+});
+
+test("cohort triage seats eligible patients first, then fewest open items, then fewest hard failures", () => {
+  // Same discipline as compareMatches, holding the trial fixed instead of the
+  // patient: absolute code-derived counts only, never a met/total ratio.
+  const eligible = { status: "eligible" as const, criteria: [criterion({ verdict: "meets" })] };
+  const oneOpen = { status: "uncertain" as const, criteria: [criterion({ verdict: "confirm" })] };
+  const threeOpen = {
+    status: "uncertain" as const,
+    criteria: [criterion({ verdict: "confirm" }), criterion({ verdict: "confirm" }), criterion({ verdict: "confirm" })],
+  };
+  const oneHardFail = { status: "near" as const, criteria: [criterion({ verdict: "fails", remediable: false })] };
+  const twoHardFail = {
+    status: "near" as const,
+    criteria: [criterion({ verdict: "fails", remediable: false }), criterion({ verdict: "fails", remediable: false })],
+  };
+
+  const sorted = [twoHardFail, threeOpen, oneHardFail, oneOpen, eligible].sort(compareCohortPatients);
+  assert.deepEqual(sorted, [eligible, oneOpen, threeOpen, oneHardFail, twoHardFail]);
+});
+
+test("a structurally excluded patient sinks to the bottom of the cohort list but is never dropped from it", () => {
+  const eligible = { status: "eligible" as const, criteria: [criterion({ verdict: "meets" })] };
+  const near = { status: "near" as const, criteria: [criterion({ verdict: "fails", remediable: true })] };
+  const excluded = { status: "excluded" as const, criteria: [] };
+
+  const cohort = [excluded, eligible, near];
+  cohort.sort(compareCohortPatients);
+  assert.deepEqual(cohort, [eligible, near, excluded]);
+  assert.equal(cohort.length, 3, "a gated-out patient is ranked last, not removed from the roster");
+});
+
+test("cohort ranking does not depend on how finely one patient's ledger was segmented", () => {
+  // Mirrors the equivalent /api/match regression: a met/total ratio would
+  // reward a patient whose profile happened to yield fewer atomic criteria.
+  const coarse = { status: "eligible" as const, criteria: Array.from({ length: 4 }, () => criterion({ verdict: "meets" })) };
+  const fine = { status: "eligible" as const, criteria: Array.from({ length: 20 }, () => criterion({ verdict: "meets" })) };
+  assert.equal(compareCohortPatients(coarse, fine), 0, "segmentation granularity must not decide a coordinator's reading order");
+});
+
+test("cohort buckets always sum to the number of patients screened", () => {
+  // A count that stops reconciling reads as a finding rather than a dropped
+  // bucket: twenty patients screened, four zeroes reported, no explanation.
+  const rows = [
+    { status: "eligible" as const },
+    { status: "uncertain" as const },
+    { status: "uncertain" as const },
+    { status: "near" as const },
+    { status: "excluded" as const },
+    { status: "screened" as const },
+  ];
+  const c = cohortCounts(rows);
+  assert.equal(c.total, rows.length);
+  assert.equal(c.eligible + c.uncertain + c.near + c.screened + c.excluded, c.total);
+  assert.deepEqual(c, { total: 6, eligible: 1, uncertain: 2, near: 1, screened: 1, excluded: 1 });
+});
+
+test("a study with no published eligibility text is counted, not silently lost", () => {
+  // reasonTrial returns "screened" when a study publishes no criteria — then
+  // EVERY row in the cohort carries it, and the bucket has to exist to say so.
+  const c = cohortCounts(Array.from({ length: 20 }, () => ({ status: "screened" as const })));
+  assert.equal(c.screened, 20);
+  assert.equal(c.total, 20);
 });
