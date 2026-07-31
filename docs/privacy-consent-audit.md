@@ -17,6 +17,28 @@
 
 ---
 
+## Status — 2026-07-31
+
+Findings resolved since the audit, verified against the code (not against this file):
+
+| # | Sev | Finding | Resolution |
+|---|-----|---------|------------|
+| 1 | BLOCKER | No blocking interstitial | `DemoGate` now sits at the data-flow choke point — non-dismissible, sample patient primary, unchecked box, gates note **and** PDF **and** connect. |
+| 2 | HIGH | Footer asserts security controls that don't exist | HIPAA/BAA marketing removed; the footer now says Trialign isn't a covered entity and names Anthropic as the one third party. |
+| 3 | HIGH | Curated demo shown under an "AI-generated" label | `/api/match` returns `provenance`; the fixture declares `"curated-demo"` and the caption, the stat line, and the exported screening log all say so. |
+| 4 | HIGH | Not gated — anyone with the URL reaches the intake | `proxy.ts` passcode gate over pages **and** `/api/*`. Off unless `DEMO_PASSCODE` is set, so it cannot silently lock out a running deployment. |
+| 5 | HIGH | Signup promises saved searches | Copy replaced with "Demo account — explore the signed-in experience." |
+| 6 | MEDIUM | Entry screen lacks the DEMO badge | Badge added to the landing intake screen. |
+| 9 | MEDIUM | FHIR import sends name + full DOB | `composeDocument` now emits **age**, not DOB, and the name never enters the document (it stays in `meta.patientLabel`, picker UI only). |
+| 10 | MEDIUM | Claude endpoints unauthenticated | Covered by #4 — the gate matches `/api/*` and returns 401 JSON. |
+| 11 | MEDIUM | Prompt-injection surface | Every prompt that reads patient- or registry-supplied text now states the document is data, never instructions. |
+| 12 | LOW | `resolveNarrative` fetches arbitrary `attachment.url` | Same-origin check against `FHIR_BASE`; an unparseable URL is not same-origin. |
+| 13 | LOW | `GET /api/trials?cond=` puts a diagnosis in a query string | Route is now `POST` with a body. |
+
+**Still open:** #7 (bundled consent), #8 (disclosure ledger), #14 (`privacy@` mailbox), #15 (puffery), #16 (localStorage identity — design note), #17 (BAA framing is the wrong regime). #7, #8 and #17 are posture decisions rather than defects and want a human call, not a patch.
+
+---
+
 ## BLOCKER
 
 ### 1. [BLOCKER] [DEMO] No blocking interstitial — upload/paste/connect are one click away while the copy invites real records (D7, D4)

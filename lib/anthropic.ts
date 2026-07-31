@@ -11,6 +11,12 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const MODEL = "claude-opus-4-8";
 
+/** The triage pass only ranks candidates for reading order — it never issues a
+ *  verdict and nothing is dropped on its say-so — so it runs on the cheap, fast
+ *  model. That is what makes it affordable to widen the candidate pool instead
+ *  of trusting the registry's relevance ordering. */
+export const TRIAGE_MODEL = "claude-haiku-4-5-20251001";
+
 let client: Anthropic | null = null;
 
 export function anthropic(): Anthropic {

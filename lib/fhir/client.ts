@@ -120,6 +120,16 @@ export async function listPatients(count = 8): Promise<PatientSummary[]> {
   });
 }
 
+/** True when `url` lives on the same scheme+host+port as the configured FHIR
+ *  base. An unparseable URL is not same-origin — unknown is not permission. */
+function sameOrigin(url: string, base: string): boolean {
+  try {
+    return new URL(url).origin === new URL(base).origin;
+  } catch {
+    return false;
+  }
+}
+
 /** Resolve a DocumentReference's narrative to plain text. Handles inline base64
  *  (`attachment.data`) and, for the live path, a `Binary`/URL reference. */
 async function resolveNarrative(doc: FhirResource, allowNetwork: boolean): Promise<string> {
@@ -131,6 +141,12 @@ async function resolveNarrative(doc: FhirResource, allowNetwork: boolean): Promi
     if (att.url && allowNetwork) {
       try {
         const url = att.url.startsWith("http") ? att.url : `${FHIR_BASE}/${att.url.replace(/^\/+/, "")}`;
+        // `attachment.url` is a value from the FHIR server's response, not from
+        // us. Fetching it verbatim would let whoever controls that server point
+        // this process at any host it can reach — a link-following bug that
+        // becomes SSRF the moment FHIR_BASE is a real EHR rather than a public
+        // sandbox. Narratives may only be resolved from the server we asked.
+        if (!sameOrigin(url, FHIR_BASE)) continue;
         const res = await fetch(url, { headers: { Accept: "*/*" }, cache: "no-store" });
         if (!res.ok) continue;
         const raw = await res.text();
@@ -188,6 +204,19 @@ function obsValue(o: FhirResource): string {
 const MAX_OBSERVATIONS = 50;
 const MAX_MEDS = 40;
 
+/** "1964-03-12" → "age 62". Returns null when the date is absent or unparseable
+ *  — an unreadable birth date is simply not reported, never approximated. */
+function ageFromBirthDate(birthDate?: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((birthDate ?? "").trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const now = new Date();
+  let age = now.getUTCFullYear() - y;
+  const hadBirthday = now.getUTCMonth() + 1 > mo || (now.getUTCMonth() + 1 === mo && now.getUTCDate() >= d);
+  if (!hadBirthday) age -= 1;
+  return age >= 0 && age <= 120 ? `age ${age}` : null;
+}
+
 /** Flatten a patient's resources into one provenance-delimited text document.
  *  Section headers ("STRUCTURED FHIR DATA" / "CLINICAL NOTES") are how the
  *  extractor assigns each field's `source` (fhir vs note). */
@@ -201,9 +230,15 @@ export async function composeDocument(resources: FhirResource[], allowNetwork: b
 
   const structured: string[] = [];
   if (patient) {
+    // Age, not date of birth. Nothing downstream matches on a birth date — age
+    // bands are what eligibility criteria are written in — so sending the DOB
+    // would put a direct identifier into a third-party API call to buy nothing.
+    // (The patient's NAME is likewise kept out of this document; it stays in
+    // meta.patientLabel, which never leaves the picker UI.) ZIP-only for
+    // location, which is already the discipline everywhere else.
     const demo = [
       patient.gender,
-      patient.birthDate ? `DOB ${patient.birthDate}` : "",
+      ageFromBirthDate(patient.birthDate) ?? "",
       patient.address?.[0]?.postalCode ? `ZIP ${patient.address[0].postalCode}` : "",
     ]
       .filter(Boolean)

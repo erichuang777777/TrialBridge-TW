@@ -48,6 +48,11 @@ export const ProfileSchema = z.object({
   conditionQuery: z
     .string()
     .describe("The single best ClinicalTrials.gov condition search term for this patient, e.g. 'breast cancer'. Concise; the primary disease, not the full history."),
+  conditionQueries: z
+    .array(z.string())
+    .describe(
+      "2–5 ADDITIONAL ClinicalTrials.gov condition search terms whose results should be searched and merged with conditionQuery, ordered most to least central. This is a recall device: a single term misses studies that register under a synonym or under a broader umbrella. Include, when they apply to this patient: (a) a registry synonym or the formal term ('breast neoplasms', 'mammary carcinoma'); (b) the disease qualified by stage or site ('metastatic breast cancer'); (c) the biomarker-defined umbrella a basket study would register under ('PIK3CA mutation', 'advanced solid tumor', 'HER2-low'). Do NOT include treatment names, and do NOT include terms unrelated to this patient's disease — a wrong term costs a wasted search and pollutes the candidate pool.",
+    ),
   summary: z
     .string()
     .describe("One-sentence patient summary in the coordinator's voice, e.g. 'HR+/HER2− metastatic breast cancer, 2 prior lines, ECOG 1.'"),
@@ -76,6 +81,11 @@ export const LedgerCriterionSchema = z.object({
     .enum(["fhir", "note", "you", "not_documented"])
     .describe(
       "Where the evidence for THIS judgment came from: 'fhir' = a structured FHIR resource from the chart; 'note' = a clinical narrative/note; 'you' = the patient told us directly; 'not_documented' = nothing in the record addresses this criterion (use this ONLY with a 'confirm' verdict). This is descriptive provenance — it does not change the verdict.",
+    ),
+  remediable: z
+    .boolean()
+    .describe(
+      "Could THIS patient come to satisfy this criterion? true = a washout that will elapse, a scan/lab that can be ordered or redrawn, a consent or document that can be obtained, a fluctuating value that may re-qualify. false = fixed for this patient — sex, age band, tumor type/subtype, an irreversible prior therapy or surgery, a permanent comorbidity, a prior-lines cap already exceeded. Only consulted when the verdict is 'fails', but set it honestly on every criterion. It is descriptive — it NEVER changes the verdict.",
     ),
 });
 
@@ -117,6 +127,11 @@ export const ReverdictSchema = z.object({
   evidence: z
     .string()
     .describe("The 'why', citing the patient's added info and record in plain words. Empty string only when there is genuinely nothing to cite."),
+  remediable: z
+    .boolean()
+    .describe(
+      "Same meaning as on the original criterion: could this patient come to satisfy it (true) or is it fixed for them (false)? Only consulted when the re-judged verdict is 'fails'.",
+    ),
 });
 
 export const ReconfirmSchema = z.object({
@@ -197,3 +212,30 @@ export const LedgerSchema = z.object({
 });
 
 export type ExtractedLedger = z.infer<typeof LedgerSchema>;
+
+/* ---- /api/match triage pass — WHICH trials get deep reasoning ----
+   Deep per-criterion reasoning is the expensive step, so only a handful of
+   studies can get it. Previously that handful was simply the registry's own
+   relevance ordering, which knows the search term and nothing about the patient.
+
+   The triage pass reads the profile against each candidate's title, conditions
+   and interventions and scores plausibility. It is a RANKER, never a filter:
+   nothing is dropped on its say-so, it only decides reading order, so a triage
+   mistake costs position rather than visibility. It sees titles and metadata,
+   not the eligibility prose — it is not making an eligibility call and must not
+   be allowed to sound like one. */
+export const TriageItemSchema = z.object({
+  nctId: z.string().describe("Echo the NCT id exactly as given."),
+  score: z
+    .number()
+    .describe(
+      "Plausibility that this study is worth full eligibility reasoning for THIS patient: 2 = likely (the disease, stage and biomarker context line up), 1 = possible (right disease area, unclear fit), 0 = unlikely (different disease, different population, or plainly inapplicable). When unsure between two scores, give the HIGHER one — an under-scored study loses its reasoning slot.",
+    ),
+  reason: z.string().describe("At most 12 words on what drove the score. No eligibility language — this is a reading-order note, not a verdict."),
+});
+
+export const TriageSchema = z.object({
+  items: z.array(TriageItemSchema).describe("One entry per input study, in the SAME order given. Do not add, drop, or reorder."),
+});
+
+export type ExtractedTriage = z.infer<typeof TriageSchema>;

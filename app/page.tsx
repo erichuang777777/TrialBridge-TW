@@ -22,7 +22,7 @@ import HeroVideo from "@/app/components/HeroVideo";
 import NavAuth from "@/app/components/NavAuth";
 import ProductCarousel from "@/app/components/ProductCarousel";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
-import { deriveStatus, metCountOf } from "@/lib/verdict";
+import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches } from "@/lib/verdict";
 
 /* ---- API response shapes ---- */
 type FieldSource = "fhir" | "note" | "you";
@@ -30,6 +30,10 @@ type ProfileField = { label: string; value: string; clinical: boolean; gap: bool
 type Clarification = { id: string; question: string; rationale: string; gloss: string; options: string[] };
 type Profile = {
   conditionQuery: string;
+  /** Extra condition terms the extractor proposed; unioned with conditionQuery
+   *  at search time so a study registered under a synonym or a broader umbrella
+   *  is still reachable. */
+  conditionQueries?: string[];
   summary: string;
   fields: ProfileField[];
   clarifications: Clarification[];
@@ -41,9 +45,30 @@ type Counts = {
   uncertain: number;
   near: number;
   screened: number;
+  /** Ruled out by a deterministic structural gate (age band, sex) before any
+   *  model call. Reported, never hidden. */
+  excluded: number;
 };
+/** How the candidate pool was assembled — one entry per search term, so the
+ *  coverage of a search is inspectable rather than implied by a single number. */
+type Coverage = { terms: { term: string; added: number; error: string | null }[]; triaged: boolean };
+/** One re-judged criterion coming back from /api/reconfirm. `remediable` is
+ *  optional so an older response shape still applies cleanly. */
+type Reverdict = { verdict: Verdict; evidence: string; remediable?: boolean };
 type LocationInfo = { applied: boolean; label: string; travel: TravelPref | null; inRange: number };
-type MatchResponse = { conditionQuery: string; summary: string; counts: Counts; location: LocationInfo; matches: TrialMatch[] };
+type MatchResponse = {
+  /** "curated-demo" = the sample-patient fixture, with hand-authored ledgers and
+   *  no model call. The screen must not describe those as AI-generated, and must
+   *  not report a live screen that never ran — they are attached to real NCT ids
+   *  and real sponsors. Absent (older shape) is treated as live. */
+  provenance?: "live" | "curated-demo";
+  conditionQuery: string;
+  summary: string;
+  counts: Counts;
+  coverage?: Coverage;
+  location: LocationInfo;
+  matches: TrialMatch[];
+};
 
 type PortalMode = "patient" | "clinician" | "partner";
 type Phase = "home" | "landing" | "connect" | "capture" | "clarify" | "confirm" | "reason" | "results" | "fork" | "refer";
@@ -460,6 +485,7 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conditionQuery: profile.conditionQuery,
+          conditionQueries: profile.conditionQueries ?? [],
           summary: profile.summary,
           fields: profile.fields.map((f) => ({ label: f.label, value: f.value })),
           location: survey.location.trim(),
@@ -511,13 +537,13 @@ export default function Page() {
       body: JSON.stringify({
         profile: { summary: updatedProfile.summary, fields: updatedProfile.fields.map((f) => ({ label: f.label, value: f.value })) },
         trial: { nctId: trial.nctId, title: trial.title, phase: trial.phase },
-        criteria: [{ kind: crit.kind, requirement: crit.requirement, evidence: crit.evidence }],
+        criteria: [{ kind: crit.kind, requirement: crit.requirement, evidence: crit.evidence, remediable: crit.remediable }],
         answer,
       }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Couldn't update this item.");
-    const nv = (data.verdicts?.[0] ?? null) as { verdict: Verdict; evidence: string } | null;
+    const nv = (data.verdicts?.[0] ?? null) as Reverdict | null;
     if (!nv) throw new Error("No verdict returned.");
 
     setMatch((prev) => applyReverdicts(prev, nctId, [critIndex], [nv]));
@@ -545,12 +571,12 @@ export default function Page() {
           body: JSON.stringify({
             profile: { summary: updatedProfile.summary, fields: updatedProfile.fields.map((f) => ({ label: f.label, value: f.value })) },
             trial: { nctId: t.nctId, title: t.title, phase: t.phase },
-            criteria: open.map((x) => ({ kind: x.c.kind, requirement: x.c.requirement, evidence: x.c.evidence })),
+            criteria: open.map((x) => ({ kind: x.c.kind, requirement: x.c.requirement, evidence: x.c.evidence, remediable: x.c.remediable })),
           }),
         });
         if (!res.ok) return;
         const data = await res.json();
-        const verdicts = (data.verdicts ?? []) as { verdict: Verdict; evidence: string }[];
+        const verdicts = (data.verdicts ?? []) as Reverdict[];
         changed += open.reduce((n, _x, k) => n + (verdicts[k] && verdicts[k].verdict !== "confirm" ? 1 : 0), 0);
         setMatch((prev) =>
           applyReverdicts(
@@ -767,6 +793,7 @@ export default function Page() {
             {phase === "results" && match && (
               <Results
                 data={match}
+                entrant={entrant}
                 prefs={prefs}
                 saved={saved}
                 onToggleSave={toggleSave}
@@ -1548,6 +1575,12 @@ function Landing({
               <span className="s">demo</span> Try a sample patient (Margaret)
             </button>
           </div>
+
+          {/* Audit #8/#6: the label belongs on every screen that touches health
+              data, and this is the screen where it is actually entered. */}
+          <div className="demo-badge" style={{ marginTop: 16 }}>
+            DEMO · SYNTHETIC DATA ONLY
+          </div>
           <div className="disclaimer" style={{ marginTop: 20 }}>
             Informational decision support to review with your care team — not medical advice or a final eligibility determination. Trial data is
             live from ClinicalTrials.gov. Please use synthetic personas only in this demo, not real patient data.
@@ -2181,7 +2214,7 @@ const PREFS: { key: PrefKey; label: string; hint: string }[] = [
 
 function prefScore(m: TrialMatch, prefs: Set<PrefKey>): number {
   let s = 0;
-  if (prefs.has("near")) s += m.factors.proximityScore * 2; // 0..6
+  if (prefs.has("near")) s += m.factors.proximityScore * 2; // 0..8 (see lib/geo bands)
   if (prefs.has("established")) s += m.factors.phaseRank; // 0..4
   if (prefs.has("open")) s += m.factors.randomized ? 0 : 3;
   if (prefs.has("burden")) s += 2 - m.factors.burdenProxy; // 0..2
@@ -2191,8 +2224,9 @@ function prefScore(m: TrialMatch, prefs: Set<PrefKey>): number {
 function prefReasons(m: TrialMatch, prefs: Set<PrefKey>): string[] {
   const r: string[] = [];
   if (prefs.has("near")) {
-    if (m.factors.proximityScore >= 3) r.push(`site in ${m.factors.nearestSite}`);
-    else if (m.factors.proximityScore === 2) r.push("a site in your state");
+    if (m.factors.proximityScore >= 4) r.push(`site in ${m.factors.nearestSite}`);
+    else if (m.factors.proximityScore === 3) r.push("a site in your state");
+    else if (m.factors.proximityScore === 2) r.push("a site in a neighboring state");
   }
   if (prefs.has("established") && m.factors.phaseRank >= 3) r.push(`later-phase (${m.phase})`);
   if (prefs.has("open") && !m.factors.randomized) r.push("open-label, no randomization");
@@ -2200,9 +2234,6 @@ function prefReasons(m: TrialMatch, prefs: Set<PrefKey>): string[] {
   return r;
 }
 
-function ratioOf(m: TrialMatch): number {
-  return m.total === 0 ? 0 : m.metCount / m.total;
-}
 function passesStudyFilter(m: TrialMatch, f: StudyFilter): boolean {
   if (f === "all") return true;
   return f === "treatment" ? m.interventional : !m.interventional;
@@ -2222,15 +2253,28 @@ function passesFacets(m: TrialMatch, studyFilter: StudyFilter, phaseFilter: Set<
 function limitK<T>(list: T[], k: TopK): T[] {
   return k === "all" ? list : list.slice(0, k);
 }
+/* What each band actually resolves to. Kept truthful to lib/geo's thresholds:
+   we place sites at city/state granularity, so "within a few hours" is honestly
+   reported as your state or one bordering it — not as a mileage we cannot
+   compute, and no longer as the whole country. */
 function travelLabel(t: TravelPref | null): string {
-  return t === "local" ? "in your state" : t === "regional" ? "in your country" : "anywhere";
+  return t === "local" ? "in your state" : t === "regional" ? "in or next to your state" : "anywhere";
 }
 
-/** The four summary buckets — canonical counts, always reconcile to the pool total. */
+/** Coarse age of a registry record, for the staleness chip. Deliberately blunt
+ *  — the point is "this may not be current", not a precise interval. */
+function monthsAgo(days: number): string {
+  const months = Math.floor(days / 30);
+  if (months >= 24) return `${Math.floor(months / 12)} yrs`;
+  return `${months} mo`;
+}
+
+/** The summary buckets — canonical counts, always reconcile to the pool total. */
 const COUNT_BUCKETS: { key: MatchStatus; cls: string; label: string }[] = [
   { key: "eligible", cls: "eligible", label: "eligible" },
   { key: "uncertain", cls: "uncertain", label: "pending" },
   { key: "near", cls: "near", label: "ruled out" },
+  { key: "excluded", cls: "near", label: "not open to you" },
   { key: "screened", cls: "", label: "not yet reasoned" },
 ];
 
@@ -3070,6 +3114,7 @@ const CARD_STAGGER = 70; // ms between successive cards
 
 function Results({
   data,
+  entrant,
   prefs,
   saved,
   onToggleSave,
@@ -3089,6 +3134,9 @@ function Results({
   showNgsAction,
 }: {
   data: MatchResponse;
+  /** §5.3 — who is reading. For a clinician this reorders the page, not just
+   *  the prose: the ledger leads and the patient-facing framing steps back. */
+  entrant: Entrant;
   prefs: Set<PrefKey>;
   saved: Set<string>;
   onToggleSave: (n: string) => void;
@@ -3109,7 +3157,27 @@ function Results({
 }) {
   const { counts, matches, conditionQuery, location } = data;
   const active = prefs.size > 0;
+  const clinical = entrant === "clinician";
+  // The sample-patient fixture returns hand-authored ledgers attached to real
+  // NCT ids and real sponsors. Captioning those "AI-generated", or reporting a
+  // live screen that never ran, would be a false statement about how the result
+  // on screen was produced — so the curated path says what it is.
+  const curated = data.provenance === "curated-demo";
   const [showAllScreened, setShowAllScreened] = useState(false);
+  const [logCopied, setLogCopied] = useState(false);
+
+  // The coordinator's takeaway. Everything in it is already on this screen —
+  // the log is a transcription, not a second opinion — so it can be pasted into
+  // a screening note or a study binder without carrying a claim the UI didn't make.
+  async function copyLog() {
+    try {
+      await navigator.clipboard.writeText(buildScreeningLog(data));
+      setLogCopied(true);
+      window.setTimeout(() => setLogCopied(false), 1600);
+    } catch {
+      /* clipboard blocked — no-op */
+    }
+  }
 
   // Drive the match-found reveal (see REVEAL storyboard above the component).
   const [stage, setStage] = useState(0); // 0 hidden · 1 counts in · 2 cards in
@@ -3127,29 +3195,43 @@ function Results({
   // have open questions (surfaced inline on the card); ruled-out trials are moot.
   const eligibleCount = matches.filter((m) => m.status === "eligible").length;
 
-  // Canonical counts (from the single source of truth on the server). These four
+  // Canonical counts (from the single source of truth on the server). These
   // buckets ALWAYS sum to poolTotal, so the header and buckets can never disagree.
+  const excludedCount = counts.excluded ?? 0;
+  // Which terms actually contributed studies — a failed or empty leg is not
+  // coverage and must not be counted as if it were.
+  const searchTerms = (data.coverage?.terms ?? []).filter((t) => !t.error && t.added > 0).map((t) => t.term);
   const bucketCounts: Record<MatchStatus, number> = {
     eligible: counts.eligible,
     uncertain: counts.uncertain,
     near: counts.near,
     screened: counts.screened,
+    excluded: excludedCount,
   };
-  const reconTotal = counts.eligible + counts.uncertain + counts.near + counts.screened;
+  const reconTotal = counts.eligible + counts.uncertain + counts.near + counts.screened + excludedCount;
 
   // Shared refine facets (search · study type · phase) apply to every section.
   const facet = (m: TrialMatch) => passesFacets(m, studyFilter, phaseFilter, query);
   const statusOk = (m: TrialMatch) => statusFilter === "all" || m.status === statusFilter;
 
   const consider = matches.filter((m) => (m.status === "eligible" || m.status === "uncertain") && facet(m) && statusOk(m));
-  const ruledOut = matches.filter((m) => m.status === "near" && facet(m) && statusOk(m));
   const screened = matches.filter((m) => m.status === "screened" && facet(m) && statusOk(m));
+  const excluded = matches.filter((m) => m.status === "excluded" && facet(m) && statusOk(m));
+
+  // Within "ruled out", a study the patient could still come to qualify for (a
+  // washout that elapses, a scan that gets ordered) is worth reading before one
+  // that is fixed shut. Sorting on hard failures surfaces the workable ones.
+  const ruledOut = matches
+    .filter((m) => m.status === "near" && facet(m) && statusOk(m))
+    .sort((a, b) => hardFailCountOf(a.criteria) - hardFailCountOf(b.criteria));
 
   // Fully-eligible studies always rank first for clear visibility; within the same
   // status, the existing preference/fit ranking still applies.
   const statusRank = (m: TrialMatch) => (m.status === "eligible" ? 0 : 1);
   const ordered = [...consider].sort(
-    (a, b) => statusRank(a) - statusRank(b) || (active ? prefScore(b, prefs) - prefScore(a, prefs) : 0) || ratioOf(b) - ratioOf(a),
+    // Final tiebreak uses the SAME comparator the server ranked with, so a
+    // client-side re-sort can never disagree with the order the results arrived in.
+    (a, b) => statusRank(a) - statusRank(b) || (active ? prefScore(b, prefs) - prefScore(a, prefs) : 0) || compareMatches(a, b),
   );
 
   // Geography: when the server actually ran distance filtering, split the ranked
@@ -3167,13 +3249,14 @@ function Results({
   // an empty list behind a collapsed "Farther" toggle — auto-open it and say so.
   const emptyInRange = grouped && inRangeAll.length === 0 && fartherAll.length > 0;
 
-  const totalShown = inRange.length + farther.length + ruledOut.length + screened.length;
+  const totalShown = inRange.length + farther.length + ruledOut.length + screened.length + excluded.length;
   const filtersActive = statusFilter !== "all" || studyFilter !== "all" || phaseFilter.size > 0 || query.trim().length > 0;
 
   const card = (m: TrialMatch, i: number) => (
     <DecisionCard
       key={m.nctId}
       m={m}
+      entrant={entrant}
       saved={saved.has(m.nctId)}
       onSave={() => onToggleSave(m.nctId)}
       reasons={active ? prefReasons(m, prefs) : []}
@@ -3193,9 +3276,14 @@ function Results({
     <div className="scroll">
       <div className="board board--results" data-reveal={stage} style={{ "--card-stagger": `${CARD_STAGGER}ms` } as React.CSSProperties}>
         <div className="board-head">
-          <h2>Matches for you</h2>
+          <h2>{clinical ? "Screening results" : "Matches for you"}</h2>
           <div className="board-head-r">
-            {eligibleCount > 0 && (
+            {clinical && (
+              <button className="nextsteps-btn" onClick={copyLog} title="Copy a plain-text screening log for this patient — one line per study, with the open items.">
+                {logCopied ? "Copied" : "Copy screening log"}
+              </button>
+            )}
+            {!clinical && eligibleCount > 0 && (
               <button className="nextsteps-btn" onClick={onOpenNextSteps}>
                 Your next steps <span className="ns-count">{eligibleCount}</span>
               </button>
@@ -3218,8 +3306,31 @@ function Results({
 
         {/* Stat line leads — the counts that matter, not a paragraph of prose. */}
         <p className="board-sub">
-          Screened <b>{counts.poolTotal} recruiting trials</b> for <span className="mono">{conditionQuery}</span> · reasoned the top{" "}
-          <b>{counts.reasoned}</b> in depth
+          {curated ? (
+            <>
+              <b>{counts.poolTotal} hand-authored example studies</b> for <span className="mono">{conditionQuery}</span> · no registry search
+              and no model call ran for this sample patient
+            </>
+          ) : (
+            <>
+              Screened <b>{counts.poolTotal} recruiting trials</b> for <span className="mono">{conditionQuery}</span>
+              {/* How wide the net was is part of the claim: "we searched" means
+                  little without saying across how many terms. */}
+              {searchTerms.length > 1 ? (
+                <>
+                  {" "}
+                  <span title={searchTerms.join(" · ")}>and {searchTerms.length - 1} related terms</span>
+                </>
+              ) : null}{" "}
+              · reasoned the top <b>{counts.reasoned}</b> in depth
+              {excludedCount > 0 ? (
+                <>
+                  {" "}
+                  · <b>{excludedCount}</b> ruled out on published age/sex criteria
+                </>
+              ) : null}
+            </>
+          )}
           {filtersActive ? (
             <>
               {" "}
@@ -3263,7 +3374,9 @@ function Results({
             <span className="bn-ic" aria-hidden>
               ⓘ
             </span>{" "}
-            AI-generated eligibility — not a determination; only a study team can confirm you qualify.
+            {curated
+              ? "Curated demo result for the sample patient — illustrative, not a live eligibility screen."
+              : "AI-generated eligibility — not a determination; only a study team can confirm you qualify."}
           </span>
           <span className={`bn loc ${location.applied ? "on" : ""}`}>
             <span className="bn-ic" aria-hidden>
@@ -3363,6 +3476,7 @@ function Results({
                 <div className="ruled-body">
                   <DecisionCard
                     m={m}
+                    entrant={entrant}
                     saved={saved.has(m.nctId)}
                     onSave={() => onToggleSave(m.nctId)}
                     reasons={active ? prefReasons(m, prefs) : []}
@@ -3375,6 +3489,26 @@ function Results({
                 </div>
               </details>
             ))}
+          </>
+        )}
+
+        {/* Structural exclusions: decided from the registry's own age/sex fields,
+            in code, before any model call. Listed with the reason rather than
+            hidden — "we looked and here is why not" is the honest form. */}
+        {excluded.length > 0 && (statusFilter === "all" || statusFilter === "excluded") && (
+          <>
+            <div className="section-h">
+              Not open to you ({excluded.length}) <span>— the study&apos;s published age or sex criteria rule these out; no AI judgment involved</span>
+            </div>
+            <div className="screened-list">
+              {excluded.map((m) => (
+                <a key={m.nctId} className="screened-row" href={m.url} target="_blank" rel="noopener noreferrer">
+                  <span className="mono">{m.nctId}</span>
+                  <span className="sr-title">{m.title}</span>
+                  <span className="sr-why">{m.structuralExclusion}</span>
+                </a>
+              ))}
+            </div>
           </>
         )}
 
@@ -3413,6 +3547,7 @@ function Results({
 
 const DecisionCard = memo(function DecisionCard({
   m,
+  entrant,
   saved,
   onSave,
   reasons,
@@ -3425,6 +3560,7 @@ const DecisionCard = memo(function DecisionCard({
   revealActive = true,
 }: {
   m: TrialMatch;
+  entrant: Entrant;
   saved: boolean;
   onSave: () => void;
   reasons: string[];
@@ -3440,13 +3576,25 @@ const DecisionCard = memo(function DecisionCard({
 }) {
   const label = m.status === "eligible" ? "Eligible" : m.status === "uncertain" ? "Needs info" : "Ruled out";
   const near = m.status === "near";
+  // A coordinator's job on this card is the opposite of a patient's. The patient
+  // is deciding whether to want the trial, so the plain-language brief leads and
+  // the criterion ledger sits one click away. The coordinator already wants it —
+  // their question is "what is still missing and where do I get it", which is the
+  // ledger. So for a clinician the two swap places. No eligibility rule changes.
+  const clinical = entrant === "clinician";
+  // Open items, in the order a coordinator works them: the ones nothing in the
+  // record addresses first, since those are the phone calls.
+  const openItems = m.criteria
+    .map((c, i) => ({ c, i }))
+    .filter((x) => x.c.verdict === "confirm")
+    .sort((a, b) => Number(b.c.provenance === "not_documented") - Number(a.c.provenance === "not_documented"));
   // Referral is offered ONLY for trials the patient has fully met eligibility for
   // (Eligible) — never for "Needs info"/uncertain, where eligibility isn't established.
   const canRefer = m.status === "eligible";
   const tally = ledgerTally(m.criteria);
   // Lazy-render the ledger body: it's the densest part of the page, so we only
   // build its rows when the accordion is actually open (near-misses open by default).
-  const [ledgerOpen, setLedgerOpen] = useState(near);
+  const [ledgerOpen, setLedgerOpen] = useState(near || clinical);
   const enroll = m.factors.enrollmentWindow;
   const enrollUrgent = near || m.status === "uncertain";
   // Condensed enrollment chip: lead segment ("Open now") as the label, full
@@ -3516,7 +3664,52 @@ const DecisionCard = memo(function DecisionCard({
 
       {reasons.length > 0 && <div className="why">▲ moved up: {reasons.join(" · ")}</div>}
 
-      {!near && m.brief && (
+      {/* CLINICIAN LEAD — the screening worklist. Every open item, what the record
+          says about it today, and where the answer would have to come from. This
+          is the artifact a coordinator actually leaves with; it is derived purely
+          from the ledger, so it can never disagree with it. */}
+      {clinical && openItems.length > 0 && (
+        <div className="worklist">
+          <div className="worklist-h">
+            To obtain before screening <span className="worklist-n">{openItems.length}</span>
+          </div>
+          <ul>
+            {openItems.map(({ c, i }) => (
+              <li key={i}>
+                <span className="wl-req">{c.requirement}</span>
+                <SourceBadge source={c.provenance ?? "not_documented"} />
+                {c.evidence && <span className="wl-ev">{c.evidence}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* For a clinician the patient-facing framing is still available, but it is
+          reference material rather than the lead — they are not the addressee. */}
+      {!near && m.brief && clinical && (
+        <details className="brief-d">
+          <summary>Patient-facing framing</summary>
+          <div className="brief-d__body">
+            <div className="offer">
+              <div className="offer-k">Benefits of the study</div>
+              <div className="offer-v">{m.brief.offers}</div>
+            </div>
+            <div className="tradeoffs">
+              <div className="tcol ask">
+                <div className="tk">Expectations of the study</div>
+                <div className="tv">{m.brief.commitment}</div>
+              </div>
+              <div className="tcol unc">
+                <div className="tk">Additional Information</div>
+                <div className="tv">{m.brief.uncertainty}</div>
+              </div>
+            </div>
+          </div>
+        </details>
+      )}
+
+      {!near && m.brief && !clinical && (
         <>
           {/* "Could offer" gets the lead — full width, larger; the two trade-offs step down to a quieter pair. */}
           <div className="offer">
@@ -3556,11 +3749,26 @@ const DecisionCard = memo(function DecisionCard({
             location not verified
           </span>
         )}
+        {/* A study can be RECRUITING while every listed site is withdrawn,
+            suspended or finished. Say so — otherwise the site line above reads
+            as an invitation to a door that is shut. */}
+        {!m.factors.nearestSiteActive && !m.factors.locationUnknown && (
+          <span className="fchip warn" title="The registry lists no site whose own status is currently recruiting. Confirm with the study contact before travelling.">
+            no site listed as recruiting
+          </span>
+        )}
+        {/* Registry freshness: a stale record is the only published signal that a
+            study may have stopped enrolling without updating its status. */}
+        {m.factors.registryStale && m.factors.registryAgeDays !== null && (
+          <span className="fchip warn" title="ClinicalTrials.gov records are updated by the study team. A record this old may not reflect whether the study is still enrolling.">
+            registry entry {monthsAgo(m.factors.registryAgeDays)} old
+          </span>
+        )}
         {!m.interventional && <span className="fchip">Observational</span>}
       </div>
 
       {m.criteria.length > 0 && (
-        <details className="ledger-d" open={near} onToggle={(e) => setLedgerOpen((e.currentTarget as HTMLDetailsElement).open)}>
+        <details className="ledger-d" open={near || clinical} onToggle={(e) => setLedgerOpen((e.currentTarget as HTMLDetailsElement).open)}>
           <summary>
             <span className="lsum-label">Eligibility reasoning</span>
             <span className="lsum-tally">
@@ -3723,6 +3931,14 @@ function LedgerRow({
         <span className={`ck ${c.kind}`}>{c.kind}</span>
         <span className="cx">
           {c.requirement}
+          {/* On a failure, the coordinator's first question is whether this is a
+              "no" or a "not yet". Say which — it is the difference between
+              abandoning a study and diarising it. */}
+          {c.verdict === "fails" && (
+            <span className={`cfix ${c.remediable ? "soft" : "hard"}`}>
+              {c.remediable ? "could change" : "fixed for you"}
+            </span>
+          )}
           {c.evidence ? <span className="ev">{c.evidence}</span> : null}
         </span>
         {resolvable ? (
@@ -3808,7 +4024,7 @@ function applyReverdicts(
   prev: MatchResponse | null,
   nctId: string,
   indices: number[],
-  verdicts: { verdict: Verdict; evidence: string }[],
+  verdicts: Reverdict[],
 ): MatchResponse | null {
   if (!prev) return prev;
   const matches = prev.matches.map((m) => {
@@ -3816,16 +4032,109 @@ function applyReverdicts(
     const criteria = m.criteria.map((c, i) => {
       const at = indices.indexOf(i);
       if (at === -1 || !verdicts[at]) return c;
-      return { ...c, verdict: verdicts[at].verdict, evidence: verdicts[at].evidence || c.evidence };
+      return {
+        ...c,
+        verdict: verdicts[at].verdict,
+        evidence: verdicts[at].evidence || c.evidence,
+        // Keep the prior reading when the re-judge didn't supply one, rather
+        // than defaulting a newly-failing criterion to "definitively out".
+        remediable: verdicts[at].remediable ?? c.remediable,
+      };
     });
     return { ...m, criteria, status: deriveStatus(criteria), metCount: metCountOf(criteria), total: criteria.length };
   });
   return { ...prev, matches, counts: recomputeCounts(prev.counts, matches) };
 }
 
+/* ---- the coordinator's screening log --------------------------------------
+   A plain-text transcription of the result set, grouped the way a coordinator
+   triages: who can be approached, who needs a phone call and about what, who is
+   out and whether that is reversible. It restates the same disclaimer the screen
+   carries, because a pasted artifact outlives the screen it came from.
+   -------------------------------------------------------------------------- */
+function buildScreeningLog(data: MatchResponse): string {
+  const { counts, matches, conditionQuery, summary, coverage } = data;
+  const L: string[] = [];
+  const terms = (coverage?.terms ?? []).filter((t) => !t.error && t.added > 0);
+
+  const curated = data.provenance === "curated-demo";
+
+  L.push("TRIALIGN SCREENING LOG");
+  if (curated) {
+    // The same caveat the screen carries. A log gets pasted into notes and
+    // emails, where it outlives the screen that qualified it — so it has to
+    // qualify itself, or it becomes a screening record of a screen that never ran.
+    L.push("CURATED DEMO RESULT for the sample patient — illustrative only.");
+    L.push("No registry search and no model reasoning were run to produce this.");
+  } else {
+    L.push("Informational pre-screen against published registry criteria. NOT an eligibility");
+    L.push("determination — only the study team can confirm eligibility, after a screening workup.");
+  }
+  L.push("");
+  if (summary) L.push(`Patient: ${summary}`);
+  L.push(
+    curated
+      ? `Condition: ${conditionQuery} · ${counts.poolTotal} hand-authored example studies`
+      : `Search: ${conditionQuery}${terms.length > 1 ? ` (+${terms.length - 1} related terms)` : ""} · ` +
+          `${counts.poolTotal} recruiting studies retrieved · top ${counts.reasoned} reasoned in depth`,
+  );
+  L.push(curated ? "Studies are real ClinicalTrials.gov records; the verdicts below are hand-authored." : "Source: ClinicalTrials.gov");
+
+  const section = (title: string, rows: TrialMatch[], body: (m: TrialMatch) => string[]) => {
+    if (rows.length === 0) return;
+    L.push("", `${title} (${rows.length})`, "-".repeat(70));
+    for (const m of rows) {
+      L.push(`${m.nctId}  ${m.title}`);
+      L.push(`  ${m.phase} · ${m.sponsor}`);
+      for (const line of body(m)) L.push(`  ${line}`);
+      L.push("");
+    }
+  };
+
+  const siteLine = (m: TrialMatch): string => {
+    const site = m.factors.nearestSiteActive ? m.factors.nearestSite : `${m.factors.nearestSite} (NO SITE LISTED AS RECRUITING)`;
+    const age = m.factors.registryStale && m.factors.registryAgeDays !== null ? ` · registry record ${m.factors.registryAgeDays} days old` : "";
+    return `site: ${site}${age}`;
+  };
+
+  section("ELIGIBLE ON PUBLISHED CRITERIA", matches.filter((m) => m.status === "eligible"), (m) => [
+    siteLine(m),
+    `${m.metCount}/${m.total} criteria satisfied, no open items`,
+  ]);
+
+  section("NEEDS INFORMATION", matches.filter((m) => m.status === "uncertain"), (m) => [
+    siteLine(m),
+    `${m.metCount}/${m.total} criteria satisfied · ${openCountOf(m.criteria)} open`,
+    "to obtain:",
+    ...m.criteria
+      .filter((c) => c.verdict === "confirm")
+      .map((c) => `  - ${c.requirement}  [${c.provenance === "not_documented" ? "nothing on record" : c.provenance}]`),
+  ]);
+
+  section("RULED OUT ON PUBLISHED CRITERIA", matches.filter((m) => m.status === "near"), (m) => [
+    ...m.criteria
+      .filter((c) => c.verdict === "fails")
+      .map((c) => `fails: ${c.requirement}  [${c.remediable ? "could change" : "fixed for this patient"}]${c.evidence ? ` — ${c.evidence}` : ""}`),
+  ]);
+
+  section("NOT OPEN — PUBLISHED AGE/SEX CRITERIA", matches.filter((m) => m.status === "excluded"), (m) => [
+    m.structuralExclusion ?? "",
+  ]);
+
+  const screened = matches.filter((m) => m.status === "screened");
+  if (screened.length > 0) {
+    L.push("", `RETRIEVED BUT NOT REASONED THIS PASS (${screened.length})`, "-".repeat(70));
+    L.push("These matched the condition and recruiting filters. They were not ruled out —");
+    L.push("they simply did not get a deep-reasoning slot in this run.");
+    for (const m of screened) L.push(`${m.nctId}  ${m.title}`);
+  }
+
+  return L.join("\n");
+}
+
 /* Keep the header status buckets honest after a criterion flips a trial's status. */
 function recomputeCounts(base: Counts, matches: TrialMatch[]): Counts {
-  const reasoned = matches.filter((m) => m.status !== "screened");
+  const reasoned = matches.filter((m) => m.status !== "screened" && m.status !== "excluded");
   return {
     ...base,
     eligible: reasoned.filter((m) => m.status === "eligible").length,

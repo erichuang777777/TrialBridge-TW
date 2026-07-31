@@ -49,7 +49,7 @@ function SignupForm() {
         <span>Trialign</span>
       </Link>
       <h1>Create your account</h1>
-      <p className="auth-sub">Save searches and pick up where you left off.</p>
+      <p className="auth-sub">Demo account — explore the signed-in experience.</p>
 
       <form className="auth-form" onSubmit={onSubmit} noValidate>
         <div className="auth-field">

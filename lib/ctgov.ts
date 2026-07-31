@@ -83,12 +83,18 @@ export type SearchOptions = {
   status?: string; // overrides the study-type-derived status when set
   pageSize?: number; // default 30
   studyTypes?: StudyTypeKey[]; // §4.1 scope; empty/undefined = no study-type filter
+  /** Optional location term (city / state / ZIP). Sent as `query.locn`, which
+   *  the registry matches against a study's site list. Used ONLY to pull an
+   *  ADDITIONAL, location-boosted page that is unioned with the unlocalized
+   *  results — never as a filter, so it can raise recall but never lower it. */
+  locn?: string;
 };
 
 /** Search recruiting trials for a condition and return normalized Trial[]. */
 export async function searchTrials(opts: SearchOptions): Promise<Trial[]> {
   const params = new URLSearchParams();
   if (opts.cond) params.set("query.cond", opts.cond);
+  if (opts.locn?.trim()) params.set("query.locn", opts.locn.trim());
   const { advanced, statuses } = buildStudyTypeFilter(opts.studyTypes ?? []);
   params.set("filter.overallStatus", opts.status ?? statuses.join(","));
   if (advanced) params.set("filter.advanced", advanced);
@@ -143,6 +149,7 @@ type RawStudy = {
       eligibilityCriteria?: string;
       sex?: string;
       minimumAge?: string;
+      maximumAge?: string;
       stdAges?: string[];
     };
     contactsLocationsModule?: { centralContacts?: RawContact[]; locations?: RawLocation[] };
@@ -159,6 +166,19 @@ type RawLocation = {
   status?: string;
   contacts?: RawContact[];
 };
+
+/* ---- site-level recruiting status ----
+   A study's overallStatus is RECRUITING while individual sites can be WITHDRAWN,
+   SUSPENDED, TERMINATED, COMPLETED, or NOT_YET_RECRUITING. Showing one of those
+   as "your nearest site" sends a patient to a door that is shut, so every
+   proximity decision keys off THIS predicate, not off the study status.
+   The registry omits `status` on many location records; an omitted status is
+   treated as open (we inherit the study's RECRUITING) rather than hidden. */
+const SITE_OPEN = new Set(["RECRUITING", "AVAILABLE", "ENROLLING_BY_INVITATION", ""]);
+
+export function siteIsRecruiting(loc: { status: string }): boolean {
+  return SITE_OPEN.has((loc.status ?? "").trim().toUpperCase());
+}
 
 function normalizeContact(c: RawContact): TrialContact {
   return { name: c.name ?? "", role: c.role ?? "", phone: c.phone ?? "", email: c.email ?? "" };
@@ -202,6 +222,7 @@ function normalizeStudy(study: RawStudy): Trial | null {
     eligibilityCriteria: p?.eligibilityModule?.eligibilityCriteria ?? "",
     sex: p?.eligibilityModule?.sex ?? "",
     minimumAge: p?.eligibilityModule?.minimumAge ?? "",
+    maximumAge: p?.eligibilityModule?.maximumAge ?? "",
     stdAges: p?.eligibilityModule?.stdAges ?? [],
     locations,
     url: `https://clinicaltrials.gov/study/${id.nctId}`,

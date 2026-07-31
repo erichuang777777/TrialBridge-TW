@@ -1,0 +1,35 @@
+# The deterministic eval suite is only worth having if something runs it.
+#
+# Everything here is offline: no ANTHROPIC_API_KEY, no registry calls. The
+# model-tier scorecard (`npm run eval:model`) costs tokens per run and needs a
+# key, so it stays a deliberate local/manual step rather than a per-push one.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22.x for native TypeScript execution — the eval suite runs its .ts
+          # sources directly, with no build step and no extra dependency.
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Eval — deterministic layers
+        run: npm run eval
+
+      - name: Build
+        run: npm run build

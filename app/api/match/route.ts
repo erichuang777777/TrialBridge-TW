@@ -1,13 +1,20 @@
 /* ============================================================================
    POST /api/match  —  profile → ranked trials with per-criterion ledgers
 
-   Seam #3 (retrieve → segment → reason). The trust surface of the product.
+   Seam #3 (retrieve → gate → triage → reason). The trust surface of the product.
 
-   1. Fetch a pool of recruiting trials for the profile's condition (live).
-   2. Deep-reason the top DEEP_REASON_COUNT with Claude, one call per trial,
-      at bounded concurrency: segment the eligibility prose into atomic
-      criteria and judge each against the profile.
-   3. The rest are returned as "screened — not yet reasoned" so nothing is
+   1. Retrieve a pool of recruiting trials across SEVERAL condition terms (live),
+      unioned and de-duplicated. One term is a hard ceiling on recall and recall
+      lost here cannot be recovered downstream.
+   2. Apply deterministic structural gates (age band, sex) from the registry's
+      own structured fields. Ruled-out studies are reported with the reason and
+      never consume a reasoning call.
+   3. Triage the survivors with a cheap model to decide READING ORDER — a ranker,
+      never a filter, so a triage mistake costs position and not visibility.
+   4. Deep-reason the top DEEP_REASON_COUNT with Claude, one call per trial, at
+      bounded concurrency: segment the eligibility prose into atomic criteria and
+      judge each against the profile.
+   5. The rest are returned as "screened — not yet reasoned" so nothing is
       silently dropped.
 
    Trust invariants enforced here, not left to the model:
@@ -15,77 +22,60 @@
      from a model's self-report (rank on explainable signal only).
    - "confirm" (insufficient info) is a first-class verdict — a coordinator
      to-do, never guessed into a pass or fail.
+   - Ranking is over absolute, cross-trial-comparable counts (hard failures,
+     open items) — never a met/total ratio, whose denominator is an artifact of
+     how finely the model happened to segment the prose.
    ========================================================================== */
 
 import { NextResponse } from "next/server";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { anthropic, MODEL } from "@/lib/anthropic";
-import { LedgerSchema } from "@/lib/schemas";
-import { searchRegistries } from "@/lib/registries";
+import { anthropic, TRIAGE_MODEL } from "@/lib/anthropic";
+import { TriageSchema } from "@/lib/schemas";
+import { searchExpanded, type SearchLeg } from "@/lib/registries";
 import type { StudyTypeKey } from "@/lib/ctgov";
-import { VERDICT_RULES, deriveStatus, metCountOf } from "@/lib/verdict";
+import { compareMatches } from "@/lib/verdict";
+import { DOCUMENT_IS_DATA, reasonSystem, reasonTrial, renderProfile } from "@/lib/reason";
+import { derivePatientDemographics, structuralExclusion } from "@/lib/structuralGate";
+import { computeFactors, type GeoContext } from "@/lib/factors";
+import { derivePatientLoc, travelThreshold, type TravelPref } from "@/lib/geo";
 import { margaretDemoMatch } from "@/lib/demoMatch";
-import type { Trial, TrialMatch, MatchStatus, Criterion, DecisionFactors } from "@/lib/types";
+import type { Trial, TrialMatch } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 /* --- tuning knobs (logged when they bound coverage; never silent) --- */
-const CANDIDATE_POOL = 30; // structural candidates fetched from the registry
+const PER_TERM_PAGE = 50; // studies fetched per condition term
+const CANDIDATE_POOL = 120; // cap on the merged, de-duplicated candidate pool
+const TRIAGE_BATCH = 30; // candidates scored per triage call
 const DEEP_REASON_COUNT = 10; // trials we run full Claude reasoning over
 const CONCURRENCY = 5; // simultaneous per-trial Claude calls
 
-const SYSTEM = `You are the coordinating agent for Trialign, screening one patient against one clinical trial's eligibility criteria.
+const TRIAGE_SYSTEM = `You are ordering a reading queue for Trialign.
 
-You are given a structured patient profile and the verbatim inclusion/exclusion text from ClinicalTrials.gov. Segment that text into atomic criteria and judge each against the profile.
+A patient profile and a list of recruiting studies are given. Score each study for whether it is worth spending full eligibility reasoning on for THIS patient, using only the title, conditions, phase and interventions. You are deciding READING ORDER, not eligibility — nothing is excluded on your score, and a low score only means "read this later".
 
-${VERDICT_RULES}
+${DOCUMENT_IS_DATA}
 
-For EACH criterion, also set \`provenance\` — where the evidence for your judgment came from (this is descriptive and NEVER changes the verdict):
-- "fhir": the profile value you relied on is structured chart data (imported via SMART on FHIR).
-- "note": you relied on a clinical narrative/note value.
-- "you": you relied on something the patient stated/told us directly.
-- "not_documented": nothing in the record addresses this criterion. Use this ONLY together with a "confirm" verdict (it marks the gap the coordinator would otherwise phone to discover).
-
-THEN produce a patient-facing decision brief (the \`brief\` field) to help this person weigh the trial with their care team:
-- Write for the reader named in the ADDRESSEE section at the end of this prompt — follow its voice and plain-language rules. Apply the same addressee to the headline field (it overrides any "speak to you" wording in the field schema when the addressee is a caregiver or clinician).
-- Ground offers / commitment / uncertainty ONLY in the trial facts given to you (phase, purpose, randomization/masking, interventions, nearest site) and your eligibility findings. Never invent efficacy, outcomes, or benefit.
-- Be phase-honest: a Phase 1 study tests safety and dosing and benefit to the patient is unproven; an observational study contributes data and provides no treatment; only later-phase interventional studies test whether a treatment works.
-- Non-directive: NEVER tell the patient which trial to choose, or call any trial "best" or "recommended". You frame the decision; the patient and their care team make it.
-- BE BRIEF. offers / commitment / uncertainty are each 1–2 short sentences (~30 words, hard cap). Lead with the single most important point and stop. Do NOT restate the trial title, re-explain a drug's mechanism at length, or pad with caveats. Concise beats complete — the reader is scanning three columns side by side.
-- questionsToAsk: turn the 'confirm' items and the real uncertainties into 2–3 specific questions this patient should bring to their care team.`;
-
-/* §5.3 — "Who's filling this out?" changes ONLY the addressee/voice of the brief
-   and headline. Every eligibility rule (verdicts, citation, fail-closed) is
-   identical across entrants. voiceRules() is appended to SYSTEM per request. */
-type Entrant = "patient" | "caregiver" | "clinician";
-function normalizeEntrant(input?: string): Entrant {
-  return input === "caregiver" || input === "clinician" ? input : "patient";
-}
-function voiceRules(entrant: Entrant): string {
-  switch (entrant) {
-    case "caregiver":
-      return `ADDRESSEE — a family member or caregiver is reading this on behalf of the patient:
-- Address the caregiver ABOUT the patient. Refer to the patient as "your loved one" — never invent a name, and never use "you" to mean the patient.
-- Keep plain language and gloss any clinical term once. All non-directive, citation, and fail-closed rules apply exactly as stated above.`;
-    case "clinician":
-      return `ADDRESSEE — a clinician is reading this:
-- A clinical register is acceptable; you may use standard oncology terminology WITHOUT glossing it into plain language. Refer to "the patient". Keep it concise and professional.
-- All non-directive, citation, and fail-closed rules apply exactly as stated above — voice is the ONLY thing that changes.`;
-    default:
-      return `ADDRESSEE — the patient is reading this (default voice):
-- Address the patient directly as "you". Plain language; gloss any clinical term once.`;
-  }
-}
+Rules:
+- 2 = likely: the disease, stage and biomarker context line up with this patient.
+- 1 = possible: right disease area, fit unclear from the metadata alone.
+- 0 = unlikely: a different disease, a different population (e.g. pediatric-only for an adult), or plainly inapplicable.
+- When torn between two scores, give the HIGHER one. Under-scoring costs a study its reasoning slot, which is the expensive mistake here.
+- You have NOT been shown the eligibility criteria. Never phrase a reason as an eligibility finding.
+- Return one entry per study, in the order given, echoing each NCT id exactly.`;
 
 type MatchBody = {
   conditionQuery?: string;
+  /** Additional condition terms to union with conditionQuery (recall, §P1). */
+  conditionQueries?: string[];
   summary?: string;
   fields?: { label: string; value: string }[];
   /** Explicit location captured in the intake survey (city, state, or ZIP). */
   location?: string;
-  /** Travel preference: "local" (~25mi) · "regional" (~100mi) · "any". */
-  travel?: "local" | "regional" | "any" | null;
+  /** Travel preference: "local" (your state) · "regional" (your state or one
+   *  next to it) · "any". */
+  travel?: TravelPref | null;
   /** Study-type scope chips (§4.1). Applied at the registry before reasoning. */
   studyTypes?: string[];
   /** Who's filling this out (§5.3) — changes the brief/headline voice only. */
@@ -120,45 +110,93 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "conditionQuery is required." }, { status: 400 });
   }
 
+  const fields = profile.fields ?? [];
+  // Prefer the explicitly captured survey location; fall back to any location
+  // read out of the note. Distance filtering only bites when we actually have one.
+  const patient = derivePatientLoc(fields, profile.location);
+  const travelThr = travelThreshold(profile.travel ?? null);
+  const now = Date.now();
+  const geo: GeoContext = { patient, travelThr, now };
+
   let pool: Trial[];
+  let legs: SearchLeg[];
   try {
     // §4.1: scope the candidate set at the registry so excluded study types never
-    // reach the pool and never consume a Claude reasoning call.
-    pool = await searchRegistries({ cond, pageSize: CANDIDATE_POOL, studyTypes: sanitizeStudyTypes(profile.studyTypes) });
+    // reach the pool and never consume a Claude reasoning call. The terms are
+    // unioned: a basket study registered under a broader umbrella is only
+    // reachable from a broader term.
+    const found = await searchExpanded({
+      terms: [cond, ...(profile.conditionQueries ?? [])],
+      pageSize: PER_TERM_PAGE,
+      studyTypes: sanitizeStudyTypes(profile.studyTypes),
+      // Only worth an extra leg when the patient actually cares about distance.
+      locn: travelThr > 0 ? (profile.location ?? "").trim() || undefined : undefined,
+      cap: CANDIDATE_POOL,
+    });
+    pool = found.trials;
+    legs = found.legs;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Trial registry request failed.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
   const profileText = renderProfile(profile);
-  // Prefer the explicitly captured survey location; fall back to any location
-  // read out of the note. Distance filtering only bites when we actually have one.
-  const patient = derivePatientLoc(profile.fields ?? [], profile.location);
-  const travelThr = travelThreshold(profile.travel ?? null);
-  const geo: GeoContext = { patient, travelThr };
-  const toReason = pool.slice(0, DEEP_REASON_COUNT);
-  const screenedOnly = pool.slice(DEEP_REASON_COUNT);
+
+  /* --- structural gates: decidable in code, so decided in code --- */
+  const demographics = derivePatientDemographics(fields, profile.summary);
+  const candidates: Trial[] = [];
+  const excluded: TrialMatch[] = [];
+  for (const trial of pool) {
+    const gate = structuralExclusion(trial, demographics);
+    if (gate) {
+      excluded.push({
+        ...trial,
+        status: "excluded",
+        headline: gate.reason,
+        criteria: [],
+        metCount: 0,
+        total: 0,
+        brief: null,
+        factors: computeFactors(trial, geo),
+        structuralExclusion: gate.reason,
+        triageScore: null,
+      });
+    } else {
+      candidates.push(trial);
+    }
+  }
 
   // Compose the addressee voice (§5.3) onto the base system prompt once per search.
-  const system = `${SYSTEM}\n\n${voiceRules(normalizeEntrant(profile.entrant))}`;
+  const system = reasonSystem(profile.entrant);
 
   let reasoned: TrialMatch[];
+  let screenedOnly: Trial[];
+  let triageScores: Map<string, number>;
   try {
     const client = anthropic();
-    reasoned = await mapPool(toReason, CONCURRENCY, (trial) => reasonTrial(client, system, profileText, trial, geo));
+
+    // Order the queue by patient-specific plausibility rather than by the
+    // registry's own relevance ranking, which knows the search term and nothing
+    // about the patient. Ranker only — a failure here falls back to pool order.
+    triageScores = await triagePool(client, profileText, candidates);
+    const queue = orderByTriage(candidates, triageScores);
+
+    const toReason = queue.slice(0, DEEP_REASON_COUNT);
+    screenedOnly = queue.slice(DEEP_REASON_COUNT);
+
+    reasoned = await mapPool(toReason, CONCURRENCY, (trial) =>
+      reasonTrial(client, system, profileText, trial, geo, triageScores.get(trial.nctId) ?? null),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Reasoning failed.";
     const status = message.includes("ANTHROPIC_API_KEY") ? 500 : 502;
     return NextResponse.json({ error: message }, { status });
   }
 
-  // Rank the reasoned trials on explainable signal only: eligible first, then
-  // by criteria-met ratio. Never on a model's self-reported confidence.
-  const rank: Record<MatchStatus, number> = { eligible: 0, uncertain: 1, near: 2, screened: 3 };
-  reasoned.sort((a, b) => {
-    if (rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
-    return ratio(b) - ratio(a);
-  });
+  // Rank on explainable signal only: status first, then absolute counts that
+  // mean the same thing across trials (hard failures, open items). Never a
+  // met/total ratio, and never a model's self-reported confidence.
+  reasoned.sort(compareMatches);
 
   const screened: TrialMatch[] = screenedOnly.map((t) => ({
     ...t,
@@ -169,9 +207,11 @@ export async function POST(req: Request) {
     total: 0,
     brief: null,
     factors: computeFactors(t, geo),
+    structuralExclusion: null,
+    triageScore: triageScores.get(t.nctId) ?? null,
   }));
 
-  const matches = [...reasoned, ...screened];
+  const matches = [...reasoned, ...screened, ...excluded];
   const counts = {
     poolTotal: pool.length,
     reasoned: reasoned.length,
@@ -179,6 +219,13 @@ export async function POST(req: Request) {
     uncertain: reasoned.filter((m) => m.status === "uncertain").length,
     near: reasoned.filter((m) => m.status === "near").length,
     screened: screened.length,
+    excluded: excluded.length,
+  };
+
+  // How the pool was assembled, so coverage is inspectable instead of implied.
+  const coverage = {
+    terms: legs.map((l) => ({ term: l.term, added: l.added, error: l.error ?? null })),
+    triaged: triageScores.size > 0,
   };
 
   // Location filtering is only meaningful when we have BOTH a patient location
@@ -191,246 +238,72 @@ export async function POST(req: Request) {
     inRange: locationApplied ? reasoned.filter((m) => m.factors.withinRange === true).length : 0,
   };
 
-  return NextResponse.json({ conditionQuery: cond, summary: profile.summary ?? "", counts, location, matches });
+  return NextResponse.json({ provenance: "live", conditionQuery: cond, summary: profile.summary ?? "", counts, coverage, location, matches });
 }
 
-/* ---- per-trial reasoning ---- */
+/* ---- triage (reading order) ---- */
 
-async function reasonTrial(
+/**
+ * Score every candidate 0–2 for plausibility, in batches. Purely an ordering
+ * signal: on any failure we return an empty map and the pool keeps its registry
+ * order, so the expensive-but-safe behavior is the fallback.
+ */
+async function triagePool(
   client: ReturnType<typeof anthropic>,
-  system: string,
   profileText: string,
-  trial: Trial,
-  geo: GeoContext,
-): Promise<TrialMatch> {
-  const factors = computeFactors(trial, geo);
+  candidates: Trial[],
+): Promise<Map<string, number>> {
+  const scores = new Map<string, number>();
+  // Nothing to order when every candidate gets reasoned anyway.
+  if (candidates.length <= DEEP_REASON_COUNT) return scores;
 
-  // No eligibility text → nothing to reason over; surface as screened rather
-  // than burning a call on an empty prompt.
-  if (!trial.eligibilityCriteria.trim()) {
-    return { ...trial, status: "screened", headline: "No eligibility text published.", criteria: [], metCount: 0, total: 0, brief: null, factors };
-  }
+  const batches: Trial[][] = [];
+  for (let i = 0; i < candidates.length; i += TRIAGE_BATCH) batches.push(candidates.slice(i, i + TRIAGE_BATCH));
 
-  const design =
-    `Design: ${trial.randomized ? "randomized" : "non-randomized"}, ` +
-    `${trial.masked ? "blinded/masked (placebo or unknown arm possible)" : "open-label"}` +
-    `${trial.enrollment ? `, ~${trial.enrollment} participants` : ""}`;
-  const interventions = trial.interventions.length
-    ? trial.interventions.map((i) => (i.type ? `${i.name} (${i.type})` : i.name)).join("; ")
-    : "—";
+  const settled = await Promise.allSettled(
+    batches.map(async (batch) => {
+      const listing = batch
+        .map(
+          (t, i) =>
+            `${i + 1}. ${t.nctId} — ${t.title}\n   Phase ${t.phase} · ${t.studyType}${t.primaryPurpose ? ` · ${t.primaryPurpose}` : ""}\n` +
+            `   Conditions: ${t.conditions.join("; ") || "—"}\n` +
+            `   Interventions: ${t.interventions.map((iv) => iv.name).join("; ") || "—"}`,
+        )
+        .join("\n");
+      const msg = await client.messages.parse({
+        model: TRIAGE_MODEL,
+        max_tokens: 4000,
+        system: TRIAGE_SYSTEM,
+        output_config: { format: zodOutputFormat(TriageSchema) },
+        messages: [{ role: "user", content: `PATIENT PROFILE\n${profileText}\n\nSTUDIES\n${listing}` }],
+      });
+      return msg.parsed_output?.items ?? [];
+    }),
+  );
 
-  const msg = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 8000,
-    thinking: { type: "adaptive" },
-    system,
-    output_config: { format: zodOutputFormat(LedgerSchema) },
-    messages: [
-      {
-        role: "user",
-        content:
-          `PATIENT PROFILE\n${profileText}\n\n` +
-          `TRIAL ${trial.nctId} — ${trial.title}\n` +
-          `Phase ${trial.phase} · ${trial.studyType}${trial.primaryPurpose ? ` · ${trial.primaryPurpose}` : ""} · ${trial.sponsor}\n` +
-          `${design}\n` +
-          `Interventions: ${interventions}\n` +
-          `Nearest site to the patient: ${factors.nearestSite}\n\n` +
-          `ELIGIBILITY CRITERIA (verbatim from ClinicalTrials.gov)\n${trial.eligibilityCriteria}`,
-      },
-    ],
-  });
-
-  const ledger = msg.parsed_output;
-  const criteria = (ledger?.criteria ?? []) as Criterion[];
-  const brief = ledger?.brief ?? null;
-  const total = criteria.length;
-
-  // Status/tally derived from the criteria — fail-closed, explainable. Shared
-  // with /api/reconfirm and the client so a resolved "confirm" re-derives the
-  // same way it was first computed.
-  const status = deriveStatus(criteria);
-
-  return { ...trial, status, headline: ledger?.headline ?? "", criteria, metCount: metCountOf(criteria), total, brief, factors };
-}
-
-/* ---- helpers ---- */
-
-function renderProfile(profile: { summary?: string; fields?: { label: string; value: string }[] }): string {
-  const lines: string[] = [];
-  if (profile.summary) lines.push(profile.summary, "");
-  for (const f of profile.fields ?? []) lines.push(`${f.label}: ${f.value}`);
-  return lines.join("\n");
-}
-
-/* ---- decision factors (deterministic — computed in code, never from the model) ---- */
-
-type PatientLoc = { tokens: Set<string>; known: boolean };
-
-/** Everything the deterministic geo/proximity layer needs for one search. */
-type GeoContext = {
-  patient: PatientLoc;
-  /** Min proximityScore to count as "within range": 3 local (same city) ·
-   *  2 regional (same state) · 0 = no distance filter. */
-  travelThr: number;
-};
-
-/** Map a travel preference to the minimum proximity score that counts as in-range.
- *  We can only place sites at city/state granularity (no true mileage without
- *  geocoding), so we map conservatively: local (~25mi) → at least same state,
- *  regional (~100mi) → at least same country, any → 0 (no distance filter).
- *  This is what excludes out-of-state trials from a "stay near home" search. */
-function travelThreshold(t: "local" | "regional" | "any" | null): number {
-  return t === "local" ? 2 : t === "regional" ? 1 : 0;
-}
-
-const US_STATES: Record<string, string> = {
-  al: "alabama", ak: "alaska", az: "arizona", ar: "arkansas", ca: "california",
-  co: "colorado", ct: "connecticut", de: "delaware", fl: "florida", ga: "georgia",
-  hi: "hawaii", id: "idaho", il: "illinois", in: "indiana", ia: "iowa",
-  ks: "kansas", ky: "kentucky", la: "louisiana", me: "maine", md: "maryland",
-  ma: "massachusetts", mi: "michigan", mn: "minnesota", ms: "mississippi", mo: "missouri",
-  mt: "montana", ne: "nebraska", nv: "nevada", nh: "new hampshire", nj: "new jersey",
-  nm: "new mexico", ny: "new york", nc: "north carolina", nd: "north dakota", oh: "ohio",
-  ok: "oklahoma", or: "oregon", pa: "pennsylvania", ri: "rhode island", sc: "south carolina",
-  sd: "south dakota", tn: "tennessee", tx: "texas", ut: "utah", vt: "vermont",
-  va: "virginia", wa: "washington", wv: "west virginia", wi: "wisconsin", wy: "wyoming",
-  dc: "district of columbia",
-};
-const STATE_ABBR: Record<string, string> = Object.fromEntries(
-  Object.entries(US_STATES).map(([abbr, name]) => [name, abbr]),
-);
-
-/** Pull the patient's location into a token set (city + state name + US state
-    abbreviation) for approximate proximity. The explicitly-entered survey
-    location wins; profile fields read from the note are a fallback. */
-function derivePatientLoc(fields: { label: string; value: string }[], explicit?: string): PatientLoc {
-  const fromFields = fields
-    .filter((f) => /location|city|state|region|geograph|reside|home/i.test(f.label))
-    .map((f) => f.value)
-    .join(", ");
-  const raw = [explicit ?? "", fromFields].filter(Boolean).join(", ");
-  const tokens = new Set<string>();
-  for (const part of raw.split(/[,/;]/)) {
-    const p = part.trim().toLowerCase().replace(/\./g, "");
-    if (!p || /not found|unknown|n\/a|—/.test(p)) continue;
-    tokens.add(p);
-    for (const w of p.split(/\s+/)) if (w.length >= 2) tokens.add(w);
-  }
-  // expand state abbreviation ↔ full name in both directions
-  let isUS = false;
-  for (const t of Array.from(tokens)) {
-    if (US_STATES[t]) {
-      tokens.add(US_STATES[t]);
-      isUS = true;
+  for (const result of settled) {
+    if (result.status === "rejected") {
+      console.warn("[match] triage batch failed; falling back to registry order for it:", result.reason);
+      continue;
     }
-    if (STATE_ABBR[t]) {
-      tokens.add(STATE_ABBR[t]);
-      isUS = true;
+    for (const item of result.value) {
+      const score = Number(item.score);
+      if (!Number.isFinite(score)) continue;
+      scores.set(item.nctId, Math.max(0, Math.min(2, Math.round(score))));
     }
   }
-  // A recognized US state implies the country — otherwise "regional" (country-level)
-  // proximity can never match, since the patient rarely types out a country.
-  // CT.gov reports US sites with country "United States".
-  if (isUS) {
-    tokens.add("united states");
-    tokens.add("usa");
-    tokens.add("us");
-  }
-  return { tokens, known: tokens.size > 0 };
+  return scores;
 }
 
-type LocLike = { city: string; state: string; country: string };
-
-function siteLabel(loc: LocLike): string {
-  const place = [loc.city, loc.state].filter(Boolean).join(", ");
-  return place || loc.country || "Site";
-}
-
-/** 3 same city · 2 same state · 1 same country · 0 unknown/none. Approximate. */
-function proximity(loc: LocLike, patient: PatientLoc): number {
-  if (!patient.known) return 0;
-  const city = loc.city.trim().toLowerCase();
-  const state = loc.state.trim().toLowerCase();
-  const country = loc.country.trim().toLowerCase();
-  if (city && patient.tokens.has(city)) return 3;
-  if (state && (patient.tokens.has(state) || (STATE_ABBR[state] && patient.tokens.has(STATE_ABBR[state])))) return 2;
-  if (country && patient.tokens.has(country)) return 1;
-  return 0;
-}
-
-function phaseToRank(phase: string): number {
-  const p = phase.toLowerCase();
-  if (p.includes("4")) return 4;
-  if (p.includes("3")) return 3;
-  if (p.includes("2")) return 2;
-  if (p.includes("1")) return 1;
-  return 0; // N/A or observational
-}
-
-/** Rough burden estimate: observational = low; early-phase interventional = higher. */
-function burdenProxy(trial: Trial): number {
-  if (!trial.interventional) return 0;
-  return phaseToRank(trial.phase) <= 1 ? 2 : 1;
-}
-
-function computeFactors(trial: Trial, geo: GeoContext): DecisionFactors {
-  const { patient, travelThr } = geo;
-  let best = 0;
-  let nearest = "";
-  for (const loc of trial.locations) {
-    const score = proximity(loc, patient);
-    if (score > best) {
-      best = score;
-      nearest = siteLabel(loc);
-    }
-  }
-  const hasPlaceableSite = trial.locations.some((l) => l.city || l.state || l.country);
-  if (!nearest) nearest = trial.locations[0] ? siteLabel(trial.locations[0]) : "No site listed";
-
-  // withinRange is only a real yes/no when we ran distance filtering (patient
-  // location known + a distance preference set). Otherwise it's null = "not filtered".
-  const filtering = patient.known && travelThr > 0;
-  const withinRange = filtering ? best >= travelThr : null;
-
-  return {
-    phaseRank: phaseToRank(trial.phase),
-    randomized: trial.randomized || trial.masked,
-    interventional: trial.interventional,
-    nearestSite: nearest,
-    proximityScore: best,
-    burdenProxy: burdenProxy(trial),
-    withinRange,
-    locationUnknown: !hasPlaceableSite,
-    enrollmentWindow: enrollmentWindow(trial),
-  };
-}
-
-/* ---- enrollment window (P1.1) — best-estimate, explicitly labeled ----
-   CT.gov has no clean "enrollment close" field. For a recruiting study we know
-   enrollment is open now; the primary completion date is the closest published
-   upper bound on how long there is to get in. We surface it AS an estimate. */
-function enrollmentWindow(trial: Trial): string {
-  const recruiting = trial.overallStatus.toUpperCase() === "RECRUITING";
-  const bound = trial.primaryCompletionDate || trial.completionDate;
-  const boundLabel = fmtMonthYear(bound);
-  if (recruiting && boundLabel) return `Open now · est. closes before ~${boundLabel}`;
-  if (recruiting) return "Open now · estimated close date not published";
-  if (boundLabel) return `Est. closes before ~${boundLabel}`;
-  return "";
-}
-
-/** "2026-03-31" or "2026-03" → "Mar 2026". Returns "" for empty/malformed input. */
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function fmtMonthYear(date: string): string {
-  const m = /^(\d{4})-(\d{2})/.exec(date.trim());
-  if (!m) return "";
-  const year = m[1];
-  const monthIdx = Number(m[2]) - 1;
-  return monthIdx >= 0 && monthIdx < 12 ? `${MONTHS[monthIdx]} ${year}` : year;
-}
-
-function ratio(m: TrialMatch): number {
-  return m.total === 0 ? 0 : m.metCount / m.total;
+/** Stable descending sort by triage score. Anything the triage pass did not
+ *  score keeps a middling score so a batch failure cannot bury those studies
+ *  beneath ones a partial pass happened to score low. */
+function orderByTriage(candidates: Trial[], scores: Map<string, number>): Trial[] {
+  if (scores.size === 0) return candidates;
+  return candidates
+    .map((trial, index) => ({ trial, index, score: scores.get(trial.nctId) ?? 1 }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((x) => x.trial);
 }
 
 /** Run fn over items with at most `limit` in flight; preserves input order. */
