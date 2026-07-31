@@ -219,6 +219,43 @@ export function siteIsRecruiting(loc: { status: string }): boolean {
   return SITE_OPEN.has((loc.status ?? "").trim().toUpperCase());
 }
 
+/* ---- site status, in words ----
+   Same registry values as SITE_OPEN above, but for a screen a patient reads
+   right before dialing a number — "NOT_YET_RECRUITING" reads like a filter
+   value, not a sentence. This only changes how a status is written, never
+   whether it counts as open; siteIsRecruiting stays the one predicate for that. */
+const SITE_STATUS_WORDS: Record<string, string> = {
+  RECRUITING: "Recruiting",
+  AVAILABLE: "Available",
+  ENROLLING_BY_INVITATION: "Enrolling by invitation",
+  NOT_YET_RECRUITING: "Not yet recruiting",
+  ACTIVE_NOT_RECRUITING: "Active, not recruiting",
+  SUSPENDED: "Suspended",
+  TERMINATED: "Terminated",
+  WITHDRAWN: "Withdrawn",
+  COMPLETED: "Completed",
+  UNKNOWN: "Status unknown",
+};
+
+export function formatSiteStatus(status: string): string {
+  const key = (status ?? "").trim().toUpperCase();
+  if (!key) return "";
+  return SITE_STATUS_WORDS[key] ?? titleCase(key.replace(/_/g, " "));
+}
+
+/* ---- cap-safe ordering for the referral screen ----
+   The contact screen caps how many sites it prints (each one is taller now that
+   it can carry its own contacts). Locations arrive nearest-first; this moves
+   every open site ahead of every closed one, WITHOUT reordering within either
+   group, so a farther-but-open site is never bumped out of the cap by a
+   nearer site nobody there can actually enroll a patient into. */
+export function prioritizeOpenSites<T extends { status: string }>(locations: readonly T[]): T[] {
+  const open: T[] = [];
+  const closed: T[] = [];
+  for (const loc of locations) (siteIsRecruiting(loc) ? open : closed).push(loc);
+  return [...open, ...closed];
+}
+
 function normalizeContact(c: RawContact): TrialContact {
   return { name: c.name ?? "", role: c.role ?? "", phone: c.phone ?? "", email: c.email ?? "" };
 }
@@ -308,7 +345,7 @@ function formatPhases(phases?: string[]): string {
   return labels.join(", ");
 }
 
-function titleCase(s: string): string {
+export function titleCase(s: string): string {
   if (!s) return s;
   return s
     .toLowerCase()

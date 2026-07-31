@@ -23,6 +23,7 @@ import NavAuth from "@/app/components/NavAuth";
 import ProductCarousel from "@/app/components/ProductCarousel";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
 import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches, splitNearMisses } from "@/lib/verdict";
+import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, titleCase } from "@/lib/ctgov";
 
 /* ---- API response shapes ---- */
 type FieldSource = "fhir" | "note" | "you";
@@ -2870,6 +2871,11 @@ function ContactRouting({ trial }: { trial: TrialMatch }) {
     const bm = `${b.city}, ${b.state}` === near ? 0 : 1;
     return am - bm;
   });
+  // A closed site nearer than an open one must not push the open one past the
+  // cap below — see prioritizeOpenSites.
+  const orderedSites = prioritizeOpenSites(sites);
+  const shownSites = orderedSites.slice(0, 6);
+  const hiddenSiteCount = orderedSites.length - shownSites.length;
   const central = trial.contacts;
   const email = central.find((c) => c.email)?.email ?? "";
   const draft = `Subject: Interest in ${trial.nctId} — pre-screening\n\nHello,\n\nI'm a patient interested in ${trial.nctId} (${trial.title}). Working from my own records, my profile appears to line up with several of the published criteria, with a few items to confirm. Could you tell me whether the study is currently enrolling and what the next step would be?\n\nThank you.`;
@@ -2901,17 +2907,46 @@ function ContactRouting({ trial }: { trial: TrialMatch }) {
         )}
 
         <div className="contact-group">
-          <div className="contact-group__h">Sites (nearest first — matched at city/state level, not exact miles)</div>
-          {sites.slice(0, 6).map((s, i) => (
-            <div key={i} className="site-row">
-              <span className="site-place">
-                {[s.city, s.state, s.country].filter(Boolean).join(", ") || s.facility}
-              </span>
-              <span className="site-facility">{s.facility}</span>
-              {s.status && <span className="mono site-status">{s.status}</span>}
-            </div>
-          ))}
-          {sites.length > 6 && <div className="refer-empty">+{sites.length - 6} more sites on ClinicalTrials.gov.</div>}
+          {/* The label has to match the actual order. It is no longer plain
+              nearest-first: open sites come first so the cap can't hide one
+              behind a closer site nobody there can enroll into. */}
+          <div className="contact-group__h">Sites (open ones first, then nearest — matched at city/state level, not exact miles)</div>
+          {shownSites.map((s, i) => {
+            const open = siteIsRecruiting(s);
+            return (
+              <div key={i} className="site-row">
+                <div className="site-row__top">
+                  <span className="site-place">
+                    {[s.city, s.state, s.country].filter(Boolean).join(", ") || s.facility}
+                  </span>
+                  <span className="site-facility">{s.facility}</span>
+                  {s.status && (
+                    <span className={`mono site-status${open ? "" : " site-status--closed"}`}>{formatSiteStatus(s.status)}</span>
+                  )}
+                </div>
+                {/* The study can be RECRUITING while this particular site is not —
+                    say so here, on the row the patient is about to call from. */}
+                {!open && (
+                  <div className="site-closed-note">
+                    This site&apos;s own status is not recruiting. Confirm before counting on a slot here.
+                  </div>
+                )}
+                {s.contacts.length > 0 && (
+                  <div className="site-contacts">
+                    {s.contacts.map((c, j) => (
+                      <div key={j} className="contact-row">
+                        <span className="contact-name">{c.name}</span>
+                        {c.role && <span className="contact-role mono">{titleCase(c.role)}</span>}
+                        {c.phone && <a href={`tel:${c.phone.replace(/[^+\d]/g, "")}`}>{c.phone}</a>}
+                        {c.email && <a href={`mailto:${c.email}`}>{c.email}</a>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {hiddenSiteCount > 0 && <div className="refer-empty">+{hiddenSiteCount} more sites on ClinicalTrials.gov.</div>}
         </div>
 
         <div className="draft-email">

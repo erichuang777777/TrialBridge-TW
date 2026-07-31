@@ -1262,11 +1262,26 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .contact-row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line-soft);font-size:12.5px;}
 .contact-row:first-of-type{border-top:none;}
 .contact-name{font-weight:560;color:var(--ink);}
+/* No text-transform on either of these: the strings are already put into words
+   in code (titleCase / formatSiteStatus) precisely so a patient about to phone
+   a site doesn't read NOT_YET_RECRUITING. Uppercasing them here would undo that
+   work in the last inch and put the registry's shouting back on the screen. */
+.contact-role{font-size:9.5px;color:var(--ink-3);letter-spacing:.04em;}
 .contact-row a{color:var(--agent);font-family:var(--mono);font-size:12px;}
-.site-row{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line-soft);}
+.site-row{display:flex;flex-direction:column;gap:6px;padding:9px 0;border-top:1px solid var(--line-soft);}
+.site-row:first-of-type{border-top:none;}
+.site-row__top{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;}
 .site-place{font-size:13px;color:var(--ink);font-weight:560;}
 .site-facility{font-size:12px;color:var(--ink-3);}
-.site-status{font-size:10px;color:var(--ink-3);text-transform:uppercase;}
+.site-status{font-size:10px;color:var(--ink-3);}
+.site-status--closed{color:var(--uncertain);font-weight:640;}
+.site-closed-note{font-size:11.5px;line-height:1.4;color:var(--uncertain);}
+/* Per-site contacts read as the same kind of thing as the central-contacts
+   group above (same .contact-row), just indented under their own site and
+   separated by a dashed rule instead of the group's solid one. */
+.site-contacts{display:flex;flex-direction:column;padding-left:2px;}
+.site-contacts .contact-row{padding:5px 0;border-top:1px dashed var(--line-soft);}
+.site-contacts .contact-row:first-child{border-top:none;}
 .draft-email{margin-top:8px;}
 .draft-body{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:11px 13px;white-space:pre-wrap;overflow-x:auto;margin:0 0 8px;}
 

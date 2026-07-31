@@ -26,7 +26,7 @@ import {
   cohortCounts,
   splitNearMisses,
 } from "../lib/verdict.ts";
-import { siteIsRecruiting, isValidNctId } from "../lib/ctgov.ts";
+import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, isValidNctId } from "../lib/ctgov.ts";
 import { trial, site, criterion } from "./fixtures.ts";
 
 const NOW = Date.UTC(2026, 6, 30); // 2026-07-30, fixed so ages never drift
@@ -104,6 +104,36 @@ test("a site with no published status is treated as open, not hidden", () => {
   assert.equal(siteIsRecruiting({ status: "RECRUITING" }), true);
   assert.equal(siteIsRecruiting({ status: "NOT_YET_RECRUITING" }), false);
   assert.equal(siteIsRecruiting({ status: "withdrawn" }), false);
+});
+
+test("a patient about to call reads the site's status as words, not a registry filter value", () => {
+  assert.equal(formatSiteStatus("NOT_YET_RECRUITING"), "Not yet recruiting");
+  assert.equal(formatSiteStatus("RECRUITING"), "Recruiting");
+  assert.equal(formatSiteStatus("ACTIVE_NOT_RECRUITING"), "Active, not recruiting");
+  assert.equal(formatSiteStatus(""), "", "no published status means nothing to print, not a fabricated label");
+  // An enum value the table above doesn't know yet still reads as words, never
+  // as raw SCREAMING_SNAKE_CASE leaking onto the page.
+  assert.equal(formatSiteStatus("SOME_NEW_STATUS"), "Some New Status");
+});
+
+test("a nearer site that isn't recruiting never bumps a farther open one out of the referral cap", () => {
+  // The whole point of this list is "who could I actually call". A site's own
+  // closure must demote it below open sites, not merely sit inert in the sort.
+  const nearerClosed = site("Boston", "Massachusetts", "WITHDRAWN");
+  const fartherOpen = site("Providence", "Rhode Island", "RECRUITING");
+  const ordered = prioritizeOpenSites([nearerClosed, fartherOpen]);
+  assert.deepEqual(ordered, [fartherOpen, nearerClosed]);
+});
+
+test("prioritizing open sites never drops one — it only reorders", () => {
+  const a = site("Boston", "Massachusetts", "RECRUITING");
+  const b = site("Worcester", "Massachusetts", "SUSPENDED");
+  const c = site("Providence", "Rhode Island", "RECRUITING");
+  const ordered = prioritizeOpenSites([a, b, c]);
+  assert.equal(ordered.length, 3);
+  assert.deepEqual(new Set(ordered), new Set([a, b, c]));
+  // Order within each group is preserved, not re-sorted by anything else.
+  assert.deepEqual(ordered, [a, c, b]);
 });
 
 /* ---- registry freshness ------------------------------------------------- */
