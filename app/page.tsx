@@ -22,7 +22,7 @@ import HeroVideo from "@/app/components/HeroVideo";
 import NavAuth from "@/app/components/NavAuth";
 import ProductCarousel from "@/app/components/ProductCarousel";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
-import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches } from "@/lib/verdict";
+import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches, splitNearMisses } from "@/lib/verdict";
 
 /* ---- API response shapes ---- */
 type FieldSource = "fhir" | "note" | "you";
@@ -2278,6 +2278,17 @@ const COUNT_BUCKETS: { key: MatchStatus; cls: string; label: string }[] = [
   { key: "screened", cls: "", label: "not yet reasoned" },
 ];
 
+/** §P1 card summary for the "Not open to you yet" section — names the unmet
+ *  requirements directly so a patient reads what's in the way without opening
+ *  the card. Short and comma-joined; truncated because "everything" read out
+ *  in full is not a list anyone can act on. */
+function notYetWhy(criteria: Criterion[]): string {
+  const reqs = criteria.filter((c) => c.verdict === "fails" && c.remediable).map((c) => c.requirement);
+  const SHOWN = 3;
+  if (reqs.length <= SHOWN) return reqs.join(", ");
+  return `${reqs.slice(0, SHOWN).join(", ")}, +${reqs.length - SHOWN} more`;
+}
+
 /* ============================ THE FORK (§6) ============================== */
 /* Post-Results decision screen: pick a hypothetical next treatment, see which
    currently-open trials it would keep open vs. close, each with the driving
@@ -3218,12 +3229,15 @@ function Results({
   const screened = matches.filter((m) => m.status === "screened" && facet(m) && statusOk(m));
   const excluded = matches.filter((m) => m.status === "excluded" && facet(m) && statusOk(m));
 
-  // Within "ruled out", a study the patient could still come to qualify for (a
-  // washout that elapses, a scan that gets ordered) is worth reading before one
-  // that is fixed shut. Sorting on hard failures surfaces the workable ones.
-  const ruledOut = matches
-    .filter((m) => m.status === "near" && facet(m) && statusOk(m))
-    .sort((a, b) => hardFailCountOf(a.criteria) - hardFailCountOf(b.criteria));
+  // §P1 — every "near" match splits into the workable ones (every failing
+  // criterion is remediable: a washout that elapses, a scan that gets ordered)
+  // and the ones with at least one fixed failure. Same status, same "near"
+  // bucket count — this only decides which of two sections a card renders in.
+  const nearMatches = matches.filter((m) => m.status === "near" && facet(m) && statusOk(m));
+  const { notYet, ruledOut: ruledOutUnsorted } = splitNearMisses(nearMatches);
+  // Within "ruled out" proper, a study closer to workable (fewer hard failures)
+  // is still worth reading before one that is fixed shut on every count.
+  const ruledOut = [...ruledOutUnsorted].sort((a, b) => hardFailCountOf(a.criteria) - hardFailCountOf(b.criteria));
 
   // Fully-eligible studies always rank first for clear visibility; within the same
   // status, the existing preference/fit ranking still applies.
@@ -3249,7 +3263,7 @@ function Results({
   // an empty list behind a collapsed "Farther" toggle — auto-open it and say so.
   const emptyInRange = grouped && inRangeAll.length === 0 && fartherAll.length > 0;
 
-  const totalShown = inRange.length + farther.length + ruledOut.length + screened.length + excluded.length;
+  const totalShown = inRange.length + farther.length + notYet.length + ruledOut.length + screened.length + excluded.length;
   const filtersActive = statusFilter !== "all" || studyFilter !== "all" || phaseFilter.size > 0 || query.trim().length > 0;
 
   const card = (m: TrialMatch, i: number) => (
@@ -3453,6 +3467,51 @@ function Results({
                 <div className="farther-list">{farther.map(card)}</div>
               </details>
             )}
+          </>
+        )}
+
+        {/* §P1 — the workable half of "near": every failing criterion here is one
+            the patient could come to satisfy. Sits above "Ruled out" because it is
+            categorically different, not because it is more likely — the card
+            summary says what's in the way without opening it, and the copy frames
+            possibility only. No dates, no "almost", nothing that reads as a plan;
+            the study team still decides. */}
+        {notYet.length > 0 && (statusFilter === "all" || statusFilter === "near") && (
+          <>
+            <div className="section-h">
+              Not open to you yet ({notYet.length}) <span>— every criterion listed here is one that could still change</span>
+            </div>
+            {notYet.map((m) => (
+              <details key={m.nctId} className="ruled-collapse notyet-collapse">
+                <summary className="ruled-summary notyet-summary">
+                  <div className="notyet-row">
+                    <span className="ruled-chev" aria-hidden>
+                      ▶
+                    </span>
+                    <span className="ruled-dot notyet-dot" aria-hidden />
+                    <span className="ruled-tag notyet-tag">Not yet</span>
+                    <span className="mono ruled-nct">{m.nctId}</span>
+                    <span className="ruled-title">{m.title}</span>
+                    <span className="mono ruled-phase">{m.phase}</span>
+                  </div>
+                  <div className="notyet-why">Could change: {notYetWhy(m.criteria)}</div>
+                </summary>
+                <div className="ruled-body">
+                  <DecisionCard
+                    m={m}
+                    entrant={entrant}
+                    saved={saved.has(m.nctId)}
+                    onSave={() => onToggleSave(m.nctId)}
+                    reasons={active ? prefReasons(m, prefs) : []}
+                    flash={flash === m.nctId}
+                    onResolve={onResolve}
+                    onOpenNextSteps={onOpenNextSteps}
+                    onRefer={onRefer}
+                    hideHead
+                  />
+                </div>
+              </details>
+            ))}
           </>
         )}
 
@@ -4187,6 +4246,10 @@ function NextStepsPanel({ matches, onClose, onRefer }: { matches: TrialMatch[]; 
   }, [onClose]);
 
   const trials = matches.filter((m) => m.status === "eligible");
+  // §P1 — when there's nothing to act on, say whether there's something to
+  // read instead, rather than just going quiet. Uses the same shared splitter
+  // Results does, so this count can never disagree with what that section shows.
+  const { notYet } = splitNearMisses(matches);
 
   return (
     <div className="ns-overlay" role="dialog" aria-modal="true" aria-label="Your next steps" onClick={onClose}>
@@ -4199,7 +4262,9 @@ function NextStepsPanel({ matches, onClose, onRefer }: { matches: TrialMatch[]; 
                 ? `${trials.length} trial${trials.length > 1 ? "s" : ""} you match on record. Bring ${
                     trials.length > 1 ? "these" : "this"
                   } to your care team to confirm and start a referral — a study team makes the final eligibility call.`
-                : "No fully-eligible trials yet. Once you match a trial on record, its next steps show up here."}
+                : notYet.length > 0
+                  ? `No fully-eligible trials yet. ${notYet.length} ${notYet.length > 1 ? "studies" : "study"} on the results page list only criteria that could still change — see “Not open to you yet”, above the ruled-out list.`
+                  : "No fully-eligible trials yet. Once you match a trial on record, its next steps show up here."}
             </p>
           </div>
           <button className="ns-close" onClick={onClose} aria-label="Close next steps">
@@ -4209,7 +4274,11 @@ function NextStepsPanel({ matches, onClose, onRefer }: { matches: TrialMatch[]; 
 
         <div className="ns-body">
           {trials.length === 0 && (
-            <div className="ns-empty">Nothing to act on yet — once you fully match a trial on record, its next steps appear here.</div>
+            <div className="ns-empty">
+              {notYet.length > 0
+                ? `Nothing to act on yet. ${notYet.length} ${notYet.length > 1 ? "studies" : "study"} in “Not open to you yet” list what's standing in the way — worth reading with your care team, though the study team still decides.`
+                : "Nothing to act on yet — once you fully match a trial on record, its next steps appear here."}
+            </div>
           )}
           {trials.map((m) => (
             <section className="ns-trial" key={m.nctId}>

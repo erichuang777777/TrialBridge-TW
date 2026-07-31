@@ -661,6 +661,18 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 /* Inner card drops its own frame so it reads as the accordion's expanded body. */
 .ruled-body .dcard{border:none;background:transparent;border-radius:0;margin:0;padding:2px 16px 16px;}
 
+/* "Not open to you yet" (§P1) — same collapsed-row treatment as "Ruled out"
+   (it's a sibling section, not a different widget), but the tag/dot use the
+   uncertain (amber) pair instead of near (red): a workable near-miss is not a
+   hard "no" and must not read like one at a glance. The summary carries a
+   second line, visible collapsed, naming what would have to change — that's
+   the point of the section, so it can't be hidden behind the accordion. */
+.notyet-summary{display:block;padding:11px 16px;}
+.notyet-row{display:flex;align-items:center;gap:11px;min-height:26px;}
+.notyet-dot{background:var(--uncertain);}
+.notyet-tag{color:var(--uncertain);}
+.notyet-why{margin:5px 0 0;padding-left:18px;font-size:12px;line-height:1.4;color:var(--ink-2);}
+
 /* ============================================================================
    Workspace shell — sticky left sidebar + main board (patient flow only)
    ========================================================================== */

@@ -24,6 +24,7 @@ import {
   compareMatches,
   compareCohortPatients,
   cohortCounts,
+  splitNearMisses,
 } from "../lib/verdict.ts";
 import { siteIsRecruiting, isValidNctId } from "../lib/ctgov.ts";
 import { trial, site, criterion } from "./fixtures.ts";
@@ -220,6 +221,45 @@ test("failures split into workable and settled", () => {
   assert.equal(remediableFailCountOf(criteria), 1);
   assert.equal(hardFailCountOf(criteria), 1);
   assert.equal(openCountOf(criteria), 1);
+});
+
+/* ---- §P1 near-miss split ------------------------------------------------- */
+
+test("a trial the patient could still come to qualify for is a not-yet, not a ruled-out", () => {
+  const washout = { status: "near" as const, criteria: [criterion({ verdict: "fails", remediable: true })] };
+  const { notYet, ruledOut } = splitNearMisses([washout]);
+  assert.deepEqual(notYet, [washout]);
+  assert.deepEqual(ruledOut, []);
+});
+
+test("a single fixed failure sinks the whole trial into ruled-out, even alongside a washout", () => {
+  const priorTherapy = {
+    status: "near" as const,
+    criteria: [criterion({ verdict: "fails", remediable: true }), criterion({ verdict: "fails", remediable: false })],
+  };
+  const { notYet, ruledOut } = splitNearMisses([priorTherapy]);
+  assert.deepEqual(notYet, [], "one hard fail is enough to disqualify the whole trial from 'not yet'");
+  assert.deepEqual(ruledOut, [priorTherapy]);
+});
+
+test("eligible, uncertain, screened and excluded matches never land in either near-miss bucket", () => {
+  const eligible = { status: "eligible" as const, criteria: [criterion({ verdict: "meets" })] };
+  const uncertain = { status: "uncertain" as const, criteria: [criterion({ verdict: "confirm" })] };
+  const screened = { status: "screened" as const, criteria: [] };
+  const excluded = { status: "excluded" as const, criteria: [] };
+  const { notYet, ruledOut } = splitNearMisses([eligible, uncertain, screened, excluded]);
+  assert.deepEqual(notYet, []);
+  assert.deepEqual(ruledOut, [], "only 'near' matches are split at all — everything else is out of scope for this presentation split");
+});
+
+test("a match with zero criteria is not a not-yet, even if its status somehow reads near", () => {
+  // Shouldn't occur through deriveStatus (empty criteria -> "screened"), but the
+  // splitter must not rely on that: an empty ledger has no remediable failure to
+  // point to, so it must never read as "here's what would have to change".
+  const empty = { status: "near" as const, criteria: [] };
+  const { notYet, ruledOut } = splitNearMisses([empty]);
+  assert.deepEqual(notYet, []);
+  assert.deepEqual(ruledOut, [empty]);
 });
 
 test("ranking prefers eligible, then fewest hard failures, then fewest open items", () => {
