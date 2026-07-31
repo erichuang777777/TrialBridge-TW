@@ -59,7 +59,7 @@ the deterministic `enrollmentWindow` + proximity factors for the time-sensitivit
 | `app/api/extract` | `POST` note (or FHIR document) → structured profile + clarifying gaps, each field mCODE-mapped and provenance-tagged (Claude, structured output) |
 | `app/api/upload-pdf` | `POST` PDF → extracted text for the same extract flow |
 | `app/api/connect-records` | `GET` picker · `POST` pull one patient's chart via SMART on FHIR → provenance-delimited document |
-| `app/api/trials` | `GET ?cond=` → normalized recruiting trials (ClinicalTrials.gov proxy) |
+| `app/api/trials` | `POST {cond}` → normalized recruiting trials (ClinicalTrials.gov proxy). POST because a condition is a diagnosis, and a query string is written to request logs and history |
 | `app/api/match` | `POST` profile → ranked trials with per-criterion ledgers (Claude, one call per trial) |
 | `app/api/reconfirm` | `POST` re-judge open "confirm" criteria after the patient adds info (shared verdict rules) |
 | `app/api/fork-options` | `POST` profile → plausible next treatment lines (Claude) + two fixed options in code |
@@ -162,6 +162,29 @@ records untouched for ~6 months are flagged stale and ranked below fresh ones.
 The tuning knobs (`PER_TERM_PAGE`, `CANDIDATE_POOL`, `TRIAGE_BATCH`, `DEEP_REASON_COUNT`,
 `CONCURRENCY`) are named constants at the top of `app/api/match/route.ts`.
 
+## Two readers, two information architectures
+
+"Who's filling this out?" used to change only the voice of the prose. It now changes
+what leads the page, because a patient and a coordinator are answering different questions
+from the same ledger.
+
+A **patient** is deciding whether they want the trial, so the plain-language brief leads and
+the criterion ledger sits one click away. A **clinician** already wants it — their question is
+*what is still missing and where do I get it* — so on their screen the ledger is open by
+default, the patient-facing framing collapses to reference, and each card leads with a
+**"To obtain before screening"** worklist: every open item, what the record says today, and
+its provenance, with the ones nothing addresses sorted first because those are the phone calls.
+
+**Copy screening log** produces the artifact that leaves with them: a plain-text roll-up
+grouped the way triage actually works — approachable now · needs information (and exactly
+what) · ruled out (and whether that is reversible) · not open on age/sex · retrieved but not
+reasoned this pass. It is a transcription of what is already on screen, so it cannot make a
+claim the UI didn't, and it repeats its own disclaimer because a pasted log outlives the
+screen that qualified it.
+
+**No eligibility rule changes with the reader.** Verdicts, fail-closed derivation, citation
+and ranking are identical for all three entrants. Only the order of the page moves.
+
 ## Evaluation
 
 ```bash
@@ -192,6 +215,14 @@ an instruction planted in the patient record, and test-retest agreement across r
 2. Import the repo in Vercel — it auto-detects Next.js at the root; no build config needed.
 3. **Project → Settings → Environment Variables**: add `ANTHROPIC_API_KEY`.
 4. Deploy. (ClinicalTrials.gov needs no key.)
+
+Set **`DEMO_PASSCODE`** too if the URL is going anywhere it could be forwarded. `robots.txt`
+and `noindex` stop the demo being *found*; they do nothing about it being *reached*, and
+behind the link is an intake that accepts medical records plus five endpoints that each spend
+real tokens. With it set, `proxy.ts` puts a passcode in front of every page and every
+`/api/*` route; share the link as `https://…/?key=<passcode>` and it moves to a cookie on
+arrival. Unset, the gate is a no-op — a gate that silently locked out a running deployment on
+upgrade would be a worse bug than the one it fixes.
 
 The design system (palette, type, the criterion-ledger component, trust invariants) is documented
 in `.claude/skills/design-system/`.

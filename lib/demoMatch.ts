@@ -22,6 +22,10 @@ import { deriveStatus, metCountOf } from "@/lib/verdict";
 type DemoMatchResponse = {
   conditionQuery: string;
   summary: string;
+  /** How this result was produced. The fixture must say so: the results screen
+   *  otherwise captions every result "AI-generated eligibility" and reports a
+   *  live screen that did not happen, against real NCT ids and real sponsors. */
+  provenance: "curated-demo";
   counts: { poolTotal: number; reasoned: number; eligible: number; uncertain: number; near: number; screened: number; excluded: number };
   coverage: { terms: { term: string; added: number; error: string | null }[]; triaged: boolean };
   location: { applied: boolean; label: string; travel: "local" | "regional" | "any" | null; inRange: number };
@@ -287,6 +291,7 @@ export function margaretDemoMatch(summary?: string): DemoMatchResponse {
   const matches = SEEDS.map(mk);
   const reasoned = matches; // all authored (no "screened" tier in the fixture)
   return {
+    provenance: "curated-demo",
     conditionQuery: "HR-positive, HER2-negative metastatic breast cancer",
     summary: summary ?? "61F, HR+/HER2- metastatic breast cancer, PIK3CA H1047R+, post-CDK4/6 and fulvestrant.",
     counts: {

@@ -238,7 +238,7 @@ export async function POST(req: Request) {
     inRange: locationApplied ? reasoned.filter((m) => m.factors.withinRange === true).length : 0,
   };
 
-  return NextResponse.json({ conditionQuery: cond, summary: profile.summary ?? "", counts, coverage, location, matches });
+  return NextResponse.json({ provenance: "live", conditionQuery: cond, summary: profile.summary ?? "", counts, coverage, location, matches });
 }
 
 /* ---- triage (reading order) ---- */
