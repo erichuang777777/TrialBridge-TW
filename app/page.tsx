@@ -2270,6 +2270,11 @@ function monthsAgo(days: number): string {
   return `${months} mo`;
 }
 
+/** DecisionFactors.burdenProxy (0..2) → the caregiver-facing label. A proxy from
+ *  study type + phase, not a measurement — the label says "estimate" wherever
+ *  it's shown so it never launders into a stated fact (P4). */
+const BURDEN_LABEL = ["Lower", "Moderate", "Higher"];
+
 /** The summary buckets — canonical counts, always reconcile to the pool total. */
 const COUNT_BUCKETS: { key: MatchStatus; cls: string; label: string }[] = [
   { key: "eligible", cls: "eligible", label: "eligible" },
@@ -3676,6 +3681,12 @@ const DecisionCard = memo(function DecisionCard({
   // their question is "what is still missing and where do I get it", which is the
   // ledger. So for a clinician the two swap places. No eligibility rule changes.
   const clinical = entrant === "clinician";
+  // A caregiver's question is not "do I want this" (the patient's question,
+  // which the brief below still answers for them) but "is this doable" — how
+  // far, how demanding, what's actually scheduled. The brief stays exactly
+  // where it is; this only adds the logistics row further down. No eligibility
+  // rule changes here either — same invariant as `clinical` above.
+  const caring = entrant === "caregiver";
   // Open items, in the order a coordinator works them: the ones nothing in the
   // record addresses first, since those are the phone calls.
   const openItems = m.criteria
@@ -3824,7 +3835,10 @@ const DecisionCard = memo(function DecisionCard({
               premature on "Needs info" cards where eligibility isn't established yet. */}
           {m.status === "eligible" && m.brief.questionsToAsk.length > 0 && (
             <div className="qask">
-              <div className="qask-h">Questions to ask your care team</div>
+              {/* Caregiver is the one who will actually be asking these — address
+                  them directly rather than the generic "your care team", which
+                  reads as if the patient is the one holding the list. */}
+              <div className="qask-h">{caring ? "Questions to ask your loved one's care team" : "Questions to ask your care team"}</div>
               <ul>
                 {m.brief.questionsToAsk.map((q, i) => (
                   <li key={i}>{q}</li>
@@ -3833,6 +3847,66 @@ const DecisionCard = memo(function DecisionCard({
             </div>
           )}
         </>
+      )}
+
+      {/* CAREGIVER ADDITION — logistics, not a swap, and deliberately BELOW the
+          brief rather than above it. You cannot weigh "is the travel worth it"
+          before you know what is on offer, so the brief still leads and this
+          answers the second question. The brief above answers "do we want this";
+          this answers "is it doable",
+          promoting exactly the fields DecisionFactors already computes.
+          Unconditional on match status (unlike the brief, which hides on a
+          near-miss): whether a site travels or a study demands much of a
+          patient is true regardless of whether they qualify for it, and
+          "nothing silently dropped" applies to this reader too. */}
+      {caring && (
+        <div className="logistics">
+          <div className="logistics-h">Trial logistics</div>
+          <div className="logistics-grid">
+            <div className="lg-item">
+              <span className="lg-k">Nearest listed site</span>
+              <span className="lg-v" title="Approximate — matched on city/state, not an exact distance.">
+                {m.factors.nearestSite}
+              </span>
+              {m.factors.locationUnknown ? (
+                <span className="lg-note">This study lists no site we could match to the location you gave.</span>
+              ) : !m.factors.nearestSiteActive ? (
+                <span className="lg-note">This site is not currently listed as recruiting — confirm before planning around it.</span>
+              ) : m.factors.withinRange === true ? (
+                <span className="lg-note">Within the travel distance you selected.</span>
+              ) : m.factors.withinRange === false ? (
+                <span className="lg-note">Outside the travel distance you selected.</span>
+              ) : (
+                <span className="lg-note">Travel distance was not checked.</span>
+              )}
+            </div>
+            <div className="lg-item">
+              <span className="lg-k">Day-to-day demand</span>
+              <span className="lg-v">{BURDEN_LABEL[m.factors.burdenProxy]}</span>
+              <span className="lg-note" title="A rough estimate from the study's phase and type — not a count of visits.">
+                A rough estimate, not a visit count
+              </span>
+            </div>
+            <div className="lg-item">
+              <span className="lg-k">Study design</span>
+              <span className="lg-v">
+                {m.factors.randomized ? "Randomized — a placebo or unassigned arm is possible" : "Open-label — no random assignment"}
+              </span>
+              {!m.interventional && <span className="lg-note">Observational: it gathers information; no treatment is given.</span>}
+            </div>
+            {(enroll || (m.factors.registryStale && m.factors.registryAgeDays !== null)) && (
+              <div className="lg-item">
+                <span className="lg-k">Timing</span>
+                {enroll && <span className="lg-v">{enroll}</span>}
+                {m.factors.registryStale && m.factors.registryAgeDays !== null && (
+                  <span className="lg-note">
+                    Registry entry {monthsAgo(m.factors.registryAgeDays)} old — may not reflect whether the study is still enrolling.
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Design / commitment signals only — identity (phase · site · NCT) lives in the sub-line above. */}

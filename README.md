@@ -199,11 +199,11 @@ happened to split.
 This ships as engine + API only; the clinician-facing cohort screen is a separate, later piece of
 work.
 
-## Two readers, two information architectures
+## Three readers, three information architectures
 
 "Who's filling this out?" used to change only the voice of the prose. It now changes
-what leads the page, because a patient and a coordinator are answering different questions
-from the same ledger.
+what leads the page, because a patient, a caregiver and a coordinator are answering
+different questions from the same ledger.
 
 A **patient** is deciding whether they want the trial, so the plain-language brief leads and
 the criterion ledger sits one click away. A **clinician** already wants it — their question is
@@ -211,6 +211,18 @@ the criterion ledger sits one click away. A **clinician** already wants it — t
 default, the patient-facing framing collapses to reference, and each card leads with a
 **"To obtain before screening"** worklist: every open item, what the record says today, and
 its provenance, with the ones nothing addresses sorted first because those are the phone calls.
+
+A **caregiver** isn't deciding whether they want the trial — that's the patient's question —
+they're working out whether it's *doable*: how far, how demanding, whether the site that
+looks nearest is actually open. That's not a different question about the same brief, so it
+doesn't get the clinician's swap; the brief stays exactly where it is and a **"Trial
+logistics"** row is added alongside it, promoting `DecisionFactors` fields that were already
+computed and simply weren't surfaced: the nearest *open* site, whether it falls in the
+travel band the patient chose, the burden proxy (honestly labelled as an estimate, never as
+a visit count), study design, and enrollment/registry timing. Nothing here is invented — no
+travel times, no visit counts, no appointment cadence — because none of that exists in the
+data, and `burdenProxy` stays a proxy on the surface as well as in the type. The "questions
+to ask" header addresses the caregiver directly, since they're the one who'll be asking.
 
 **Copy screening log** produces the artifact that leaves with them: a plain-text roll-up
 grouped the way triage actually works — approachable now · needs information (and exactly
