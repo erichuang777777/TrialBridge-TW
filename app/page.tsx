@@ -3780,6 +3780,7 @@ const DecisionCard = memo(function DecisionCard({
           {ledgerOpen && (
             <Ledger
               criteria={m.criteria}
+              entrant={entrant}
               onResolve={(critIndex, answer) => onResolve(m.nctId, critIndex, answer)}
               onOpenNextSteps={onOpenNextSteps}
             />
@@ -3826,10 +3827,12 @@ function ledgerTally(criteria: Criterion[]) {
 
 function Ledger({
   criteria,
+  entrant,
   onResolve,
   onOpenNextSteps,
 }: {
   criteria: Criterion[];
+  entrant: Entrant;
   onResolve: (critIndex: number, answer: string) => Promise<boolean>;
   onOpenNextSteps: () => void;
 }) {
@@ -3859,7 +3862,7 @@ function Ledger({
       </div>
       {shown.map((g) => {
         const rows = groups[g.key].map(({ c, idx }) => (
-          <LedgerRow key={idx} c={c} index={idx} onResolve={onResolve} onOpenNextSteps={onOpenNextSteps} />
+          <LedgerRow key={idx} c={c} index={idx} entrant={entrant} onResolve={onResolve} onOpenNextSteps={onOpenNextSteps} />
         ));
         if (g.key === "met") {
           return (
@@ -3892,15 +3895,22 @@ function Ledger({
 function LedgerRow({
   c,
   index,
+  entrant,
   onResolve,
   onOpenNextSteps,
 }: {
   c: Criterion;
   index: number;
+  entrant: Entrant;
   onResolve: (critIndex: number, answer: string) => Promise<boolean>;
   onOpenNextSteps: () => void;
 }) {
   const cls = verdictRowClass(c.verdict);
+  // A clinician's ledger is already dense reference material and the reader
+  // doesn't need "measurable disease means…" spelled out — the gloss is a
+  // patient/caregiver aid only. Same criteria, same verdicts either way; this
+  // only changes what renders, never what was decided.
+  const showGloss = entrant !== "clinician";
   const resolvable = c.verdict === "confirm";
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -3940,6 +3950,12 @@ function LedgerRow({
             </span>
           )}
           {c.evidence ? <span className="ev">{c.evidence}</span> : null}
+          {showGloss && c.gloss && (
+            <details className="lgloss">
+              <summary>what does this mean?</summary>
+              <div className="lgloss__body">{c.gloss}</div>
+            </details>
+          )}
         </span>
         {resolvable ? (
           <button

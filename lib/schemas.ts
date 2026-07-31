@@ -87,6 +87,11 @@ export const LedgerCriterionSchema = z.object({
     .describe(
       "Could THIS patient come to satisfy this criterion? true = a washout that will elapse, a scan/lab that can be ordered or redrawn, a consent or document that can be obtained, a fluctuating value that may re-qualify. false = fixed for this patient — sex, age band, tumor type/subtype, an irreversible prior therapy or surgery, a permanent comorbidity, a prior-lines cap already exceeded. Only consulted when the verdict is 'fails', but set it honestly on every criterion. It is descriptive — it NEVER changes the verdict.",
     ),
+  gloss: z
+    .string()
+    .describe(
+      "A short plain-language 'what does this mean?' explanation of any clinical term in the requirement, ~8th-grade reading level (e.g. \"Measurable disease means the cancer shows up on a scan as spots that can be measured\"). Empty string when the requirement uses no term that needs glossing. Descriptive only — it never changes the verdict.",
+    ),
 });
 
 /* Patient-facing decision brief — grounded in the trial's real attributes and the

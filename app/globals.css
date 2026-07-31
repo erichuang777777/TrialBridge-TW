@@ -1162,6 +1162,18 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .cgloss[open]>summary{margin-bottom:5px;}
 .cgloss__body{font-size:12.5px;line-height:1.5;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:8px 11px;max-width:60ch;}
 
+/* Ledger criterion gloss (design.md §9 / roadmap P3) — same disclosure
+   pattern as .cgloss, tuned a step quieter: it sits inside a dense criterion
+   row and must never compete with the requirement text or the verdict for
+   attention. Patient/caregiver readers only — LedgerRow suppresses it for
+   clinicians, so this never needs a "clinician" variant. */
+.lgloss{display:block;margin:3px 0 0;}
+.lgloss>summary{font-size:11px;color:var(--ink-3);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px;width:fit-content;}
+.lgloss>summary::-webkit-details-marker{display:none;}
+.lgloss>summary::before{content:"?";font-family:var(--mono);font-size:8px;font-weight:700;width:12px;height:12px;border-radius:50%;border:1px solid currentColor;display:inline-flex;align-items:center;justify-content:center;}
+.lgloss[open]>summary{margin-bottom:4px;color:var(--ink-2);}
+.lgloss__body{font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:7px 10px;max-width:58ch;}
+
 /* §4.2 — empty in-range notice above the auto-opened "Farther from you" list */
 .empty-range{font-size:13px;color:var(--ink);background:var(--uncertain-bg);border:1px solid color-mix(in srgb,var(--uncertain) 34%,var(--line));border-radius:var(--r-sm);padding:10px 13px;margin:4px 0 12px;}
 
