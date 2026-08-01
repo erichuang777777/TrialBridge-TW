@@ -27,6 +27,7 @@ import {
   splitNearMisses,
 } from "../lib/verdict.ts";
 import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, isValidNctId } from "../lib/ctgov.ts";
+import { buildDisclosureRecord, recordDisclosure, type DisclosureField } from "../lib/disclosure.ts";
 import { trial, site, criterion } from "./fixtures.ts";
 
 const NOW = Date.UTC(2026, 6, 30); // 2026-07-30, fixed so ages never drift
@@ -399,4 +400,125 @@ test("a study with no published eligibility text is counted, not silently lost",
   const c = cohortCounts(Array.from({ length: 20 }, () => ({ status: "screened" as const })));
   assert.equal(c.screened, 20);
   assert.equal(c.total, 20);
+});
+
+/* ---- disclosure ledger structure (finding #8) ---------------------------
+   Nothing here should ever perform a write (see lib/disclosure.ts) — these
+   tests pin the SHAPE of the record and the honesty of recordDisclosure's
+   return value, since that shape is the whole point of the finding's fix. */
+
+function baseDisclosureInput(fields: DisclosureField[]) {
+  return {
+    authorizationId: "auth-1",
+    fields,
+    criteria: [] as { evidence?: string }[],
+    sponsor: "Example Sponsor",
+    site: "Boston, Massachusetts",
+    nctId: "NCT00000000",
+    purpose: "Eligibility pre-screening and contact for possible enrollment in NCT00000000.",
+    compensation: { compensated: false } as const,
+    now: NOW,
+  };
+}
+
+test("the record names every field actually disclosed, derived from the profile — never a hardcoded list", () => {
+  const fields: DisclosureField[] = [
+    { label: "Diagnosis", value: "Metastatic breast cancer" },
+    { label: "ECOG status", value: "1" },
+    { label: "Prior lines of therapy", value: "2" },
+  ];
+  const record = buildDisclosureRecord(baseDisclosureInput(fields));
+  assert.deepEqual(
+    record.fieldsDisclosed,
+    fields.map((f) => f.label),
+    "every disclosed field's label must appear, in order, in the record",
+  );
+
+  // Prove it's derived rather than fixed: a field the referral discloses that
+  // the record doesn't name would be exactly the P5 gap this finding closes.
+  // A hardcoded list of three labels would still pass the assertion above by
+  // coincidence — it would NOT pass this one.
+  const extra = buildDisclosureRecord(baseDisclosureInput([...fields, { label: "Recent scan", value: "CT chest/abd/pelvis, 2026-07-01" }]));
+  assert.equal(extra.fieldsDisclosed.length, fields.length + 1);
+  assert.ok(extra.fieldsDisclosed.includes("Recent scan"), "a field added to the referral must show up in the record");
+});
+
+test("the record counts the eligibility assessment too — the packet is not just the profile fields", () => {
+  // PacketB, which is what the coordinator actually receives, carries the
+  // criterion-by-criterion assessment alongside the profile, and each
+  // criterion's evidence quotes the patient's record. A ledger that named only
+  // the profile labels would understate the disclosure — the P5 gap itself.
+  const record = buildDisclosureRecord({
+    ...baseDisclosureInput([{ label: "Diagnosis", value: "Metastatic breast cancer" }]),
+    criteria: [
+      { evidence: "ER+ / PR+ on the 2025-11 pathology report" },
+      { evidence: "   " }, // whitespace is not evidence
+      {},
+    ],
+  });
+  assert.equal(record.criteriaDisclosed.count, 3, "every criterion that travels with the packet is counted");
+  assert.equal(record.criteriaDisclosed.quotingRecord, 1, "only criteria that actually quote the record count as quoting it");
+});
+
+test("buildDisclosureRecord derives validity and retention from the `now` argument, not from calling Date.now() itself", () => {
+  const record = buildDisclosureRecord(baseDisclosureInput([{ label: "Diagnosis", value: "Metastatic breast cancer" }]));
+  assert.equal(record.timestamp, new Date(NOW).toISOString());
+  assert.equal(record.authorization.validFrom, new Date(NOW).toISOString());
+  // Calendar anniversaries, not n×365 days: six 365-day years land ~1.5 days
+  // short of the six-year mark, and a retention FLOOR must never round down.
+  assert.equal(record.authorization.validUntil, "2027-07-30T00:00:00.000Z", "P3: one-year validity window");
+  assert.equal(record.authorization.retainUntil, "2032-07-30T00:00:00.000Z", "P3: six-year retention floor");
+  assert.equal(record.authorization.signature.method, "clickthrough");
+  assert.equal(record.authorization.signature.capturedAt, record.timestamp);
+});
+
+test("buildDisclosureRecord is deterministic for fixed inputs — same id, same now, same output", () => {
+  const input = baseDisclosureInput([
+    { label: "Diagnosis", value: "Metastatic breast cancer" },
+    { label: "ECOG status", value: "1" },
+  ]);
+  assert.deepEqual(buildDisclosureRecord(input), buildDisclosureRecord(input));
+});
+
+test("recordDisclosure reports the record was NOT persisted, while no ledger backend exists", () => {
+  const record = buildDisclosureRecord(baseDisclosureInput([{ label: "Diagnosis", value: "Metastatic breast cancer" }]));
+  const outcome = recordDisclosure(record);
+  assert.equal(outcome.persisted, false, "there is no ledger backend today — a caller must never read this as a successful write");
+  if (outcome.persisted) throw new Error("unreachable — narrowed above");
+  assert.equal(outcome.reason, "no_ledger_backend_configured");
+  assert.deepEqual(outcome.record, record, "the caller must still get back exactly the record that would have been written");
+});
+
+test("a compensated disclosure names the purchaser — compensation carries data, not just a flag", () => {
+  const record = buildDisclosureRecord({
+    ...baseDisclosureInput([{ label: "Diagnosis", value: "Metastatic breast cancer" }]),
+    compensation: { compensated: true, purchaser: "Example Sponsor Referral Program" },
+  });
+  assert.equal(record.compensation.compensated, true);
+  if (!record.compensation.compensated) throw new Error("unreachable — narrowed above");
+  assert.equal(record.compensation.purchaser, "Example Sponsor Referral Program");
+});
+
+test("compensation cannot be left unanswered — the type requires it, never defaults to \"no\"", () => {
+  // This is a compile-time guarantee, checked by `npx tsc --noEmit`, not a
+  // runtime one: `compensation` is a required field on buildDisclosureRecord's
+  // input, so omitting it must fail to type-check. If someone later makes it
+  // optional (silently defaulting an unanswered compensation question to "no"
+  // — exactly the failure mode finding #8 was written to prevent), the
+  // `@ts-expect-error` below stops matching a real error and tsc fails on
+  // "Unused '@ts-expect-error' directive", catching the regression here.
+  function attemptWithoutCompensation() {
+    const fields: DisclosureField[] = [{ label: "Diagnosis", value: "Metastatic breast cancer" }];
+    // @ts-expect-error — `compensation` is required; this must not type-check.
+    return buildDisclosureRecord({
+      authorizationId: "auth-1",
+      fields,
+      sponsor: "Example Sponsor",
+      site: "Boston, Massachusetts",
+      nctId: "NCT00000000",
+      purpose: "test",
+      now: NOW,
+    });
+  }
+  assert.equal(typeof attemptWithoutCompensation, "function", "the real assertion here is enforced by tsc, see comment above");
 });

@@ -24,6 +24,7 @@ import ProductCarousel from "@/app/components/ProductCarousel";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
 import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches, splitNearMisses } from "@/lib/verdict";
 import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, titleCase } from "@/lib/ctgov";
+import { buildDisclosureRecord, recordDisclosure, type DisclosureOutcome } from "@/lib/disclosure";
 
 /* ---- API response shapes ---- */
 type FieldSource = "fhir" | "note" | "you";
@@ -2696,6 +2697,10 @@ function Refer({
   // a disclosure — it opens as its own page ONLY after the patient agrees to be
   // referred, never alongside the pre-consent referral prep.
   const [referred, setReferred] = useState(false);
+  // What recordDisclosure() actually reported for this authorization (finding
+  // #8) — kept so the "prepared" screen can say something true about it
+  // instead of a static line that would drift the moment a backend lands.
+  const [authOutcome, setAuthOutcome] = useState<DisclosureOutcome | null>(null);
 
   if (referred) {
     return (
@@ -2721,7 +2726,13 @@ function Refer({
               In production, {trial.sponsor} would receive your consented pre-screen packet for {trial.nctId} — a referral-ready candidate you
               initiated, not a row in a purchased list.
             </p>
-            <div className="auth-demo">Demo: no data was actually sent.</div>
+            {/* The patient reads this, not an engineer — so it says what
+                happened to their data, not which function returned what. */}
+            <div className="auth-demo">
+              {authOutcome && !authOutcome.persisted
+                ? `Demo: no data was sent. The record of this authorization — who it names, the ${authOutcome.record.fieldsDisclosed.length} fields and the ${authOutcome.record.criteriaDisclosed.count}-criterion assessment it covers, the purpose, and how long it lasts — was assembled exactly as the real flow would assemble it, and then kept nowhere. This app stores nothing, so there is no copy of it, including for us.`
+                : "Demo: no data was actually sent."}
+            </div>
           </div>
           {/* "Who to contact" now lives on the prepared screen (Packet A moved to the
               pre-referral screen). Packet B stays inside #refer-packets so its single-
@@ -2770,7 +2781,14 @@ function Refer({
         <div id="refer-note">
           <PacketA trial={trial} />
         </div>
-        <ReferralAuthorization trial={trial} profile={profile} onAuthorize={() => setReferred(true)} />
+        <ReferralAuthorization
+          trial={trial}
+          profile={profile}
+          onAuthorize={(outcome) => {
+            setAuthOutcome(outcome);
+            setReferred(true);
+          }}
+        />
         <ReferTimeline gaps={gaps} trial={trial} />
       </div>
     </div>
@@ -3077,8 +3095,44 @@ function PacketB({ trial, profile }: { trial: TrialMatch; profile: Profile }) {
 }
 
 /* §7 — referral = the authorization moment (front-end only; synthetic demo). */
-function ReferralAuthorization({ trial, profile, onAuthorize }: { trial: TrialMatch; profile: Profile; onAuthorize: () => void }) {
+function ReferralAuthorization({
+  trial,
+  profile,
+  onAuthorize,
+}: {
+  trial: TrialMatch;
+  profile: Profile;
+  onAuthorize: (outcome: DisclosureOutcome) => void;
+}) {
   const [stage, setStage] = useState<"idle" | "review">("idle");
+  const purpose = `Eligibility pre-screening and contact for possible enrollment in ${trial.nctId}.`;
+
+  // The (future) transmit point (finding #8): this is where a real disclosure
+  // to a real sponsor would leave. The record is built from what's actually on
+  // screen — the same fields, recipient, and purpose the patient just read —
+  // never a hardcoded list, so it can't silently omit something disclosed.
+  function handleAuthorize() {
+    const record = buildDisclosureRecord({
+      authorizationId: crypto.randomUUID(),
+      fields: profile.fields,
+      // Packet B is what the coordinator receives, and it is not just the
+      // profile — it carries the criterion-by-criterion assessment, whose
+      // evidence lines quote the record. Listing only the fields would make
+      // the ledger describe a smaller disclosure than the one that happened.
+      criteria: trial.criteria,
+      sponsor: trial.sponsor,
+      site: trial.factors.nearestSite,
+      nctId: trial.nctId,
+      purpose,
+      // No referral in this app is ever compensated. lib/disclosure.ts makes
+      // that an explicit field rather than a default so a future paid-referral
+      // path can't slip through this call site unnoticed.
+      compensation: { compensated: false },
+      now: Date.now(),
+    });
+    onAuthorize(recordDisclosure(record));
+  }
+
   return (
     <section id="refer-auth" className="refer-sec">
       <div className="refer-sec__h">Refer me to this study</div>
@@ -3097,7 +3151,21 @@ function ReferralAuthorization({ trial, profile, onAuthorize }: { trial: TrialMa
         <div className="auth-card">
           <div className="auth-row">
             <span className="auth-k">What is disclosed</span>
-            <span className="auth-v">{profile.fields.map((f) => f.label).join(" · ")}</span>
+            {/* The packet is the profile AND the assessment. Naming only the
+                fields here would understate the disclosure on the very screen
+                where the patient agrees to it. */}
+            <span className="auth-v">
+              {profile.fields.map((f) => f.label).join(" · ")}
+              {trial.criteria.length > 0 ? (
+                <>
+                  {" · "}
+                  <b>
+                    plus the {trial.criteria.length}-criterion eligibility assessment for this study
+                    {trial.criteria.some((c) => c.evidence) ? ", which quotes your record where it explains a verdict" : ""}
+                  </b>
+                </>
+              ) : null}
+            </span>
           </div>
           <div className="auth-row">
             <span className="auth-k">To whom</span>
@@ -3105,21 +3173,35 @@ function ReferralAuthorization({ trial, profile, onAuthorize }: { trial: TrialMa
           </div>
           <div className="auth-row">
             <span className="auth-k">Purpose</span>
-            <span className="auth-v">Eligibility pre-screening and contact for possible enrollment in {trial.nctId}.</span>
+            <span className="auth-v">{purpose}</span>
           </div>
           <div className="auth-row">
             <span className="auth-k">Terms</span>
             <span className="auth-v">One year · revocable at any time · this trial only.</span>
           </div>
+          <div className="auth-row">
+            <span className="auth-k">Signature</span>
+            <span className="auth-v">Click-through: the button below is what you would be signing with — not a wet or drawn signature.</span>
+          </div>
+          <div className="auth-row">
+            <span className="auth-k">Retention</span>
+            {/* Stated as a term of the authorization, in the same conditional
+                frame the card's footer sets — not as a claim that anything is
+                being kept today, which would be finding #2 all over again. */}
+            <span className="auth-v">A real referral would keep this authorization on file for six years, separate from the one-year sharing window above.</span>
+          </div>
           <div className="auth-actions">
-            <button className="btn go" onClick={onAuthorize}>
+            <button className="btn go" onClick={handleAuthorize}>
               Authorize &amp; refer
             </button>
             <button className="ghost" onClick={() => setStage("idle")}>
               Cancel
             </button>
           </div>
-          <div className="auth-demo">Demo: nothing is transmitted and this is synthetic data — this screen shows the authorization the real flow would capture.</div>
+          <div className="auth-demo">
+            Demo: nothing is transmitted and this is synthetic data — clicking Authorize builds exactly the record above (recipient, fields, purpose,
+            signature, retention) and hands it to the ledger write the real flow would make. No ledger backend exists yet, so that write does not happen.
+          </div>
         </div>
       )}
     </section>
