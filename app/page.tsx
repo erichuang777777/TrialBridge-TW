@@ -21,6 +21,7 @@ import AsciiBackground from "@/app/components/AsciiBackground";
 import HeroVideo from "@/app/components/HeroVideo";
 import NavAuth from "@/app/components/NavAuth";
 import ProductCarousel from "@/app/components/ProductCarousel";
+import DemoGate from "@/app/components/DemoGate";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
 import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches, splitNearMisses } from "@/lib/verdict";
 import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, titleCase } from "@/lib/ctgov";
@@ -892,41 +893,6 @@ export default function Page() {
    reaches /api/extract before this consent moment. Deliberately NOT dismissible
    — no backdrop-click, no Escape, no ✕. The only ways out are its two buttons,
    and the primary steers to the safe synthetic sample. */
-function DemoGate({ onSample, onContinue }: { onSample: () => void; onContinue: () => void }) {
-  const [agreed, setAgreed] = useState(false);
-  return (
-    <div className="gate-overlay" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-      <div className="gate-panel">
-        <div className="gate-head">
-          <div className="demo-badge">DEMO · SYNTHETIC DATA ONLY</div>
-          <h2 id="gate-title">This is a demo — synthetic data only</h2>
-        </div>
-        <div className="gate-body">
-          <p>
-            This build is for demonstration. <b>Please do not enter real patient information.</b> Anything you enter is processed by an AI service
-            to generate trial matches, and is not stored by Trial.
-          </p>
-          <label className="consent gate-consent">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-            <span>
-              I understand, and I will not enter real patient information. I agree to the information I enter being processed to find matching
-              trials.
-            </span>
-          </label>
-        </div>
-        <div className="gate-actions">
-          <button type="button" className="btn go" onClick={onSample}>
-            Use the sample patient (Margaret)
-          </button>
-          <button type="button" className="ghost gate-continue" disabled={!agreed} onClick={onContinue}>
-            Continue with a synthetic note
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ============================ workspace shell ============================= */
 
 function Sidebar({

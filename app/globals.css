@@ -1476,4 +1476,85 @@ details.mcode-banner[open]>summary::after{transform:rotate(90deg);}
 details.mcode-banner .mcode-banner__txt{padding:0 13px 11px;margin:0;}
 /* edit affordance faintly visible at rest (the page asks you to correct anything) */
 .prow .edit{opacity:.5;}
+
+/* ============================================================================
+   Cohort screen (§C1 part 2) — /screen, a coordinator's trial → patients view.
+   Its own standalone page (not the workspace shell): reuses the app's tokens,
+   buttons, counts pills, and criterion-row primitives (.crow family) so it
+   reads as the same product, not a second app bolted on.
+   ========================================================================== */
+.screen-page{position:relative;z-index:1;min-height:100vh;padding:36px 22px 64px;}
+.screen-inner{max-width:920px;margin:0 auto;}
+.screen-head{margin:0 0 22px;padding-bottom:18px;border-bottom:1px solid var(--line);}
+.screen-head h1{font-size:clamp(24px,3.2vw,32px);font-weight:600;letter-spacing:-.02em;line-height:1.15;margin:0 0 8px;}
+.screen-lede{font-size:14px;line-height:1.6;color:var(--ink-2);margin:0;max-width:70ch;}
+
+.screen-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:18px;}
+.screen-panel h2{font-size:14px;font-weight:650;margin:0 0 4px;}
+.screen-panel .sub{font-size:12.5px;color:var(--ink-3);margin:0 0 14px;}
+
+.screen-field{margin-bottom:16px;}
+.screen-field label{display:block;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px;}
+.screen-nct{width:100%;max-width:280px;font:inherit;font-family:var(--mono);font-size:14px;padding:9px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface-sunken);color:var(--ink);}
+.screen-nct:focus-visible{outline:2px solid var(--agent);outline-offset:1px;}
+
+/* per-patient roster editor — cheap to add, edit, remove, and tell apart */
+.cohort-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.cohort-row{display:grid;grid-template-columns:200px 1fr auto;gap:10px;align-items:start;background:var(--surface-sunken);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:10px 12px;}
+.cohort-row .cohort-id{font:inherit;font-size:13px;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);}
+.cohort-row .cohort-summary{font:inherit;font-size:13px;line-height:1.5;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);resize:vertical;min-height:44px;width:100%;}
+.cohort-remove{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:14px;padding:6px;border-radius:6px;align-self:start;}
+.cohort-remove:hover{color:var(--near);background:var(--near-bg);}
+@media(max-width:640px){.cohort-row{grid-template-columns:1fr;}.cohort-remove{justify-self:flex-end;}}
+
+.cohort-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.cohort-cap{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:auto;}
+.cohort-cap.over{color:var(--near);font-weight:600;}
+
+.screen-run-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft);}
+
+/* progress — this route can run for minutes; say so, don't just spin */
+.screen-progress{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:12px;}
+.screen-progress .sp-dot{width:7px;height:7px;border-radius:50%;background:var(--agent);animation:blink 1.2s var(--ease) infinite;flex:none;}
+
+/* two more counts-pill variants than app/page.tsx needed — this screen's
+   cohort can land in "screened" or "excluded" as visibly as any other bucket,
+   never a silent zero. */
+.count.screened .count-dot{background:var(--ink-3);}
+.count.screened b{color:var(--ink-3);}
+.count.excluded .count-dot{background:var(--near);}
+.count.excluded b{color:var(--near);}
+
+/* the matrix */
+.matrix-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 16px;font-size:11.5px;color:var(--ink-3);line-height:1.5;}
+.matrix-legend b{color:var(--ink-2);font-weight:600;}
+.matrix-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);}
+table.matrix{width:100%;border-collapse:collapse;font-size:13px;min-width:680px;}
+table.matrix thead th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap;}
+table.matrix tbody td{padding:11px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+table.matrix tbody tr:last-child td{border-bottom:none;}
+table.matrix tbody tr.matrix-row:hover{background:var(--raise);}
+.matrix-id{font-weight:600;color:var(--ink);white-space:nowrap;}
+.matrix-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+.matrix-status .dot{width:6px;height:6px;border-radius:50%;flex:none;}
+.matrix-status.eligible{color:var(--eligible);background:var(--eligible-bg);}
+.matrix-status.eligible .dot{background:var(--eligible);}
+.matrix-status.uncertain{color:var(--uncertain);background:var(--uncertain-bg);}
+.matrix-status.uncertain .dot{background:var(--uncertain);}
+.matrix-status.near{color:var(--near);background:var(--near-bg);}
+.matrix-status.near .dot{background:var(--near);}
+.matrix-status.excluded{color:var(--near);background:var(--near-bg);}
+.matrix-status.excluded .dot{background:var(--near);}
+.matrix-status.screened{color:var(--ink-3);background:var(--surface-2);}
+.matrix-status.screened .dot{background:var(--ink-3);}
+.matrix-num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-2);}
+.matrix-headline{color:var(--ink-2);font-size:12.5px;max-width:32ch;}
+.matrix-toggle{font:inherit;font-size:11.5px;color:var(--agent-2);background:none;border:0;cursor:pointer;padding:0;white-space:nowrap;}
+.matrix-toggle:hover{text-decoration:underline;}
+
+.matrix-detail-row td{background:var(--surface-sunken);padding:0 12px 16px;}
+.matrix-detail{padding:10px 4px 4px;}
+.matrix-exclusion{font-size:13px;color:var(--ink);background:var(--near-bg);border:1px solid color-mix(in srgb,var(--near) 40%,var(--line));border-radius:var(--r-sm);padding:9px 12px;margin-bottom:6px;}
+.matrix-detail .headline{font-size:13px;color:var(--ink-2);margin:0 0 8px;}
+.matrix-empty-ledger{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
 .prow:hover .edit,.prow.editing .edit{opacity:1;}

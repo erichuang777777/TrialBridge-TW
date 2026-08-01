@@ -28,6 +28,8 @@ import {
 } from "../lib/verdict.ts";
 import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, isValidNctId } from "../lib/ctgov.ts";
 import { buildDisclosureRecord, recordDisclosure, type DisclosureField } from "../lib/disclosure.ts";
+import { buildCohortCsv, csvField } from "../lib/cohortCsv.ts";
+import type { PatientResult, ScreenResponse } from "../lib/screenTypes.ts";
 import { trial, site, criterion } from "./fixtures.ts";
 
 const NOW = Date.UTC(2026, 6, 30); // 2026-07-30, fixed so ages never drift
@@ -400,6 +402,167 @@ test("a study with no published eligibility text is counted, not silently lost",
   const c = cohortCounts(Array.from({ length: 20 }, () => ({ status: "screened" as const })));
   assert.equal(c.screened, 20);
   assert.equal(c.total, 20);
+});
+
+/* ---- cohort CSV export (§C1 part 2) --------------------------------------
+   buildCohortCsv is the plain module the cohort-screen page and the sample
+   fixture both call — tested directly here, no browser and no route harness
+   required, per the task's own instruction to keep it unit-testable. */
+
+const CSV_TRIAL = {
+  nctId: "NCT01234567",
+  title: "A Study, With a Comma in the Title",
+  phase: "Phase 2",
+  sponsor: "Example, Inc.",
+  url: "https://clinicaltrials.gov/study/NCT01234567",
+  overallStatus: "RECRUITING",
+  registryAgeDays: 5,
+  registryStale: false,
+};
+
+function csvPatient(id: string, status: PatientResult["status"], criteria: ReturnType<typeof criterion>[], over: Partial<PatientResult> = {}): PatientResult {
+  return {
+    id,
+    status,
+    headline: "",
+    criteria,
+    metCount: criteria.filter((c) => c.verdict === "meets" || c.verdict === "clear").length,
+    total: criteria.length,
+    openCount: criteria.filter((c) => c.verdict === "confirm").length,
+    hardFailCount: criteria.filter((c) => c.verdict === "fails" && !c.remediable).length,
+    structuralExclusion: null,
+    ...over,
+  };
+}
+
+// A cohort deliberately built to exercise every corner CSV escaping has to
+// get right: a comma in evidence, a quote in evidence, a newline in evidence,
+// a structurally gated patient with an empty ledger, and a "screened" patient
+// with an empty ledger too.
+const CSV_PATIENTS: PatientResult[] = [
+  csvPatient("P-001, Rm 4", "eligible", [criterion({ verdict: "meets", requirement: "HR-positive disease", evidence: "ER 90%, PR 60%" })]),
+  csvPatient("P-002", "uncertain", [
+    criterion({ verdict: "confirm", requirement: "ESR1 mutation status", evidence: 'Patient says "no prior testing" per note.' }),
+  ]),
+  csvPatient("P-003", "near", [
+    criterion({ verdict: "fails", requirement: "No prior CDK4/6 inhibitor", evidence: "Progressed on:\nletrozole\npalbociclib", remediable: false }),
+  ]),
+  csvPatient("P-004", "excluded", [], { structuralExclusion: "Enrolls female participants only." }),
+  csvPatient("P-005", "screened", [], { headline: "No eligibility text published." }),
+];
+
+function csvData(patients: PatientResult[] = CSV_PATIENTS): ScreenResponse {
+  return { trial: CSV_TRIAL, counts: cohortCounts(patients), patients };
+}
+
+test("csvField only quotes a field that actually needs it", () => {
+  assert.equal(csvField("plain text"), "plain text");
+  assert.equal(csvField(""), "");
+});
+
+test("csvField escapes a comma by quoting the whole field", () => {
+  assert.equal(csvField("ER 90%, PR 60%"), '"ER 90%, PR 60%"');
+});
+
+test("csvField escapes an embedded quote by doubling it, inside quotes", () => {
+  assert.equal(csvField('Patient says "no" per note'), '"Patient says ""no"" per note"');
+});
+
+test("csvField escapes an embedded newline by quoting the whole field", () => {
+  const v = csvField("line one\nline two");
+  assert.ok(v.startsWith('"') && v.endsWith('"'), "a newline must trigger quoting, or Excel will split it into two rows");
+  assert.ok(v.includes("line one\nline two"), "the newline itself is preserved inside the quotes, not stripped");
+});
+
+test("the export carries the registry caveats, not just the study's name", () => {
+  // A stale or no-longer-recruiting record misleads a whole cohort at once.
+  // The response already carries both; an export that drops them is where that
+  // gets lost, because the file outlives the screen that showed them.
+  const fresh = buildCohortCsv(csvData());
+  assert.ok(fresh.includes("Recruiting"), "the study's own recruiting status belongs in the export");
+  assert.ok(!fresh.includes("STALE"), "a fresh record must not be labelled stale");
+
+  const stale = buildCohortCsv({
+    ...csvData(),
+    trial: { ...CSV_TRIAL, registryAgeDays: 400, registryStale: true },
+  });
+  assert.ok(stale.includes("registry record 400 days old"), "the age must be stated, in the same words the per-patient log uses");
+  assert.ok(stale.includes("STALE"), "and flagged as a caveat, not left as a number the reader has to judge");
+});
+
+test("buildCohortCsv escapes commas, quotes, and newlines the way Excel expects", () => {
+  const csv = buildCohortCsv(csvData());
+  // The comma sits inside the criteria-ledger cell, which is itself one CSV
+  // field — so the WHOLE cell must be quoted (not just the substring around
+  // the comma), or the comma would fracture the row into an extra column.
+  assert.ok(
+    csv.includes('"incl/meets: HR-positive disease — ER 90%, PR 60%"'),
+    "a comma inside evidence must not fracture the row into extra columns",
+  );
+  assert.ok(csv.includes('""no prior testing""'), "an embedded quote must be doubled, not left to close the field early");
+  assert.ok(csv.includes("Progressed on:\nletrozole\npalbociclib"), "an embedded newline must survive inside a quoted cell");
+});
+
+test("every patient in the cohort appears as exactly one CSV row, in the order the route returned", () => {
+  const csv = buildCohortCsv(csvData());
+  const lines = csv.split("\r\n");
+  const headerIdx = lines.findIndex((l) => l.startsWith("Patient ID,"));
+  assert.ok(headerIdx >= 0, "expected a patient-table header row");
+  const dataRows = lines.slice(headerIdx + 1).filter((l) => l.length > 0);
+  assert.equal(dataRows.length, CSV_PATIENTS.length, "nothing dropped and nothing duplicated — including the structurally gated patient");
+  CSV_PATIENTS.forEach((p, i) => {
+    // A row whose own id starts with a comma is itself quoted — check against
+    // the same csvField() escaping the builder used, not the raw id.
+    assert.ok(dataRows[i].startsWith(`${csvField(p.id)},`), `row ${i} must be ${p.id}, in buildCohortCsv's own order (never re-sorted)`);
+  });
+});
+
+test("a structurally gated patient's row carries the exclusion reason and an empty ledger cell, not a dropped row", () => {
+  const csv = buildCohortCsv(csvData());
+  assert.ok(csv.includes("Enrolls female participants only."), "the structural-exclusion reason must reach the export");
+});
+
+test("the disclaimer is present on every export, and the curated flag changes which one", () => {
+  const live = buildCohortCsv(csvData());
+  assert.match(live, /NOT an eligibility determination/);
+  assert.doesNotMatch(live, /CURATED DEMO COHORT/, "a live export must not claim to be the demo fixture");
+
+  const curated = buildCohortCsv(csvData(), { curated: true });
+  assert.match(curated, /CURATED DEMO COHORT/i);
+  assert.match(curated, /not an eligibility determination/i, "the curated export still carries the core disclaimer, not just the demo caveat");
+});
+
+test("the CSV counts table matches the actual patient rows, independently recomputed", () => {
+  // Recompute from CSV_PATIENTS directly (not via cohortCounts) so this test
+  // can actually catch a bug in the CSV writer, rather than just echoing
+  // whatever cohortCounts() already produced.
+  const csv = buildCohortCsv(csvData());
+  const lines = csv.split("\r\n");
+  const statusIdx = lines.findIndex((l) => l === "Status,Count");
+  assert.ok(statusIdx >= 0, "expected a Status,Count header");
+  const STATUSES = ["eligible", "uncertain", "near", "screened", "excluded"] as const;
+  const parsed: Record<string, number> = {};
+  STATUSES.forEach((s, i) => {
+    const [status, count] = lines[statusIdx + 1 + i].split(",");
+    assert.equal(status, s, "counts table must list every status in a fixed, predictable order");
+    parsed[status] = Number(count);
+  });
+  const [totalLabel, totalCount] = lines[statusIdx + 1 + STATUSES.length].split(",");
+  assert.equal(totalLabel, "total");
+
+  for (const s of STATUSES) {
+    const actual = CSV_PATIENTS.filter((p) => p.status === s).length;
+    assert.equal(parsed[s], actual, `the ${s} count must match how many rows actually carry that status`);
+  }
+  assert.equal(Number(totalCount), CSV_PATIENTS.length);
+});
+
+test("a cohort with every bucket at zero except one still reports all five, not just the nonzero one", () => {
+  const allScreened = [csvPatient("only-one", "screened", [])];
+  const csv = buildCohortCsv(csvData(allScreened));
+  for (const status of ["eligible", "uncertain", "near", "screened", "excluded"]) {
+    assert.ok(csv.includes(`\r\n${status},`), `the ${status} row must still appear even at 0, not be omitted`);
+  }
 });
 
 /* ---- disclosure ledger structure (finding #8) ---------------------------

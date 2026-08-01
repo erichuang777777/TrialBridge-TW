@@ -89,7 +89,18 @@ result out. That matters, because it means this can ship without first resolving
 storage question below.
 
 Shipped in two parts — engine and API first (self-contained, testable without a
-browser), then the clinician-facing screen.
+browser), then the clinician-facing screen. **Both parts have landed:**
+`app/api/screen/route.ts` and `/screen`, with a curated sample cohort so the
+matrix can be exercised without an API key, and a CSV export of the matrix
+(`lib/cohortCsv.ts`). The wire contract lives in `lib/screenTypes.ts`, which the
+route imports rather than restates — a route module may only *export* handlers,
+but it may import anything, so there is one definition and one `MAX_COHORT`.
+
+`/screen` is a fourth ingest path, so it carries the same `DemoGate` and DEMO
+badge as the patient side (audit findings #1 and #6) — the component moved to
+`app/components/DemoGate.tsx` for that reason. A coordinator's list is 25 notes
+rather than one, which makes it the surface where an ungated paste would matter
+most, not least.
 
 ---
 
@@ -139,8 +150,13 @@ are already structured in a coordinator's hands; making them retype prose so a m
 can re-extract it is backwards. Worth doing, but it is an intake redesign and should
 follow C1 — the cohort screen is where the shape of that input will become obvious.
 
-**Batch export beyond one patient.** The screening log is per-patient plain text. A
-multi-patient matrix (CSV) belongs with C1, not before it.
+**Batch export beyond one patient.** ~~The screening log is per-patient plain text. A
+multi-patient matrix (CSV) belongs with C1, not before it.~~ **Done** — shipped with
+C1 as `lib/cohortCsv.ts`. Like the per-patient log, the file qualifies itself: a
+download outlives the screen that framed it, so it carries the
+not-an-eligibility-determination line, says when it came from the sample cohort,
+and states the registry record's status and age — which is exactly what cannot be
+recovered from the file later.
 
 ---
 

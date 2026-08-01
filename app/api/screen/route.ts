@@ -44,6 +44,11 @@ import { derivePatientDemographics, structuralExclusion } from "@/lib/structural
 import { computeFactors, type GeoContext } from "@/lib/factors";
 import { derivePatientLoc } from "@/lib/geo";
 import { openCountOf, hardFailCountOf, compareCohortPatients, cohortCounts } from "@/lib/verdict";
+// The wire contract lives in lib/ and is imported here, not redeclared. A route
+// module may only EXPORT handlers — importing is unrestricted — so there is no
+// reason for the cohort screen and this route to hold separate copies of the
+// same shapes, or two constants both spelling the cap.
+import { MAX_COHORT, type PatientInput, type PatientResult, type ScreenBody, type ScreenResponse } from "@/lib/screenTypes";
 import type { Criterion, MatchStatus, Trial } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -53,38 +58,7 @@ export const runtime = "nodejs";
 // per-batch budget to the higher batch count.
 export const maxDuration = 600;
 
-/** A coordinator's list for one day, not an unbounded batch job — capped so a
- *  single request can't turn into an unbounded number of Claude calls. Reject
- *  over-cap rather than silently screening only the first MAX_COHORT. */
-const MAX_COHORT = 25;
 const CONCURRENCY = 5; // simultaneous per-patient Claude calls, same as /api/match
-
-type PatientInput = {
-  id: string;
-  summary?: string;
-  fields?: { label: string; value: string }[];
-};
-
-type ScreenBody = {
-  nctId?: string;
-  patients?: PatientInput[];
-  /** Voice only — same meaning as /api/match's `entrant`, but defaulting to
-   *  "clinician" here rather than "patient". Verdicts never move. */
-  entrant?: string;
-};
-
-/** One row of the cohort matrix. No per-patient TrialMatch — see header. */
-type PatientResult = {
-  id: string;
-  status: MatchStatus;
-  headline: string;
-  criteria: Criterion[];
-  metCount: number;
-  total: number;
-  openCount: number;
-  hardFailCount: number;
-  structuralExclusion: string | null;
-};
 
 export async function POST(req: Request) {
   let body: ScreenBody;
@@ -198,6 +172,9 @@ export async function POST(req: Request) {
   const counts = cohortCounts(results);
 
   const factors = computeFactors(trial, geo);
+  // `satisfies` rather than a cast: this is the one place the wire shape is
+  // produced, so a field added or renamed here must fail to compile against the
+  // contract the client reads, not reach it as a surprise at runtime.
   return NextResponse.json({
     trial: {
       nctId: trial.nctId,
@@ -211,7 +188,7 @@ export async function POST(req: Request) {
     },
     counts,
     patients: results,
-  });
+  } satisfies ScreenResponse);
 }
 
 /** Run fn over items with at most `limit` in flight; preserves input order.
