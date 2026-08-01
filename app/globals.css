@@ -1557,4 +1557,31 @@ table.matrix tbody tr.matrix-row:hover{background:var(--raise);}
 .matrix-exclusion{font-size:13px;color:var(--ink);background:var(--near-bg);border:1px solid color-mix(in srgb,var(--near) 40%,var(--line));border-radius:var(--r-sm);padding:9px 12px;margin-bottom:6px;}
 .matrix-detail .headline{font-size:13px;color:var(--ink-2);margin:0 0 8px;}
 .matrix-empty-ledger{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+/* Post-screening correction (screening-failure feedback loop) — deliberately
+   quieter than the ledger above it: muted surface, smaller type, no color
+   from the verdict palette. It only appears once a coordinator has already
+   opened the ledger, and it reads as a distinct, secondary block, not part
+   of the screening read itself. */
+.matrix-correction{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-soft);}
+.mc-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+.mc-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);}
+.mc-sub{font-size:12px;color:var(--ink-3);line-height:1.5;}
+.mc-mode{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;}
+.mc-radio{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);cursor:pointer;}
+.mc-radio input{margin:0;}
+.mc-field{margin-bottom:10px;max-width:480px;}
+.mc-field label{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);margin-bottom:4px;}
+.mc-field select,.mc-field input[type="text"],.mc-field input:not([type]),.mc-field textarea{font:inherit;font-size:12.5px;width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);}
+.mc-field textarea{resize:vertical;min-height:36px;}
+.mc-failure-text{margin-top:6px;}
+/* What the chosen basis means for the eval, said where the choice is made. */
+.mc-hint{margin:6px 0 0;font-size:11.5px;line-height:1.5;color:var(--ink-3);}
+.mc-field-inline{max-width:220px;}
+.mc-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:4px;}
+.mc-export{font:inherit;font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 12px;cursor:pointer;}
+.mc-export:hover:not(:disabled){border-color:var(--agent);color:var(--ink);}
+.mc-export:disabled{opacity:.5;cursor:not-allowed;}
+.mc-warning{font-size:11px;color:var(--ink-3);line-height:1.5;max-width:46ch;}
+
 .prow:hover .edit,.prow.editing .edit{opacity:1;}

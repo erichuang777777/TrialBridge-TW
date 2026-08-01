@@ -24,10 +24,57 @@ import type { Criterion, MatchStatus } from "@/lib/types";
 import { isValidNctId, formatSiteStatus } from "@/lib/ctgov";
 import { MAX_COHORT, type PatientResult, type ScreenResponse } from "@/lib/screenTypes";
 import { buildCohortCsv } from "@/lib/cohortCsv";
+import {
+  buildCorrection,
+  buildAdjudicatedCase,
+  serializeAdjudicatedCase,
+  isAdjudicable,
+  type CorrectedStatus,
+  type CorrectionBasis,
+} from "@/lib/feedback";
 import DemoGate from "@/app/components/DemoGate";
 import { SAMPLE_NCT_ID, SAMPLE_PATIENT_INPUTS, sampleScreenResult } from "@/lib/demoScreen";
 
 type Draft = { key: string; id: string; summary: string };
+
+/* ---- the screening-failure feedback loop (roadmap: "Deferred, and why") ---
+   A coordinator's post-hoc correction, held in React state only and never
+   sent anywhere — it leaves this page as a downloaded JSON file, the same
+   way the cohort CSV already does (downloadCsv below). See lib/feedback.ts
+   for the builder, the invariants it enforces, and why the exported file
+   satisfies evals/cases/ledger-cases.ts's LedgerCase shape. */
+type CorrectionMode = "unset" | "confirm" | "override";
+type CorrectionDraft = {
+  mode: CorrectionMode;
+  /** Only meaningful when mode === "override" — buildCorrection() below
+   *  never defaults this from the app's own p.status. */
+  trueStatus: CorrectedStatus | "";
+  /** "" = nothing chosen · "other" = "not listed by the app" · else the
+   *  index (as a string) into this patient's failing criteria. */
+  failureChoice: string;
+  /** Editable regardless of how failureChoice was set — the coordinator's
+   *  own words are what travels, even when they started from the app's. */
+  failureText: string;
+  /** true iff failureChoice named one of the app's own "fails" criteria. */
+  appNamedIt: boolean;
+  /** Why the screen and the truth diverged. Decides whether this correction
+   *  can become a gold eval case at all — see CorrectionBasis in
+   *  lib/feedback.ts. "" until the coordinator answers; the export button
+   *  stays disabled while it is unanswered on anything but a plain confirm. */
+  basis: CorrectionBasis | "";
+  note: string;
+  reviewerLabel: string;
+};
+const EMPTY_DRAFT: CorrectionDraft = {
+  mode: "unset",
+  trueStatus: "",
+  failureChoice: "",
+  failureText: "",
+  appNamedIt: false,
+  basis: "",
+  note: "",
+  reviewerLabel: "",
+};
 
 /** Every MatchStatus bucket a cohort row can carry, with a plain-language
  *  explanation shown regardless of whether the count is 0 for this run — a
@@ -89,6 +136,12 @@ export default function ScreenPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [elapsed, setElapsed] = useState(0);
   const [csvSaved, setCsvSaved] = useState(false);
+  // Post-screening corrections: keyed by patient id, in memory only. Cleared
+  // whenever the roster changes (new screen / new run) — a draft correction
+  // for a patient who is no longer on screen is not a thing that should
+  // linger. See exportCorrection() below for where a completed one goes.
+  const [corrections, setCorrections] = useState<Record<string, CorrectionDraft>>({});
+  const [exportedIds, setExportedIds] = useState<Set<string>>(new Set());
 
   // /api/screen's own maxDuration is 600s (see its header comment) — a real
   // run can take minutes. Show something truer than a static spinner.
@@ -134,6 +187,8 @@ export default function ScreenPage() {
     setResult(sampleScreenResult());
     setIsSample(true);
     setExpanded(new Set());
+    setCorrections({});
+    setExportedIds(new Set());
   }
 
   function newScreen() {
@@ -143,6 +198,8 @@ export default function ScreenPage() {
     setError(null);
     setIsSample(false);
     setExpanded(new Set());
+    setCorrections({});
+    setExportedIds(new Set());
   }
 
   // Audit finding #1 (BLOCKER), same choke point as the patient side: no
@@ -179,6 +236,8 @@ export default function ScreenPage() {
       if (!res.ok) throw new Error(data.error || `Screening failed (HTTP ${res.status}).`);
       setResult(data as ScreenResponse);
       setExpanded(new Set());
+      setCorrections({});
+      setExportedIds(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong reaching /api/screen.");
     } finally {
@@ -212,6 +271,81 @@ export default function ScreenPage() {
     URL.revokeObjectURL(url);
     setCsvSaved(true);
     window.setTimeout(() => setCsvSaved(false), 1600);
+  }
+
+  function correctionFor(id: string): CorrectionDraft {
+    return corrections[id] ?? EMPTY_DRAFT;
+  }
+
+  function patchCorrection(id: string, patch: Partial<CorrectionDraft>) {
+    setCorrections((m) => ({ ...m, [id]: { ...correctionFor(id), ...patch } }));
+    // Editing after a download means the exported file no longer reflects the
+    // draft on screen — the "Saved" badge would otherwise keep claiming a
+    // file exists that matches what's now showing.
+    setExportedIds((s) => {
+      if (!s.has(id)) return s;
+      const n = new Set(s);
+      n.delete(id);
+      return n;
+    });
+  }
+
+  // The free-text summary the coordinator actually typed for this patient —
+  // the only "profile" the cohort screen ever collects (no structured
+  // fields, unlike the patient-facing side). Looked up from the roster
+  // rather than re-derived, and from `rows` rather than the request payload,
+  // since `rows` is what's still in memory after the run.
+  function summaryFor(id: string): string {
+    return rows.find((r) => (r.id.trim() || r.key) === id)?.summary ?? "";
+  }
+
+  // Turns one patient's correction draft into the downloaded file — the
+  // whole round trip this feature exists for: React state → JSON → a file a
+  // coordinator can drop into evals/cases/adjudicated/ and have the eval
+  // harness actually run. No network call, no write of any kind; the Blob
+  // URL is revoked immediately after the click, same discipline as
+  // downloadCsv above.
+  function exportCorrection(p: PatientResult) {
+    if (!result) return;
+    const draft = correctionFor(p.id);
+    const trueStatus: CorrectedStatus | "" = draft.mode === "confirm" ? (p.status as CorrectedStatus) : draft.trueStatus;
+    if (!trueStatus) return; // CorrectionPanel's canExport keeps the button disabled until this is set
+    const trueFailure = trueStatus === "near" ? { requirement: draft.failureText.trim(), appNamedIt: draft.appNamedIt } : null;
+
+    let correction;
+    try {
+      correction = buildCorrection({
+        patientId: p.id,
+        trialNctId: result.trial.nctId,
+        appStatus: p.status,
+        trueStatus,
+        trueFailure,
+        basis: draft.basis === "" ? null : draft.basis,
+        note: draft.note,
+        reviewerLabel: draft.reviewerLabel,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not build that correction.");
+      return;
+    }
+
+    const adjudicated = buildAdjudicatedCase({
+      correction,
+      patient: { criteria: p.criteria },
+      profile: { summary: summaryFor(p.id) },
+      trial: result.trial,
+    });
+    const json = serializeAdjudicatedCase(adjudicated);
+    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${adjudicated.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setExportedIds((s) => new Set(s).add(p.id));
   }
 
   return (
@@ -347,7 +481,18 @@ export default function ScreenPage() {
         </section>
 
         {result && (
-          <CohortMatrix data={result} isSample={isSample} expanded={expanded} onToggle={toggleExpand} onDownload={downloadCsv} csvSaved={csvSaved} />
+          <CohortMatrix
+            data={result}
+            isSample={isSample}
+            expanded={expanded}
+            onToggle={toggleExpand}
+            onDownload={downloadCsv}
+            csvSaved={csvSaved}
+            getDraft={correctionFor}
+            onDraftChange={patchCorrection}
+            onExportCorrection={exportCorrection}
+            exportedIds={exportedIds}
+          />
         )}
 
         <p className="disclaimer">
@@ -366,6 +511,10 @@ function CohortMatrix({
   onToggle,
   onDownload,
   csvSaved,
+  getDraft,
+  onDraftChange,
+  onExportCorrection,
+  exportedIds,
 }: {
   data: ScreenResponse;
   isSample: boolean;
@@ -373,6 +522,10 @@ function CohortMatrix({
   onToggle: (id: string) => void;
   onDownload: () => void;
   csvSaved: boolean;
+  getDraft: (id: string) => CorrectionDraft;
+  onDraftChange: (id: string, patch: Partial<CorrectionDraft>) => void;
+  onExportCorrection: (p: PatientResult) => void;
+  exportedIds: Set<string>;
 }) {
   const { trial, counts, patients } = data;
 
@@ -449,7 +602,16 @@ function CohortMatrix({
           </thead>
           <tbody>
             {patients.map((p) => (
-              <PatientRow key={p.id} p={p} open={expanded.has(p.id)} onToggle={() => onToggle(p.id)} />
+              <PatientRow
+                key={p.id}
+                p={p}
+                open={expanded.has(p.id)}
+                onToggle={() => onToggle(p.id)}
+                draft={getDraft(p.id)}
+                onDraftChange={(patch) => onDraftChange(p.id, patch)}
+                onExport={() => onExportCorrection(p)}
+                exported={exportedIds.has(p.id)}
+              />
             ))}
           </tbody>
         </table>
@@ -458,7 +620,23 @@ function CohortMatrix({
   );
 }
 
-function PatientRow({ p, open, onToggle }: { p: PatientResult; open: boolean; onToggle: () => void }) {
+function PatientRow({
+  p,
+  open,
+  onToggle,
+  draft,
+  onDraftChange,
+  onExport,
+  exported,
+}: {
+  p: PatientResult;
+  open: boolean;
+  onToggle: () => void;
+  draft: CorrectionDraft;
+  onDraftChange: (patch: Partial<CorrectionDraft>) => void;
+  onExport: () => void;
+  exported: boolean;
+}) {
   return (
     <>
       <tr className="matrix-row">
@@ -506,11 +684,179 @@ function PatientRow({ p, open, onToggle }: { p: PatientResult; open: boolean; on
                   </p>
                 )
               )}
+              {/* Post-hoc only: not part of the screening read, and only offered
+                  for a row a model actually reasoned over (see isAdjudicable in
+                  lib/feedback.ts — "screened" and "excluded" are not clinical
+                  judgments, so there is nothing here to confirm or correct). */}
+              {isAdjudicable(p.status) && (
+                <CorrectionPanel p={p} draft={draft} onChange={onDraftChange} onExport={onExport} exported={exported} />
+              )}
             </div>
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+/** What a coordinator learns after the fact — the screening-failure feedback
+ *  loop's whole affordance, in one collapsed-by-default block below the
+ *  ledger. See lib/feedback.ts for what leaves the browser and why. */
+function CorrectionPanel({
+  p,
+  draft,
+  onChange,
+  onExport,
+  exported,
+}: {
+  p: PatientResult;
+  draft: CorrectionDraft;
+  onChange: (patch: Partial<CorrectionDraft>) => void;
+  onExport: () => void;
+  exported: boolean;
+}) {
+  const failingCriteria = p.criteria.filter((c) => c.verdict === "fails");
+  const trueStatus: CorrectedStatus | "" = draft.mode === "confirm" ? (p.status as CorrectedStatus) : draft.trueStatus;
+  const needsFailure = trueStatus === "near";
+  // A basis is needed whenever there is a divergence to explain: either the
+  // coordinator disagrees with the app's bucket, or they agree with it but say
+  // the patient failed on something the app never named. Both change what the
+  // correction means for the eval; neither can be guessed on their behalf.
+  const disagrees = trueStatus !== "" && trueStatus !== p.status;
+  const needsBasis = disagrees || (needsFailure && draft.failureChoice === "other");
+  const canExport =
+    draft.mode !== "unset" &&
+    (draft.mode === "confirm" || draft.trueStatus !== "") &&
+    (!needsFailure || (draft.failureChoice !== "" && draft.failureText.trim() !== "")) &&
+    (!needsBasis || draft.basis !== "");
+
+  function chooseFailure(choice: string) {
+    if (choice === "" || choice === "other") {
+      onChange({ failureChoice: choice, failureText: choice === "other" ? draft.failureText : "", appNamedIt: false });
+      return;
+    }
+    const c = failingCriteria[Number(choice)];
+    onChange({ failureChoice: choice, failureText: c?.requirement ?? "", appNamedIt: true });
+  }
+
+  return (
+    <div className="matrix-correction">
+      <div className="mc-head">
+        <span className="mc-title">Post-screening correction</span>
+        <span className="mc-sub">
+          Record what you actually learn about {p.id} after this screen — not part of the screen itself, and never sent anywhere.
+        </span>
+      </div>
+
+      <div className="mc-mode">
+        <label className="mc-radio">
+          <input
+            type="radio"
+            name={`mc-mode-${p.id}`}
+            checked={draft.mode === "confirm"}
+            onChange={() => onChange({ mode: "confirm", trueStatus: "" })}
+          />
+          Confirms the app — patient was truly <b>{p.status}</b>
+        </label>
+        <label className="mc-radio">
+          <input
+            type="radio"
+            name={`mc-mode-${p.id}`}
+            checked={draft.mode === "override"}
+            onChange={() => onChange({ mode: "override" })}
+          />
+          Different from the app
+        </label>
+      </div>
+
+      {draft.mode === "override" && (
+        <div className="mc-field">
+          <label>True status</label>
+          <select
+            value={draft.trueStatus}
+            onChange={(e) => onChange({ trueStatus: e.target.value as CorrectedStatus | "", failureChoice: "", failureText: "" })}
+          >
+            <option value="">Choose…</option>
+            <option value="eligible">eligible</option>
+            <option value="uncertain">uncertain</option>
+            <option value="near">near / ruled out</option>
+          </select>
+        </div>
+      )}
+
+      {needsFailure && (
+        <div className="mc-field">
+          <label>Criterion actually failed</label>
+          <select value={draft.failureChoice} onChange={(e) => chooseFailure(e.target.value)}>
+            <option value="">Choose…</option>
+            {failingCriteria.map((c, i) => (
+              <option key={i} value={String(i)}>
+                {c.requirement}
+              </option>
+            ))}
+            <option value="other">Not listed by the app — describe below</option>
+          </select>
+          <textarea
+            className="mc-failure-text"
+            rows={2}
+            value={draft.failureText}
+            onChange={(e) => onChange({ failureText: e.target.value })}
+            placeholder="The criterion, in your own words"
+            disabled={draft.failureChoice === ""}
+          />
+        </div>
+      )}
+
+      {needsBasis && (
+        <div className="mc-field">
+          <label>Why did the screen and the outcome differ?</label>
+          <select value={draft.basis} onChange={(e) => onChange({ basis: e.target.value as CorrectionBasis | "" })}>
+            <option value="">Choose one…</option>
+            <option value="published-criteria">The information was in the record and the published criteria — this was read wrong</option>
+            <option value="criterion-missing">The criterion is in the study&apos;s published text, but never appeared in this ledger</option>
+            <option value="outside-the-record">The deciding fact wasn&apos;t in the record we screened (a later scan, an undocumented history)</option>
+          </select>
+          {/* Said plainly, because the coordinator is the one choosing, and the
+              third answer means something different from the first two. */}
+          <p className="mc-hint">
+            {draft.basis === "outside-the-record"
+              ? "Kept as feedback about the record, and deliberately not scored against the model — nothing in the notes we screened could have shown this."
+              : draft.basis === ""
+                ? "This decides whether the correction can be used to score the model at all."
+                : "This becomes a scored case: the same notes, the same published criteria, a better answer expected."}
+          </p>
+        </div>
+      )}
+
+      <div className="mc-field">
+        <label>Note (optional)</label>
+        <textarea
+          rows={2}
+          value={draft.note}
+          onChange={(e) => onChange({ note: e.target.value })}
+          placeholder="What the record didn't show…"
+        />
+      </div>
+
+      <div className="mc-field mc-field-inline">
+        <label>Reviewer</label>
+        <input
+          value={draft.reviewerLabel}
+          onChange={(e) => onChange({ reviewerLabel: e.target.value })}
+          placeholder="Initials or role"
+        />
+      </div>
+
+      <div className="mc-actions">
+        <button type="button" className="mc-export" disabled={!canExport} onClick={onExport}>
+          {exported ? "Saved" : "Export correction (JSON)"}
+        </button>
+        <span className="mc-warning">
+          Downloads a file carrying this patient&apos;s summary and outcome — a health-data record. Handle and store it like any other
+          PHI.
+        </span>
+      </div>
+    </div>
   );
 }
 

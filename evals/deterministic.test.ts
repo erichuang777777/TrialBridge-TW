@@ -12,6 +12,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { derivePatientLoc, proximity, travelThreshold, travelLabel } from "../lib/geo.ts";
 import { computeFactors, ageInDays, STALE_AFTER_DAYS, type GeoContext } from "../lib/factors.ts";
@@ -29,7 +32,18 @@ import {
 import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, isValidNctId } from "../lib/ctgov.ts";
 import { buildDisclosureRecord, recordDisclosure, type DisclosureField } from "../lib/disclosure.ts";
 import { buildCohortCsv, csvField } from "../lib/cohortCsv.ts";
-import type { PatientResult, ScreenResponse } from "../lib/screenTypes.ts";
+import type { PatientResult, ScreenResponse, ScreenTrialSummary } from "../lib/screenTypes.ts";
+import {
+  buildCorrection,
+  buildAdjudicatedCase,
+  serializeAdjudicatedCase,
+  parseAdjudicatedCase,
+  toLedgerCase,
+  reconstructTrial,
+  reconstructEligibilityCriteria,
+  isAdjudicable,
+} from "../lib/feedback.ts";
+import { loadAdjudicatedCases } from "./cases/adjudicated-loader.ts";
 import { trial, site, criterion } from "./fixtures.ts";
 
 const NOW = Date.UTC(2026, 6, 30); // 2026-07-30, fixed so ages never drift
@@ -684,4 +698,395 @@ test("compensation cannot be left unanswered — the type requires it, never def
     });
   }
   assert.equal(typeof attemptWithoutCompensation, "function", "the real assertion here is enforced by tsc, see comment above");
+});
+
+/* ---- the screening-failure feedback loop (lib/feedback.ts) --------------
+   The file round trip the roadmap asked for: a coordinator's correction →
+   JSON → a case evals/ledger.ts can actually run. Every test below pins one
+   of the invariants lib/feedback.ts's header comment states, not just that
+   the functions don't throw. */
+
+const FEEDBACK_TRIAL: ScreenTrialSummary = {
+  nctId: "NCT12340000",
+  title: "Fabricated Study For The Feedback Loop",
+  phase: "Phase 2",
+  sponsor: "Example Sponsor",
+  url: "https://clinicaltrials.gov/study/NCT12340000",
+  overallStatus: "RECRUITING",
+  registryAgeDays: 10,
+  registryStale: false,
+};
+
+function feedbackPatient(): PatientResult {
+  const criteria = [
+    criterion({ kind: "incl", verdict: "meets", requirement: "HR-positive, HER2-negative metastatic breast cancer", evidence: "ER 90%, HER2 IHC 0." }),
+    criterion({ kind: "excl", verdict: "fails", requirement: "No prior CDK4/6 inhibitor", evidence: "Received palbociclib 1L.", remediable: false }),
+  ];
+  return {
+    id: "P-1",
+    status: "near",
+    headline: "Ruled out on prior CDK4/6 inhibitor.",
+    criteria,
+    metCount: 1,
+    total: 2,
+    openCount: 0,
+    hardFailCount: 1,
+    structuralExclusion: null,
+  };
+}
+
+test("isAdjudicable admits only the statuses a model actually reasoned over", () => {
+  assert.equal(isAdjudicable("eligible"), true);
+  assert.equal(isAdjudicable("uncertain"), true);
+  assert.equal(isAdjudicable("near"), true);
+  assert.equal(isAdjudicable("screened"), false, "no criteria were ever judged — nothing to confirm or correct");
+  assert.equal(isAdjudicable("excluded"), false, "a deterministic structural gate, not a clinical judgment");
+});
+
+test("reconstructEligibilityCriteria groups a patient's own ledger back into inclusion/exclusion prose", () => {
+  const text = reconstructEligibilityCriteria([
+    criterion({ kind: "incl", requirement: "Adults 18 or older" }),
+    criterion({ kind: "excl", requirement: "No active brain metastases" }),
+  ]);
+  assert.match(text, /Inclusion Criteria:\n- Adults 18 or older/);
+  assert.match(text, /Exclusion Criteria:\n- No active brain metastases/);
+});
+
+test("an exported correction round-trips through JSON without losing the clinician's claim", () => {
+  const patient = feedbackPatient();
+  const correction = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: patient.status,
+    trueStatus: "near",
+    // The clinician says the REAL reason was something the app's ledger never
+    // named at all — the exact case the roadmap's feedback loop exists for.
+    trueFailure: { requirement: "Uncontrolled brain metastases found on post-screening MRI", appNamedIt: false },
+    // The deciding fact arrived AFTER the screen — so this is feedback about
+    // the record, not about the reasoning, and must not be scored.
+    basis: "outside-the-record",
+    note: "Progressed intracranially two weeks after this screen; nothing in the record we had showed it.",
+    reviewerLabel: "RN — J.D.",
+    now: Date.UTC(2026, 7, 1),
+  });
+  const built = buildAdjudicatedCase({
+    correction,
+    patient: { criteria: patient.criteria },
+    profile: { summary: "62F, HR+/HER2- MBC, 2 prior lines, ECOG 1." },
+    trial: FEEDBACK_TRIAL,
+    now: Date.UTC(2026, 7, 1),
+  });
+
+  const json = serializeAdjudicatedCase(built);
+  const parsed = parseAdjudicatedCase(json);
+  assert.equal(parsed.ok, true, parsed.ok ? "" : parsed.error);
+  if (!parsed.ok) throw new Error("unreachable — asserted above");
+  assert.deepEqual(parsed.case, built, "parsing what was just serialized must reproduce it exactly, field for field");
+
+  const ledgerCase = toLedgerCase(parsed.case);
+  assert.equal(ledgerCase.adjudicated, true);
+  assert.equal(ledgerCase.expected, "near", "expected comes from the clinician's trueStatus");
+  assert.equal(ledgerCase.correction?.trueFailure?.requirement, "Uncontrolled brain metastases found on post-screening MRI");
+  assert.equal(ledgerCase.correction?.trueFailure?.appNamedIt, false, "\"the app never named this\" must survive the round trip intact");
+  assert.deepEqual(ledgerCase.mustFail, ["Uncontrolled brain metastases found on post-screening MRI"]);
+  // A LedgerCase the harness can actually run needs criteria TEXT, not just a
+  // bucket — reconstructed here from the patient's own ledger (see
+  // lib/feedback.ts's reconstructTrial), since /screen never held the
+  // registry's raw prose to begin with.
+  assert.ok(ledgerCase.trial.eligibilityCriteria.includes("No prior CDK4/6 inhibitor"));
+  assert.ok(ledgerCase.trial.nctId === FEEDBACK_TRIAL.nctId && ledgerCase.trial.title === FEEDBACK_TRIAL.title);
+});
+
+test("a confirmation is a real, dated, attributed verdict — not the same thing as no review at all", () => {
+  const patient = feedbackPatient();
+  const confirmed = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: patient.status, // "near"
+    trueStatus: "near", // the coordinator agrees
+    trueFailure: { requirement: "No prior CDK4/6 inhibitor", appNamedIt: true },
+    now: Date.UTC(2026, 7, 1),
+  });
+  assert.equal(confirmed.confirmsApp, true, "trueStatus === appStatus must read as an explicit confirmation");
+  assert.ok(confirmed.reviewedAt, "a confirmation still carries a timestamp — it is a real review, not a no-op");
+
+  const built = buildAdjudicatedCase({
+    correction: confirmed,
+    patient: { criteria: patient.criteria },
+    profile: { summary: "x" },
+    trial: FEEDBACK_TRIAL,
+  });
+  assert.equal(toLedgerCase(built).adjudicated, true, "a confirmation is still `adjudicated: true` — it is evidence, not silence");
+
+  // There is no path in this module to a ScreeningCorrection nobody made: no
+  // default export, no empty/unset value. "Unreviewed" is represented only
+  // by the total absence of a correction — e.g. an authored LedgerCase from
+  // evals/cases/ledger-cases.ts, which never sets `adjudicated` at all.
+  assert.equal(trial().eligibilityCriteria.length > 0, true, "sanity: an authored case's trial carries no `adjudicated`/`correction` fields");
+});
+
+test("the app's derived status never overwrites the coordinator's claim, in either direction", () => {
+  const patient = feedbackPatient(); // app derived "near"
+  const overridden = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: patient.status, // "near"
+    trueStatus: "eligible", // the coordinator's claim: the app was wrong
+    basis: "published-criteria",
+  });
+  assert.equal(overridden.trueStatus, "eligible", "the clinician's claim survives even though it disagrees with the app");
+  assert.equal(overridden.appStatus, "near", "the app's own status is kept for the record, never silently rewritten to agree");
+  assert.equal(overridden.confirmsApp, false);
+
+  const built = buildAdjudicatedCase({
+    correction: overridden,
+    patient: { criteria: patient.criteria },
+    profile: { summary: "x" },
+    trial: FEEDBACK_TRIAL,
+  });
+  assert.equal(built.expected, "eligible", "the eval's gold `expected` comes from the clinician's claim, never from appStatus");
+});
+
+test('buildCorrection refuses a "near" claim with no named failure, and refuses a failure attached to a non-"near" claim', () => {
+  assert.throws(
+    () => buildCorrection({ patientId: "p", trialNctId: "NCT00000001", appStatus: "near", trueStatus: "near" }),
+    /must name the criterion/,
+  );
+  assert.throws(
+    () =>
+      buildCorrection({
+        patientId: "p",
+        trialNctId: "NCT00000001",
+        appStatus: "eligible",
+        trueStatus: "eligible",
+        trueFailure: { requirement: "x", appNamedIt: false },
+      }),
+    /only applies when/,
+  );
+});
+
+test("malformed JSON is rejected, not silently turned into a degenerate case", () => {
+  const notJson = parseAdjudicatedCase("{not valid json");
+  assert.equal(notJson.ok, false);
+  if (notJson.ok) throw new Error("unreachable");
+  assert.match(notJson.error, /Malformed JSON/);
+
+  const wrongShape = parseAdjudicatedCase(JSON.stringify({ hello: "world" }));
+  assert.equal(wrongShape.ok, false);
+
+  const emptyCriteria = parseAdjudicatedCase(
+    JSON.stringify({
+      kind: "trialign-adjudicated-case",
+      schemaVersion: 1,
+      exportedAt: "2026-08-01T00:00:00.000Z",
+      notice: "x",
+      id: "x",
+      about: "x",
+      profile: { summary: "x", fields: [] },
+      trial: { ...reconstructTrial(FEEDBACK_TRIAL, []), eligibilityCriteria: "" },
+      expected: "near",
+      correction: {
+        kind: "trialign-screening-correction",
+        schemaVersion: 1,
+        patientId: "p",
+        trialNctId: FEEDBACK_TRIAL.nctId,
+        appStatus: "near",
+        trueStatus: "near",
+        confirmsApp: true,
+        trueFailure: { requirement: "x", appNamedIt: true },
+        note: "",
+        reviewedAt: "2026-08-01T00:00:00.000Z",
+        reviewerLabel: "",
+      },
+      reconstructionCaveats: [],
+    }),
+  );
+  assert.equal(emptyCriteria.ok, false, "a case with no criteria text to reason over must be rejected, not accepted as runnable");
+});
+
+test("a spoofed confirmsApp is caught on read, not trusted from the file", () => {
+  // The app's status must never be able to silently overwrite the
+  // clinician's claim — including via a hand-edited or corrupted file that
+  // just asserts agreement that never happened.
+  const patient = feedbackPatient();
+  const correction = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: "near",
+    trueStatus: "eligible", // genuinely disagrees with the app
+    basis: "published-criteria",
+  });
+  const built = buildAdjudicatedCase({ correction, patient: { criteria: patient.criteria }, profile: { summary: "x" }, trial: FEEDBACK_TRIAL });
+  const tampered = JSON.parse(serializeAdjudicatedCase(built));
+  tampered.correction.confirmsApp = true; // the lie: claim the app was right when the correction itself disagrees
+  const rejected = parseAdjudicatedCase(JSON.stringify(tampered));
+  assert.equal(rejected.ok, false);
+  if (rejected.ok) throw new Error("unreachable");
+  assert.match(rejected.error, /confirmsApp/);
+});
+
+test("a correction whose criterion the app never surfaced is put back into the trial text, not left unsatisfiable", () => {
+  // The primary case this loop exists for: the app missed a published
+  // criterion. The eligibility text a case carries is rebuilt from the app's
+  // own ledger, so unless the criterion is restored, the case asks the model
+  // to fail on a requirement it is never shown — red forever, and read as a
+  // model defect rather than a broken case.
+  const patient = feedbackPatient();
+  const correction = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: "eligible",
+    trueStatus: "near",
+    trueFailure: { requirement: "Prior exposure to an AKT inhibitor", appNamedIt: false },
+    basis: "criterion-missing",
+  });
+  const built = buildAdjudicatedCase({ correction, patient: { criteria: patient.criteria }, profile: { summary: "x" }, trial: FEEDBACK_TRIAL });
+  assert.equal(built.evalUsable, true, "a criterion the study published but the app dropped is exactly what should be scored");
+  assert.ok(
+    built.trial.eligibilityCriteria.includes("Prior exposure to an AKT inhibitor"),
+    "the restored criterion must appear in the text the model will be shown, or the case can never pass",
+  );
+  assert.match(built.trial.eligibilityCriteria, /restored by clinician review/, "and it must be visibly distinguishable from the app's own extraction");
+});
+
+test("a failure that was outside the record is kept as feedback but never scored", () => {
+  // A model reasoning over a profile that never mentioned the fact SHOULD
+  // reach the app's answer. Scoring this would mark correct reasoning as a
+  // miss and corrupt the false-eligible rate — the number the suite exists for.
+  const patient = feedbackPatient();
+  const correction = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: "eligible",
+    trueStatus: "near",
+    trueFailure: { requirement: "Brain metastases seen on a scan taken after the screen", appNamedIt: false },
+    basis: "outside-the-record",
+  });
+  const built = buildAdjudicatedCase({ correction, patient: { criteria: patient.criteria }, profile: { summary: "x" }, trial: FEEDBACK_TRIAL });
+  assert.equal(built.evalUsable, false);
+  assert.ok(built.evalUsableReason.length > 0, "and it must say why, in the file itself");
+  // Still a valid, parseable artifact — excluded from scoring, not discarded.
+  const reparsed = parseAdjudicatedCase(serializeAdjudicatedCase(built));
+  assert.equal(reparsed.ok, true);
+});
+
+test("a stated basis governs even when the coordinator agrees with the app's bucket", () => {
+  // Right answer, wrong reason: the app said "near" and the coordinator agrees
+  // it was near — but on a criterion nobody could have known. The agreement
+  // does not make the pinned criterion scorable.
+  const patient = feedbackPatient();
+  const correction = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: "near",
+    trueStatus: "near",
+    trueFailure: { requirement: "Undocumented prior anthracycline exposure", appNamedIt: false },
+    basis: "outside-the-record",
+  });
+  assert.equal(correction.confirmsApp, true, "the buckets do agree");
+  const built = buildAdjudicatedCase({ correction, patient: { criteria: patient.criteria }, profile: { summary: "x" }, trial: FEEDBACK_TRIAL });
+  assert.equal(built.evalUsable, false, "but agreement on the bucket does not make an unknowable criterion scorable");
+});
+
+test("a hand-edited file cannot promote an unscorable correction into the gold set", () => {
+  const patient = feedbackPatient();
+  const correction = buildCorrection({
+    patientId: patient.id,
+    trialNctId: FEEDBACK_TRIAL.nctId,
+    appStatus: "eligible",
+    trueStatus: "near",
+    trueFailure: { requirement: "Brain metastases seen on a scan taken after the screen", appNamedIt: false },
+    basis: "outside-the-record",
+  });
+  const built = buildAdjudicatedCase({ correction, patient: { criteria: patient.criteria }, profile: { summary: "x" }, trial: FEEDBACK_TRIAL });
+  const tampered = JSON.parse(serializeAdjudicatedCase(built));
+  tampered.evalUsable = true;
+  const rejected = parseAdjudicatedCase(JSON.stringify(tampered));
+  assert.equal(rejected.ok, false, "whether a case may be scored is derived from the basis, never asserted by the file");
+  if (rejected.ok) throw new Error("unreachable");
+  assert.match(rejected.error, /evalUsable/);
+});
+
+test("an unscorable correction is reported by the loader, not silently dropped", () => {
+  const dir = mkdtempSync(join(tmpdir(), "trialign-adjudicated-mixed-"));
+  try {
+    const patient = feedbackPatient();
+    const scorable = buildAdjudicatedCase({
+      correction: buildCorrection({
+        patientId: "P-1",
+        trialNctId: FEEDBACK_TRIAL.nctId,
+        appStatus: "eligible",
+        trueStatus: "near",
+        // A criterion the app DID surface for this patient — so it is in the
+        // text the case carries and the pin is satisfiable.
+        trueFailure: { requirement: "No prior CDK4/6 inhibitor", appNamedIt: true },
+        basis: "published-criteria",
+      }),
+      patient: { criteria: patient.criteria },
+      profile: { summary: "x" },
+      trial: FEEDBACK_TRIAL,
+    });
+    const unscorable = buildAdjudicatedCase({
+      correction: buildCorrection({
+        patientId: "P-2",
+        trialNctId: FEEDBACK_TRIAL.nctId,
+        appStatus: "eligible",
+        trueStatus: "near",
+        trueFailure: { requirement: "Brain metastases seen on a scan taken after the screen", appNamedIt: false },
+        basis: "outside-the-record",
+      }),
+      patient: { criteria: patient.criteria },
+      profile: { summary: "x" },
+      trial: FEEDBACK_TRIAL,
+    });
+    writeFileSync(join(dir, "a.json"), serializeAdjudicatedCase(scorable));
+    writeFileSync(join(dir, "b.json"), serializeAdjudicatedCase(unscorable));
+
+    const { gold, excluded } = loadAdjudicatedCases(dir);
+    assert.equal(gold.length, 1, "only the scorable correction enters the gold set");
+    assert.equal(excluded.length, 1, "and the other is surfaced rather than vanishing between the coordinator and the scorecard");
+    assert.equal(excluded[0].file, "b.json");
+    assert.ok(excluded[0].reason.length > 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadAdjudicatedCases reads exported JSON from a directory and tags every case adjudicated", () => {
+  const dir = mkdtempSync(join(tmpdir(), "trialign-adjudicated-"));
+  try {
+    const patient = feedbackPatient();
+    const correction = buildCorrection({
+      patientId: patient.id,
+      trialNctId: FEEDBACK_TRIAL.nctId,
+      appStatus: "near",
+      trueStatus: "near",
+      trueFailure: { requirement: "No prior CDK4/6 inhibitor", appNamedIt: true },
+    });
+    const built = buildAdjudicatedCase({ correction, patient: { criteria: patient.criteria }, profile: { summary: "x" }, trial: FEEDBACK_TRIAL });
+    writeFileSync(join(dir, "case-1.json"), serializeAdjudicatedCase(built));
+
+    const { gold, excluded } = loadAdjudicatedCases(dir);
+    assert.equal(gold.length, 1);
+    assert.equal(excluded.length, 0);
+    assert.equal(gold[0].adjudicated, true);
+    assert.equal(gold[0].expected, "near");
+    assert.equal(gold[0].id, built.id);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadAdjudicatedCases returns nothing for a directory that does not exist yet, rather than throwing", () => {
+  assert.deepEqual(loadAdjudicatedCases(join(tmpdir(), "trialign-does-not-exist-" + Date.now())), { gold: [], excluded: [] });
+});
+
+test("loadAdjudicatedCases throws, naming the file, when one correction in the directory is malformed", () => {
+  const dir = mkdtempSync(join(tmpdir(), "trialign-adjudicated-bad-"));
+  try {
+    writeFileSync(join(dir, "broken.json"), "{not json");
+    assert.throws(() => loadAdjudicatedCases(dir), /broken\.json/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

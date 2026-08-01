@@ -102,6 +102,39 @@ badge as the patient side (audit findings #1 and #6) — the component moved to
 rather than one, which makes it the surface where an ungated paste would matter
 most, not least.
 
+### C2 · The screening-failure feedback loop
+
+This sat under "blocked on the persistence decision" and did not belong there.
+"Nowhere to put it" meant "no database", and the round trip never needed one: a
+coordinator records the outcome on `/screen` and downloads it, and the JSON drops
+into `evals/cases/adjudicated/`. `evals/ledger.ts` reports adjudicated cases
+separately from authored ones, because *how much of the gold set is actually
+clinical evidence* is the number that matters and a blended total would bury it.
+
+The load-bearing part is that a correction must say **why** the screen and the
+outcome diverged. The three answers are not interchangeable:
+
+- **The criteria were read wrong.** Same notes, same published text, better answer
+  expected. A clean scored case.
+- **A published criterion never reached the ledger.** Also scorable — but only once
+  that criterion is restored into the trial text the case carries, since the text is
+  rebuilt from the app's own ledger. Otherwise the case asks the model to fail on a
+  requirement it is never shown: unsatisfiable by construction, permanently red, and
+  read forever as a model defect.
+- **The deciding fact was outside the record.** A later scan, an undocumented
+  history. **Not scored.** A model reasoning over a profile that never mentioned the
+  fact *should* reach the app's answer, so scoring it would mark correct reasoning as
+  a miss and quietly corrupt the false-eligible rate — the one number the suite
+  exists to produce. It is still exported, still loaded, and reported as excluded,
+  because a screening failure the app could not have caught is a real fact about the
+  record, and losing it silently would make the suite look better adjudicated than
+  it is.
+
+Neither `evalUsable` nor `confirmsApp` is ever read from the file — both are derived
+on read, so a hand-edited case cannot promote itself into the gold set.
+
+`lib/feedback.ts` · `evals/cases/adjudicated-loader.ts` · `app/screen/page.tsx`.
+
 ---
 
 ## Deferred, and why
@@ -112,14 +145,13 @@ developer's to make.
 ### Blocked on the persistence decision
 
 Zero persistence is currently a genuine strength — the privacy audit verified it, and
-it is why the app can honestly say nothing is stored. It is also what makes four
+it is why the app can honestly say nothing is stored. It is also what makes three
 things impossible:
 
 | Want | Why it needs storage |
 |---|---|
 | **Time axis for patients** ("what changed since last month") | Requires last month's result to compare against. The marketing thesis is that doors close; the product takes one photograph. |
 | **Criteria-change tracking for coordinators** | Protocol amendments change eligibility. `registryStale` answers "how old is this record", not "which criterion moved since you last screened this patient" — the latter needs the prior snapshot. |
-| **Screening-failure feedback loop** | A coordinator learns, post-screening, that a patient actually failed on X. That is the single most valuable input the eval harness lacks — it is how the gold set stops being *authored* and starts being *clinically adjudicated*. Nowhere to put it today. |
 | **Audit trail** | "Who looked at which patient, when, and saw what" is a hard requirement for clinical deployment, and is audit finding #8 (disclosure ledger). Zero persistence is a demo virtue and a clinical defect. |
 
 **The decision:** whether Trialign keeps zero persistence and stays a demo/consumer
