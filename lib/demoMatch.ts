@@ -81,6 +81,7 @@ function mk(t: Seed): TrialMatch {
     phase: t.phase,
     studyType: "INTERVENTIONAL",
     overallStatus: "RECRUITING",
+    whyStopped: "",
     sponsor: t.sponsor,
     conditions: ["HR-positive HER2-negative Breast Cancer", "Metastatic Breast Cancer"],
     eligibilityCriteria: "See ClinicalTrials.gov for the full verbatim inclusion/exclusion criteria.",

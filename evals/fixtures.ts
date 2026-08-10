@@ -22,6 +22,7 @@ export function trial(over: Partial<Trial> = {}): Trial {
     phase: "Phase 2",
     studyType: "Interventional",
     overallStatus: "RECRUITING",
+    whyStopped: "",
     sponsor: "Example Sponsor",
     conditions: ["Breast Cancer"],
     eligibilityCriteria: "Inclusion: adults.",

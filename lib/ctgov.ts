@@ -21,6 +21,7 @@ const BASE = "https://clinicaltrials.gov/api/v2/studies";
 const FIELDS = [
   "protocolSection.identificationModule",
   "protocolSection.statusModule.overallStatus",
+  "protocolSection.statusModule.whyStopped",
   "protocolSection.statusModule.startDateStruct",
   "protocolSection.statusModule.primaryCompletionDateStruct",
   "protocolSection.statusModule.completionDateStruct",
@@ -117,6 +118,38 @@ export async function searchTrials(opts: SearchOptions): Promise<Trial[]> {
   return (data.studies ?? []).map(normalizeStudy).filter((t): t is Trial => t !== null);
 }
 
+export type RecentUpdatesOptions = {
+  cond: string;
+  /** Inclusive lower bound on the registry's last-update date, "YYYY-MM-DD". */
+  sinceDate: string;
+  pageSize?: number; // default 50
+};
+
+/** Studies of ANY status whose registry record changed on/after `sinceDate`,
+ *  newest first — deliberately unfiltered by overallStatus (unlike
+ *  searchTrials, which defaults to RECRUITING) so a "what changed" digest
+ *  also catches trials that just closed, completed, or stopped early. */
+export async function searchRecentlyUpdatedTrials(opts: RecentUpdatesOptions): Promise<Trial[]> {
+  const params = new URLSearchParams();
+  params.set("query.cond", opts.cond);
+  params.set("filter.advanced", `AREA[LastUpdatePostDate]RANGE[${opts.sinceDate},MAX]`);
+  params.set("sort", "LastUpdatePostDate:desc");
+  params.set("pageSize", String(opts.pageSize ?? 50));
+  params.set("fields", FIELDS);
+
+  const res = await fetch(`${BASE}?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`ClinicalTrials.gov responded ${res.status} ${res.statusText}`);
+  }
+
+  const data = (await res.json()) as { studies?: RawStudy[] };
+  return (data.studies ?? []).map(normalizeStudy).filter((t): t is Trial => t !== null);
+}
+
 /* ---- normalization ---- */
 
 // Minimal shapes for the modules we read. Everything is optional because the
@@ -126,6 +159,7 @@ type RawStudy = {
     identificationModule?: { nctId?: string; briefTitle?: string; officialTitle?: string };
     statusModule?: {
       overallStatus?: string;
+      whyStopped?: string;
       startDateStruct?: { date?: string };
       primaryCompletionDateStruct?: { date?: string };
       completionDateStruct?: { date?: string };
@@ -217,6 +251,7 @@ function normalizeStudy(study: RawStudy): Trial | null {
     phase: formatPhases(design?.phases),
     studyType: titleCase(design?.studyType ?? ""),
     overallStatus: p?.statusModule?.overallStatus ?? "",
+    whyStopped: p?.statusModule?.whyStopped ?? "",
     sponsor: p?.sponsorCollaboratorsModule?.leadSponsor?.name ?? "—",
     conditions: p?.conditionsModule?.conditions ?? [],
     eligibilityCriteria: p?.eligibilityModule?.eligibilityCriteria ?? "",

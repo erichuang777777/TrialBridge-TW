@@ -75,6 +75,10 @@ export type Trial = {
   enrollment: number;
   /** what's being tested, e.g. { type: "Drug", name: "Sacituzumab govitecan" }. */
   interventions: { type: string; name: string }[];
+  /** Sponsor-provided reason the study stopped, e.g. "Business decision" or a
+   *  protocol-amendment rationale. Only ever populated by the registry when
+   *  overallStatus is TERMINATED/WITHDRAWN/SUSPENDED; "" otherwise. */
+  whyStopped: string;
 };
 
 /** A single criterion verdict in the ledger.
