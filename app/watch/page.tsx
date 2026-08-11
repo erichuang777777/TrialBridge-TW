@@ -6,7 +6,7 @@ import { fetchWeeklyBreastCancerDigest, type WeeklyDigest } from "@/lib/trialWat
 export const metadata: Metadata = {
   title: "Breast cancer trial watch · Trialign",
   description:
-    "What changed on ClinicalTrials.gov this week for breast cancer — newly recruiting studies, early closures, and completions.",
+    "Breast-cancer studies ClinicalTrials.gov touched this week, grouped by current status — recruiting, closed early, completed.",
 };
 
 // Always live — this is a "what changed" digest, a cached page would defeat the point.
@@ -15,9 +15,10 @@ export const dynamic = "force-dynamic";
 /* ============================================================================
    /watch — weekly breast-cancer trial digest (WO42633 follow-up)
 
-   Standalone page, no patient data: a public read of what ClinicalTrials.gov
-   changed this week for breast cancer generally. Pairs with the weekly
-   automation that reports this same digest directly; this page is the
+   Standalone page, no patient data: a public read of breast-cancer studies
+   ClinicalTrials.gov touched this week, by current status (see lib/trialWatch.ts
+   for why that's not the same as "changed status this week"). Pairs with the
+   weekly automation that reports this same digest directly; this page is the
    always-current, load-anytime view of it.
    ========================================================================== */
 
@@ -101,8 +102,10 @@ export default async function WatchPage() {
         <header className="legal-head">
           <h1>Breast cancer trial watch</h1>
           <p className="legal-lede">
-            Everything ClinicalTrials.gov changed in the last 7 days for breast cancer studies — newly recruiting trials, trials
-            that closed before their planned end, and trials that completed. Pulled live on every visit; nothing here is
+            Breast-cancer studies whose ClinicalTrials.gov record was touched in the last 7 days, grouped by their current
+            status — recruiting, closed before their planned end, or completed. The registry gives a current status and an
+            update date, not a change history, so a study here may have held that status for a while and just had something
+            else edited — this is a status snapshot, not a confirmed transition. Pulled live on every visit; nothing here is
             patient-specific.
           </p>
           {digest && (
@@ -120,33 +123,33 @@ export default async function WatchPage() {
         ) : digest ? (
           <>
             <Section
-              title="Newly recruiting"
-              hint="Open to enrollment as of this week."
+              title="Currently recruiting"
+              hint="Open to enrollment, with a registry update this week — may have been recruiting for a while."
               trials={digest.recruiting}
               badge="eligible"
               badgeLabel="recruiting"
-              emptyText="No breast-cancer studies moved to Recruiting this week."
+              emptyText="No currently-recruiting breast-cancer studies had a registry update this week."
             />
             <Section
               title="Closed early"
-              hint="Terminated, withdrawn, or suspended before their planned end — worth a look at why."
+              hint="Currently terminated, withdrawn, or suspended, with a registry update this week — worth a look at why; the closure itself may predate this week."
               trials={digest.closedEarly}
               badge="near"
               badgeLabel="closed early"
-              emptyText="No breast-cancer studies closed early this week."
+              emptyText="No terminated, withdrawn, or suspended breast-cancer studies had a registry update this week."
             />
             <Section
               title="Completed"
-              hint="Ran to their planned end this week."
+              hint="Currently marked completed, with a registry update this week — the completion itself may predate this week."
               trials={digest.completed}
               badge="screened"
               badgeLabel="completed"
-              emptyText="No breast-cancer studies completed this week."
+              emptyText="No completed breast-cancer studies had a registry update this week."
             />
             {digest.other.length > 0 && (
               <details className="legal-sec">
                 <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-                  Other status changes <span className="watch-count">{digest.other.length}</span>
+                  Other statuses <span className="watch-count">{digest.other.length}</span>
                 </summary>
                 <div className="watch-list" style={{ marginTop: 14 }}>
                   {digest.other.map((t) => (

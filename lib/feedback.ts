@@ -261,6 +261,7 @@ const UNKNOWN_TRIAL_DEFAULTS = {
   interventional: true,
   enrollment: 0,
   interventions: [] as Trial["interventions"],
+  whyStopped: "",
 };
 
 /** Rebuild an eligibility-criteria block from a patient's own criterion
@@ -316,7 +317,7 @@ export function reconstructTrial(trial: ScreenTrialSummary, criteria: Criterion[
  *  than left as a comment only developers read. */
 export const RECONSTRUCTION_CAVEATS: string[] = [
   "trial.eligibilityCriteria below is RECONSTRUCTED from this patient's own criterion ledger (the requirement text /api/screen already extracted for them), not copied verbatim from the ClinicalTrials.gov record. The /screen page's client state never holds the trial's raw eligibility prose — only a small summary (lib/screenTypes.ts: ScreenTrialSummary) — so the registry's exact wording, and any criterion the model did not surface into THIS patient's ledger, are not present here.",
-  "conditions, sex, minimumAge, maximumAge, stdAges, locations, contacts, startDate, primaryCompletionDate, completionDate, lastUpdatePostDate, randomized, masked, primaryPurpose, interventional, enrollment, interventions, studyType, and officialTitle are unknown to /screen's client state and are filled with neutral placeholder defaults below, not sourced from the registry.",
+  "conditions, sex, minimumAge, maximumAge, stdAges, locations, contacts, startDate, primaryCompletionDate, completionDate, lastUpdatePostDate, randomized, masked, primaryPurpose, interventional, enrollment, interventions, studyType, officialTitle, and whyStopped are unknown to /screen's client state and are filled with neutral placeholder defaults below, not sourced from the registry.",
   "This reconstruction is enough to make the case RUNNABLE — evals/ledger.ts's reasonTrial() only needs a criteria string to reason over — but not enough to guarantee it reproduces the registry's exact prompt. For full fidelity, replace `trial` with the output of getTrial(nctId) (lib/ctgov.ts) before treating this case as authoritative.",
 ];
 
