@@ -273,8 +273,7 @@ real tokens. With it set, `proxy.ts` puts a passcode in front of every page and 
 arrival. Unset, the gate is a no-op — a gate that silently locked out a running deployment on
 upgrade would be a worse bug than the one it fixes.
 
-The design system (palette, type, the criterion-ledger component, trust invariants) is documented
-in `.claude/skills/design-system/`.
+The design system (palette, type, spacing, motion, voice) is documented in [`design.md`](design.md).
 
 ## License
 
