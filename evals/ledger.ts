@@ -32,6 +32,12 @@ import { derivePatientLoc, travelThreshold } from "../lib/geo.ts";
 import type { GeoContext } from "../lib/factors.ts";
 import { hardFailCountOf, openCountOf } from "../lib/verdict.ts";
 import { CASES, type LedgerCase } from "./cases/ledger-cases.ts";
+// A coordinator's post-screening correction (lib/feedback.ts), dropped as
+// JSON into evals/cases/adjudicated/ — merged below, and reported separately
+// from the authored cases above. See that file's header for why the split
+// matters: "how many of our gold cases are actually clinician-adjudicated"
+// is the number the roadmap says this mechanism exists to move.
+import { loadAdjudicatedCases } from "./cases/adjudicated-loader.ts";
 import type { Criterion, MatchStatus } from "../lib/types";
 
 type Outcome = {
@@ -116,9 +122,26 @@ function pct(n: number, d: number): string {
 }
 
 async function main() {
-  const cases = ONLY ? CASES.filter((c) => c.id === ONLY) : CASES;
+  // ALL_CASES = the authored gold set plus every clinician correction sitting
+  // in evals/cases/adjudicated/. A malformed correction file throws here,
+  // naming itself, rather than being silently dropped from the run.
+  const adjudicated = loadAdjudicatedCases();
+  const ALL_CASES: LedgerCase[] = [...CASES, ...adjudicated.gold];
+  const adjudicatedCount = ALL_CASES.filter((c) => c.adjudicated).length;
+
+  // Reported before anything is scored, because a correction excluded from the
+  // gold set is still a coordinator telling us the screen was wrong. Scoring it
+  // would punish the model for not knowing something absent from its input;
+  // hiding it would let the suite look better adjudicated than it is.
+  if (adjudicated.excluded.length > 0) {
+    console.log(`${adjudicated.excluded.length} correction(s) filed but NOT scored — the deciding fact was outside the record screened:`);
+    for (const e of adjudicated.excluded) console.log(`  ${e.id}  (${e.file})`);
+    console.log("  These are feedback about record completeness, not about the model's reasoning.\n");
+  }
+
+  const cases = ONLY ? ALL_CASES.filter((c) => c.id === ONLY) : ALL_CASES;
   if (cases.length === 0) {
-    console.error(`No case matches --case ${ONLY}. Known ids: ${CASES.map((c) => c.id).join(", ")}`);
+    console.error(`No case matches --case ${ONLY}. Known ids: ${ALL_CASES.map((c) => c.id).join(", ")}`);
     process.exit(2);
   }
 
@@ -140,8 +163,12 @@ async function main() {
   const byCase = new Map<string, Outcome[]>();
   for (const o of outcomes) byCase.set(o.caseId, [...(byCase.get(o.caseId) ?? []), o]);
 
-  console.log("CASE                              EXPECTED    OBSERVED                AGREE  CAUGHT");
-  console.log("─".repeat(88));
+  // ADJ marks a case sourced from evals/cases/adjudicated/ — a real
+  // coordinator's correction, not one authored for this suite. Visible per
+  // row, not just in the summary line below, so a reviewer scanning the
+  // table can tell at a glance which rows are clinical evidence.
+  console.log("CASE                              EXPECTED    OBSERVED                AGREE  CAUGHT  SOURCE");
+  console.log("─".repeat(96));
   for (const c of cases) {
     const runs = byCase.get(c.id) ?? [];
     const tally = new Map<string, number>();
@@ -150,7 +177,7 @@ async function main() {
     const agree = runs.filter((r) => r.actual === r.expected).length;
     const caught = runs.filter((r) => r.caughtFailures && r.caughtConfirms && r.remediableOk).length;
     console.log(
-      `${c.id.padEnd(34)}${c.expected.padEnd(12)}${observed.padEnd(24)}${pct(agree, runs.length).padStart(5)}  ${pct(caught, runs.length).padStart(6)}`,
+      `${c.id.padEnd(34)}${c.expected.padEnd(12)}${observed.padEnd(24)}${pct(agree, runs.length).padStart(5)}  ${pct(caught, runs.length).padStart(6)}  ${c.adjudicated ? "ADJUDICATED" : "authored"}`,
     );
     for (const r of runs.filter((x) => x.error)) console.log(`  ! ${r.error}`);
   }
@@ -167,7 +194,7 @@ async function main() {
   const shouldBeIn = scored.filter((o) => o.expected === "eligible");
   const falseIneligible = shouldBeIn.filter((o) => o.actual === "near");
 
-  const withFailChecks = scored.filter((o) => (CASES.find((c) => c.id === o.caseId)?.mustFail ?? []).length > 0);
+  const withFailChecks = scored.filter((o) => (ALL_CASES.find((c) => c.id === o.caseId)?.mustFail ?? []).length > 0);
   const caughtRight = withFailChecks.filter((o) => o.caughtFailures);
 
   const injection = byCase.get("injected-instruction-in-note") ?? [];
@@ -191,11 +218,25 @@ async function main() {
   const errored = outcomes.filter((o) => o.error).length;
   if (errored) console.log(`errored calls          ${errored}`);
 
-  console.log(
-    "\nThese expectations are authored, not clinically adjudicated. Until an oncologist or research nurse\n" +
-      "labels each case independently, this measures self-consistency and catches regressions — it is not\n" +
-      "an accuracy claim, and it is not evidence of clinical validity.",
-  );
+  // The number the roadmap says matters: how much of this run is actually
+  // clinical evidence versus a maintainer's own authored expectation.
+  console.log(`\nclinically adjudicated ${adjudicatedCount}/${ALL_CASES.length} case(s) in this run.`);
+
+  if (adjudicatedCount === 0) {
+    console.log(
+      "These expectations are authored, not clinically adjudicated. Until an oncologist or research nurse\n" +
+        "labels each case independently (or a coordinator files a correction via /screen → evals/cases/adjudicated/),\n" +
+        "this measures self-consistency and catches regressions — it is not an accuracy claim, and it is not\n" +
+        "evidence of clinical validity.",
+    );
+  } else {
+    console.log(
+      `${CASES.length} case(s) above remain authored, not clinically adjudicated — same caveat as always. The\n` +
+        `${adjudicatedCount} marked ADJUDICATED above are a coordinator's own post-screening correction (see\n` +
+        "lib/feedback.ts), each with a reviewer, a timestamp, and — for every \"near\" — the specific criterion\n" +
+        "they say the patient actually failed on. That is real clinical evidence; the authored cases still are not.",
+    );
+  }
 
   // Non-zero exit on any false-eligible: that is the failure this suite exists for.
   if (falseEligible.length > 0) {

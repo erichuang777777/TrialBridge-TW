@@ -661,6 +661,18 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 /* Inner card drops its own frame so it reads as the accordion's expanded body. */
 .ruled-body .dcard{border:none;background:transparent;border-radius:0;margin:0;padding:2px 16px 16px;}
 
+/* "Not open to you yet" (§P1) — same collapsed-row treatment as "Ruled out"
+   (it's a sibling section, not a different widget), but the tag/dot use the
+   uncertain (amber) pair instead of near (red): a workable near-miss is not a
+   hard "no" and must not read like one at a glance. The summary carries a
+   second line, visible collapsed, naming what would have to change — that's
+   the point of the section, so it can't be hidden behind the accordion. */
+.notyet-summary{display:block;padding:11px 16px;}
+.notyet-row{display:flex;align-items:center;gap:11px;min-height:26px;}
+.notyet-dot{background:var(--uncertain);}
+.notyet-tag{color:var(--uncertain);}
+.notyet-why{margin:5px 0 0;padding-left:18px;font-size:12px;line-height:1.4;color:var(--ink-2);}
+
 /* ============================================================================
    Workspace shell — sticky left sidebar + main board (patient flow only)
    ========================================================================== */
@@ -871,6 +883,22 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .worklist li{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;font-size:13px;line-height:1.5;}
 .wl-req{color:var(--ink);flex:1 1 auto;min-width:0;}
 .wl-ev{flex:1 1 100%;color:var(--ink-3);font-size:12px;line-height:1.5;}
+
+/* ---- caregiver view (P4) ---------------------------------------------------
+   The patient decides whether they want a trial; a caregiver is working out
+   whether it's doable — a different question, so it gets an addition rather
+   than the clinician's swap: the brief stays put, this sits alongside it.
+   Quiet on purpose. Unlike .worklist this is not a to-do list, so it does not
+   borrow the "uncertain" amber treatment — that would read as urgency neither
+   deterministic fact ever claims. Sibling to .worklist in structure only. */
+.logistics{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:12px 14px;margin:10px 0 12px;}
+.logistics-h{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink);margin-bottom:8px;}
+.logistics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;}
+.lg-item{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.lg-k{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);}
+.lg-v{font-size:13px;color:var(--ink);line-height:1.45;}
+.lg-note{font-size:11.5px;color:var(--ink-3);line-height:1.45;}
+@media(max-width:640px){.logistics-grid{grid-template-columns:1fr;}}
 
 .brief-d{border:1px solid var(--line-soft);border-radius:10px;margin:10px 0 12px;}
 .brief-d>summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:12px;color:var(--ink-3);}
@@ -1162,6 +1190,18 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .cgloss[open]>summary{margin-bottom:5px;}
 .cgloss__body{font-size:12.5px;line-height:1.5;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:8px 11px;max-width:60ch;}
 
+/* Ledger criterion gloss (design.md §9 / roadmap P3) — same disclosure
+   pattern as .cgloss, tuned a step quieter: it sits inside a dense criterion
+   row and must never compete with the requirement text or the verdict for
+   attention. Patient/caregiver readers only — LedgerRow suppresses it for
+   clinicians, so this never needs a "clinician" variant. */
+.lgloss{display:block;margin:3px 0 0;}
+.lgloss>summary{font-size:11px;color:var(--ink-3);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px;width:fit-content;}
+.lgloss>summary::-webkit-details-marker{display:none;}
+.lgloss>summary::before{content:"?";font-family:var(--mono);font-size:8px;font-weight:700;width:12px;height:12px;border-radius:50%;border:1px solid currentColor;display:inline-flex;align-items:center;justify-content:center;}
+.lgloss[open]>summary{margin-bottom:4px;color:var(--ink-2);}
+.lgloss__body{font-size:12px;line-height:1.5;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:7px 10px;max-width:58ch;}
+
 /* §4.2 — empty in-range notice above the auto-opened "Farther from you" list */
 .empty-range{font-size:13px;color:var(--ink);background:var(--uncertain-bg);border:1px solid color-mix(in srgb,var(--uncertain) 34%,var(--line));border-radius:var(--r-sm);padding:10px 13px;margin:4px 0 12px;}
 
@@ -1238,11 +1278,26 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .contact-row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line-soft);font-size:12.5px;}
 .contact-row:first-of-type{border-top:none;}
 .contact-name{font-weight:560;color:var(--ink);}
+/* No text-transform on either of these: the strings are already put into words
+   in code (titleCase / formatSiteStatus) precisely so a patient about to phone
+   a site doesn't read NOT_YET_RECRUITING. Uppercasing them here would undo that
+   work in the last inch and put the registry's shouting back on the screen. */
+.contact-role{font-size:9.5px;color:var(--ink-3);letter-spacing:.04em;}
 .contact-row a{color:var(--agent);font-family:var(--mono);font-size:12px;}
-.site-row{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line-soft);}
+.site-row{display:flex;flex-direction:column;gap:6px;padding:9px 0;border-top:1px solid var(--line-soft);}
+.site-row:first-of-type{border-top:none;}
+.site-row__top{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;}
 .site-place{font-size:13px;color:var(--ink);font-weight:560;}
 .site-facility{font-size:12px;color:var(--ink-3);}
-.site-status{font-size:10px;color:var(--ink-3);text-transform:uppercase;}
+.site-status{font-size:10px;color:var(--ink-3);}
+.site-status--closed{color:var(--uncertain);font-weight:640;}
+.site-closed-note{font-size:11.5px;line-height:1.4;color:var(--uncertain);}
+/* Per-site contacts read as the same kind of thing as the central-contacts
+   group above (same .contact-row), just indented under their own site and
+   separated by a dashed rule instead of the group's solid one. */
+.site-contacts{display:flex;flex-direction:column;padding-left:2px;}
+.site-contacts .contact-row{padding:5px 0;border-top:1px dashed var(--line-soft);}
+.site-contacts .contact-row:first-child{border-top:none;}
 .draft-email{margin-top:8px;}
 .draft-body{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:11px 13px;white-space:pre-wrap;overflow-x:auto;margin:0 0 8px;}
 
@@ -1421,4 +1476,112 @@ details.mcode-banner[open]>summary::after{transform:rotate(90deg);}
 details.mcode-banner .mcode-banner__txt{padding:0 13px 11px;margin:0;}
 /* edit affordance faintly visible at rest (the page asks you to correct anything) */
 .prow .edit{opacity:.5;}
+
+/* ============================================================================
+   Cohort screen (§C1 part 2) — /screen, a coordinator's trial → patients view.
+   Its own standalone page (not the workspace shell): reuses the app's tokens,
+   buttons, counts pills, and criterion-row primitives (.crow family) so it
+   reads as the same product, not a second app bolted on.
+   ========================================================================== */
+.screen-page{position:relative;z-index:1;min-height:100vh;padding:36px 22px 64px;}
+.screen-inner{max-width:920px;margin:0 auto;}
+.screen-head{margin:0 0 22px;padding-bottom:18px;border-bottom:1px solid var(--line);}
+.screen-head h1{font-size:clamp(24px,3.2vw,32px);font-weight:600;letter-spacing:-.02em;line-height:1.15;margin:0 0 8px;}
+.screen-lede{font-size:14px;line-height:1.6;color:var(--ink-2);margin:0;max-width:70ch;}
+
+.screen-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:18px;}
+.screen-panel h2{font-size:14px;font-weight:650;margin:0 0 4px;}
+.screen-panel .sub{font-size:12.5px;color:var(--ink-3);margin:0 0 14px;}
+
+.screen-field{margin-bottom:16px;}
+.screen-field label{display:block;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px;}
+.screen-nct{width:100%;max-width:280px;font:inherit;font-family:var(--mono);font-size:14px;padding:9px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface-sunken);color:var(--ink);}
+.screen-nct:focus-visible{outline:2px solid var(--agent);outline-offset:1px;}
+
+/* per-patient roster editor — cheap to add, edit, remove, and tell apart */
+.cohort-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.cohort-row{display:grid;grid-template-columns:200px 1fr auto;gap:10px;align-items:start;background:var(--surface-sunken);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:10px 12px;}
+.cohort-row .cohort-id{font:inherit;font-size:13px;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);}
+.cohort-row .cohort-summary{font:inherit;font-size:13px;line-height:1.5;padding:7px 9px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);resize:vertical;min-height:44px;width:100%;}
+.cohort-remove{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:14px;padding:6px;border-radius:6px;align-self:start;}
+.cohort-remove:hover{color:var(--near);background:var(--near-bg);}
+@media(max-width:640px){.cohort-row{grid-template-columns:1fr;}.cohort-remove{justify-self:flex-end;}}
+
+.cohort-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.cohort-cap{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:auto;}
+.cohort-cap.over{color:var(--near);font-weight:600;}
+
+.screen-run-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft);}
+
+/* progress — this route can run for minutes; say so, don't just spin */
+.screen-progress{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:12px;}
+.screen-progress .sp-dot{width:7px;height:7px;border-radius:50%;background:var(--agent);animation:blink 1.2s var(--ease) infinite;flex:none;}
+
+/* two more counts-pill variants than app/page.tsx needed — this screen's
+   cohort can land in "screened" or "excluded" as visibly as any other bucket,
+   never a silent zero. */
+.count.screened .count-dot{background:var(--ink-3);}
+.count.screened b{color:var(--ink-3);}
+.count.excluded .count-dot{background:var(--near);}
+.count.excluded b{color:var(--near);}
+
+/* the matrix */
+.matrix-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 16px;font-size:11.5px;color:var(--ink-3);line-height:1.5;}
+.matrix-legend b{color:var(--ink-2);font-weight:600;}
+.matrix-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);}
+table.matrix{width:100%;border-collapse:collapse;font-size:13px;min-width:680px;}
+table.matrix thead th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap;}
+table.matrix tbody td{padding:11px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+table.matrix tbody tr:last-child td{border-bottom:none;}
+table.matrix tbody tr.matrix-row:hover{background:var(--raise);}
+.matrix-id{font-weight:600;color:var(--ink);white-space:nowrap;}
+.matrix-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+.matrix-status .dot{width:6px;height:6px;border-radius:50%;flex:none;}
+.matrix-status.eligible{color:var(--eligible);background:var(--eligible-bg);}
+.matrix-status.eligible .dot{background:var(--eligible);}
+.matrix-status.uncertain{color:var(--uncertain);background:var(--uncertain-bg);}
+.matrix-status.uncertain .dot{background:var(--uncertain);}
+.matrix-status.near{color:var(--near);background:var(--near-bg);}
+.matrix-status.near .dot{background:var(--near);}
+.matrix-status.excluded{color:var(--near);background:var(--near-bg);}
+.matrix-status.excluded .dot{background:var(--near);}
+.matrix-status.screened{color:var(--ink-3);background:var(--surface-2);}
+.matrix-status.screened .dot{background:var(--ink-3);}
+.matrix-num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-2);}
+.matrix-headline{color:var(--ink-2);font-size:12.5px;max-width:32ch;}
+.matrix-toggle{font:inherit;font-size:11.5px;color:var(--agent-2);background:none;border:0;cursor:pointer;padding:0;white-space:nowrap;}
+.matrix-toggle:hover{text-decoration:underline;}
+
+.matrix-detail-row td{background:var(--surface-sunken);padding:0 12px 16px;}
+.matrix-detail{padding:10px 4px 4px;}
+.matrix-exclusion{font-size:13px;color:var(--ink);background:var(--near-bg);border:1px solid color-mix(in srgb,var(--near) 40%,var(--line));border-radius:var(--r-sm);padding:9px 12px;margin-bottom:6px;}
+.matrix-detail .headline{font-size:13px;color:var(--ink-2);margin:0 0 8px;}
+.matrix-empty-ledger{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+/* Post-screening correction (screening-failure feedback loop) — deliberately
+   quieter than the ledger above it: muted surface, smaller type, no color
+   from the verdict palette. It only appears once a coordinator has already
+   opened the ledger, and it reads as a distinct, secondary block, not part
+   of the screening read itself. */
+.matrix-correction{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-soft);}
+.mc-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+.mc-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);}
+.mc-sub{font-size:12px;color:var(--ink-3);line-height:1.5;}
+.mc-mode{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;}
+.mc-radio{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);cursor:pointer;}
+.mc-radio input{margin:0;}
+.mc-field{margin-bottom:10px;max-width:480px;}
+.mc-field label{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);margin-bottom:4px;}
+.mc-field select,.mc-field input[type="text"],.mc-field input:not([type]),.mc-field textarea{font:inherit;font-size:12.5px;width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);}
+.mc-field textarea{resize:vertical;min-height:36px;}
+.mc-failure-text{margin-top:6px;}
+/* What the chosen basis means for the eval, said where the choice is made. */
+.mc-hint{margin:6px 0 0;font-size:11.5px;line-height:1.5;color:var(--ink-3);}
+.mc-field-inline{max-width:220px;}
+.mc-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:4px;}
+.mc-export{font:inherit;font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 12px;cursor:pointer;}
+.mc-export:hover:not(:disabled){border-color:var(--agent);color:var(--ink);}
+.mc-export:disabled{opacity:.5;cursor:not-allowed;}
+.mc-warning{font-size:11px;color:var(--ink-3);line-height:1.5;max-width:46ch;}
+
 .prow:hover .edit,.prow.editing .edit{opacity:1;}

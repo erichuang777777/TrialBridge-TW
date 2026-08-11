@@ -21,8 +21,11 @@ import AsciiBackground from "@/app/components/AsciiBackground";
 import HeroVideo from "@/app/components/HeroVideo";
 import NavAuth from "@/app/components/NavAuth";
 import ProductCarousel from "@/app/components/ProductCarousel";
+import DemoGate from "@/app/components/DemoGate";
 import type { TrialMatch, Criterion, Verdict, MatchStatus } from "@/lib/types";
-import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches } from "@/lib/verdict";
+import { deriveStatus, metCountOf, hardFailCountOf, openCountOf, compareMatches, splitNearMisses } from "@/lib/verdict";
+import { siteIsRecruiting, formatSiteStatus, prioritizeOpenSites, titleCase } from "@/lib/ctgov";
+import { buildDisclosureRecord, recordDisclosure, type DisclosureOutcome } from "@/lib/disclosure";
 
 /* ---- API response shapes ---- */
 type FieldSource = "fhir" | "note" | "you";
@@ -890,41 +893,6 @@ export default function Page() {
    reaches /api/extract before this consent moment. Deliberately NOT dismissible
    — no backdrop-click, no Escape, no ✕. The only ways out are its two buttons,
    and the primary steers to the safe synthetic sample. */
-function DemoGate({ onSample, onContinue }: { onSample: () => void; onContinue: () => void }) {
-  const [agreed, setAgreed] = useState(false);
-  return (
-    <div className="gate-overlay" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-      <div className="gate-panel">
-        <div className="gate-head">
-          <div className="demo-badge">DEMO · SYNTHETIC DATA ONLY</div>
-          <h2 id="gate-title">This is a demo — synthetic data only</h2>
-        </div>
-        <div className="gate-body">
-          <p>
-            This build is for demonstration. <b>Please do not enter real patient information.</b> Anything you enter is processed by an AI service
-            to generate trial matches, and is not stored by Trial.
-          </p>
-          <label className="consent gate-consent">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-            <span>
-              I understand, and I will not enter real patient information. I agree to the information I enter being processed to find matching
-              trials.
-            </span>
-          </label>
-        </div>
-        <div className="gate-actions">
-          <button type="button" className="btn go" onClick={onSample}>
-            Use the sample patient (Margaret)
-          </button>
-          <button type="button" className="ghost gate-continue" disabled={!agreed} onClick={onContinue}>
-            Continue with a synthetic note
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ============================ workspace shell ============================= */
 
 function Sidebar({
@@ -2269,6 +2237,11 @@ function monthsAgo(days: number): string {
   return `${months} mo`;
 }
 
+/** DecisionFactors.burdenProxy (0..2) → the caregiver-facing label. A proxy from
+ *  study type + phase, not a measurement — the label says "estimate" wherever
+ *  it's shown so it never launders into a stated fact (P4). */
+const BURDEN_LABEL = ["Lower", "Moderate", "Higher"];
+
 /** The summary buckets — canonical counts, always reconcile to the pool total. */
 const COUNT_BUCKETS: { key: MatchStatus; cls: string; label: string }[] = [
   { key: "eligible", cls: "eligible", label: "eligible" },
@@ -2277,6 +2250,17 @@ const COUNT_BUCKETS: { key: MatchStatus; cls: string; label: string }[] = [
   { key: "excluded", cls: "near", label: "not open to you" },
   { key: "screened", cls: "", label: "not yet reasoned" },
 ];
+
+/** §P1 card summary for the "Not open to you yet" section — names the unmet
+ *  requirements directly so a patient reads what's in the way without opening
+ *  the card. Short and comma-joined; truncated because "everything" read out
+ *  in full is not a list anyone can act on. */
+function notYetWhy(criteria: Criterion[]): string {
+  const reqs = criteria.filter((c) => c.verdict === "fails" && c.remediable).map((c) => c.requirement);
+  const SHOWN = 3;
+  if (reqs.length <= SHOWN) return reqs.join(", ");
+  return `${reqs.slice(0, SHOWN).join(", ")}, +${reqs.length - SHOWN} more`;
+}
 
 /* ============================ THE FORK (§6) ============================== */
 /* Post-Results decision screen: pick a hypothetical next treatment, see which
@@ -2679,6 +2663,10 @@ function Refer({
   // a disclosure — it opens as its own page ONLY after the patient agrees to be
   // referred, never alongside the pre-consent referral prep.
   const [referred, setReferred] = useState(false);
+  // What recordDisclosure() actually reported for this authorization (finding
+  // #8) — kept so the "prepared" screen can say something true about it
+  // instead of a static line that would drift the moment a backend lands.
+  const [authOutcome, setAuthOutcome] = useState<DisclosureOutcome | null>(null);
 
   if (referred) {
     return (
@@ -2704,7 +2692,13 @@ function Refer({
               In production, {trial.sponsor} would receive your consented pre-screen packet for {trial.nctId} — a referral-ready candidate you
               initiated, not a row in a purchased list.
             </p>
-            <div className="auth-demo">Demo: no data was actually sent.</div>
+            {/* The patient reads this, not an engineer — so it says what
+                happened to their data, not which function returned what. */}
+            <div className="auth-demo">
+              {authOutcome && !authOutcome.persisted
+                ? `Demo: no data was sent. The record of this authorization — who it names, the ${authOutcome.record.fieldsDisclosed.length} fields and the ${authOutcome.record.criteriaDisclosed.count}-criterion assessment it covers, the purpose, and how long it lasts — was assembled exactly as the real flow would assemble it, and then kept nowhere. This app stores nothing, so there is no copy of it, including for us.`
+                : "Demo: no data was actually sent."}
+            </div>
           </div>
           {/* "Who to contact" now lives on the prepared screen (Packet A moved to the
               pre-referral screen). Packet B stays inside #refer-packets so its single-
@@ -2753,7 +2747,14 @@ function Refer({
         <div id="refer-note">
           <PacketA trial={trial} />
         </div>
-        <ReferralAuthorization trial={trial} profile={profile} onAuthorize={() => setReferred(true)} />
+        <ReferralAuthorization
+          trial={trial}
+          profile={profile}
+          onAuthorize={(outcome) => {
+            setAuthOutcome(outcome);
+            setReferred(true);
+          }}
+        />
         <ReferTimeline gaps={gaps} trial={trial} />
       </div>
     </div>
@@ -2859,6 +2860,11 @@ function ContactRouting({ trial }: { trial: TrialMatch }) {
     const bm = `${b.city}, ${b.state}` === near ? 0 : 1;
     return am - bm;
   });
+  // A closed site nearer than an open one must not push the open one past the
+  // cap below — see prioritizeOpenSites.
+  const orderedSites = prioritizeOpenSites(sites);
+  const shownSites = orderedSites.slice(0, 6);
+  const hiddenSiteCount = orderedSites.length - shownSites.length;
   const central = trial.contacts;
   const email = central.find((c) => c.email)?.email ?? "";
   const draft = `Subject: Interest in ${trial.nctId} — pre-screening\n\nHello,\n\nI'm a patient interested in ${trial.nctId} (${trial.title}). Working from my own records, my profile appears to line up with several of the published criteria, with a few items to confirm. Could you tell me whether the study is currently enrolling and what the next step would be?\n\nThank you.`;
@@ -2890,17 +2896,46 @@ function ContactRouting({ trial }: { trial: TrialMatch }) {
         )}
 
         <div className="contact-group">
-          <div className="contact-group__h">Sites (nearest first — matched at city/state level, not exact miles)</div>
-          {sites.slice(0, 6).map((s, i) => (
-            <div key={i} className="site-row">
-              <span className="site-place">
-                {[s.city, s.state, s.country].filter(Boolean).join(", ") || s.facility}
-              </span>
-              <span className="site-facility">{s.facility}</span>
-              {s.status && <span className="mono site-status">{s.status}</span>}
-            </div>
-          ))}
-          {sites.length > 6 && <div className="refer-empty">+{sites.length - 6} more sites on ClinicalTrials.gov.</div>}
+          {/* The label has to match the actual order. It is no longer plain
+              nearest-first: open sites come first so the cap can't hide one
+              behind a closer site nobody there can enroll into. */}
+          <div className="contact-group__h">Sites (open ones first, then nearest — matched at city/state level, not exact miles)</div>
+          {shownSites.map((s, i) => {
+            const open = siteIsRecruiting(s);
+            return (
+              <div key={i} className="site-row">
+                <div className="site-row__top">
+                  <span className="site-place">
+                    {[s.city, s.state, s.country].filter(Boolean).join(", ") || s.facility}
+                  </span>
+                  <span className="site-facility">{s.facility}</span>
+                  {s.status && (
+                    <span className={`mono site-status${open ? "" : " site-status--closed"}`}>{formatSiteStatus(s.status)}</span>
+                  )}
+                </div>
+                {/* The study can be RECRUITING while this particular site is not —
+                    say so here, on the row the patient is about to call from. */}
+                {!open && (
+                  <div className="site-closed-note">
+                    This site&apos;s own status is not recruiting. Confirm before counting on a slot here.
+                  </div>
+                )}
+                {s.contacts.length > 0 && (
+                  <div className="site-contacts">
+                    {s.contacts.map((c, j) => (
+                      <div key={j} className="contact-row">
+                        <span className="contact-name">{c.name}</span>
+                        {c.role && <span className="contact-role mono">{titleCase(c.role)}</span>}
+                        {c.phone && <a href={`tel:${c.phone.replace(/[^+\d]/g, "")}`}>{c.phone}</a>}
+                        {c.email && <a href={`mailto:${c.email}`}>{c.email}</a>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {hiddenSiteCount > 0 && <div className="refer-empty">+{hiddenSiteCount} more sites on ClinicalTrials.gov.</div>}
         </div>
 
         <div className="draft-email">
@@ -3026,8 +3061,44 @@ function PacketB({ trial, profile }: { trial: TrialMatch; profile: Profile }) {
 }
 
 /* §7 — referral = the authorization moment (front-end only; synthetic demo). */
-function ReferralAuthorization({ trial, profile, onAuthorize }: { trial: TrialMatch; profile: Profile; onAuthorize: () => void }) {
+function ReferralAuthorization({
+  trial,
+  profile,
+  onAuthorize,
+}: {
+  trial: TrialMatch;
+  profile: Profile;
+  onAuthorize: (outcome: DisclosureOutcome) => void;
+}) {
   const [stage, setStage] = useState<"idle" | "review">("idle");
+  const purpose = `Eligibility pre-screening and contact for possible enrollment in ${trial.nctId}.`;
+
+  // The (future) transmit point (finding #8): this is where a real disclosure
+  // to a real sponsor would leave. The record is built from what's actually on
+  // screen — the same fields, recipient, and purpose the patient just read —
+  // never a hardcoded list, so it can't silently omit something disclosed.
+  function handleAuthorize() {
+    const record = buildDisclosureRecord({
+      authorizationId: crypto.randomUUID(),
+      fields: profile.fields,
+      // Packet B is what the coordinator receives, and it is not just the
+      // profile — it carries the criterion-by-criterion assessment, whose
+      // evidence lines quote the record. Listing only the fields would make
+      // the ledger describe a smaller disclosure than the one that happened.
+      criteria: trial.criteria,
+      sponsor: trial.sponsor,
+      site: trial.factors.nearestSite,
+      nctId: trial.nctId,
+      purpose,
+      // No referral in this app is ever compensated. lib/disclosure.ts makes
+      // that an explicit field rather than a default so a future paid-referral
+      // path can't slip through this call site unnoticed.
+      compensation: { compensated: false },
+      now: Date.now(),
+    });
+    onAuthorize(recordDisclosure(record));
+  }
+
   return (
     <section id="refer-auth" className="refer-sec">
       <div className="refer-sec__h">Refer me to this study</div>
@@ -3046,7 +3117,21 @@ function ReferralAuthorization({ trial, profile, onAuthorize }: { trial: TrialMa
         <div className="auth-card">
           <div className="auth-row">
             <span className="auth-k">What is disclosed</span>
-            <span className="auth-v">{profile.fields.map((f) => f.label).join(" · ")}</span>
+            {/* The packet is the profile AND the assessment. Naming only the
+                fields here would understate the disclosure on the very screen
+                where the patient agrees to it. */}
+            <span className="auth-v">
+              {profile.fields.map((f) => f.label).join(" · ")}
+              {trial.criteria.length > 0 ? (
+                <>
+                  {" · "}
+                  <b>
+                    plus the {trial.criteria.length}-criterion eligibility assessment for this study
+                    {trial.criteria.some((c) => c.evidence) ? ", which quotes your record where it explains a verdict" : ""}
+                  </b>
+                </>
+              ) : null}
+            </span>
           </div>
           <div className="auth-row">
             <span className="auth-k">To whom</span>
@@ -3054,21 +3139,35 @@ function ReferralAuthorization({ trial, profile, onAuthorize }: { trial: TrialMa
           </div>
           <div className="auth-row">
             <span className="auth-k">Purpose</span>
-            <span className="auth-v">Eligibility pre-screening and contact for possible enrollment in {trial.nctId}.</span>
+            <span className="auth-v">{purpose}</span>
           </div>
           <div className="auth-row">
             <span className="auth-k">Terms</span>
             <span className="auth-v">One year · revocable at any time · this trial only.</span>
           </div>
+          <div className="auth-row">
+            <span className="auth-k">Signature</span>
+            <span className="auth-v">Click-through: the button below is what you would be signing with — not a wet or drawn signature.</span>
+          </div>
+          <div className="auth-row">
+            <span className="auth-k">Retention</span>
+            {/* Stated as a term of the authorization, in the same conditional
+                frame the card's footer sets — not as a claim that anything is
+                being kept today, which would be finding #2 all over again. */}
+            <span className="auth-v">A real referral would keep this authorization on file for six years, separate from the one-year sharing window above.</span>
+          </div>
           <div className="auth-actions">
-            <button className="btn go" onClick={onAuthorize}>
+            <button className="btn go" onClick={handleAuthorize}>
               Authorize &amp; refer
             </button>
             <button className="ghost" onClick={() => setStage("idle")}>
               Cancel
             </button>
           </div>
-          <div className="auth-demo">Demo: nothing is transmitted and this is synthetic data — this screen shows the authorization the real flow would capture.</div>
+          <div className="auth-demo">
+            Demo: nothing is transmitted and this is synthetic data — clicking Authorize builds exactly the record above (recipient, fields, purpose,
+            signature, retention) and hands it to the ledger write the real flow would make. No ledger backend exists yet, so that write does not happen.
+          </div>
         </div>
       )}
     </section>
@@ -3218,12 +3317,15 @@ function Results({
   const screened = matches.filter((m) => m.status === "screened" && facet(m) && statusOk(m));
   const excluded = matches.filter((m) => m.status === "excluded" && facet(m) && statusOk(m));
 
-  // Within "ruled out", a study the patient could still come to qualify for (a
-  // washout that elapses, a scan that gets ordered) is worth reading before one
-  // that is fixed shut. Sorting on hard failures surfaces the workable ones.
-  const ruledOut = matches
-    .filter((m) => m.status === "near" && facet(m) && statusOk(m))
-    .sort((a, b) => hardFailCountOf(a.criteria) - hardFailCountOf(b.criteria));
+  // §P1 — every "near" match splits into the workable ones (every failing
+  // criterion is remediable: a washout that elapses, a scan that gets ordered)
+  // and the ones with at least one fixed failure. Same status, same "near"
+  // bucket count — this only decides which of two sections a card renders in.
+  const nearMatches = matches.filter((m) => m.status === "near" && facet(m) && statusOk(m));
+  const { notYet, ruledOut: ruledOutUnsorted } = splitNearMisses(nearMatches);
+  // Within "ruled out" proper, a study closer to workable (fewer hard failures)
+  // is still worth reading before one that is fixed shut on every count.
+  const ruledOut = [...ruledOutUnsorted].sort((a, b) => hardFailCountOf(a.criteria) - hardFailCountOf(b.criteria));
 
   // Fully-eligible studies always rank first for clear visibility; within the same
   // status, the existing preference/fit ranking still applies.
@@ -3249,7 +3351,7 @@ function Results({
   // an empty list behind a collapsed "Farther" toggle — auto-open it and say so.
   const emptyInRange = grouped && inRangeAll.length === 0 && fartherAll.length > 0;
 
-  const totalShown = inRange.length + farther.length + ruledOut.length + screened.length + excluded.length;
+  const totalShown = inRange.length + farther.length + notYet.length + ruledOut.length + screened.length + excluded.length;
   const filtersActive = statusFilter !== "all" || studyFilter !== "all" || phaseFilter.size > 0 || query.trim().length > 0;
 
   const card = (m: TrialMatch, i: number) => (
@@ -3456,6 +3558,51 @@ function Results({
           </>
         )}
 
+        {/* §P1 — the workable half of "near": every failing criterion here is one
+            the patient could come to satisfy. Sits above "Ruled out" because it is
+            categorically different, not because it is more likely — the card
+            summary says what's in the way without opening it, and the copy frames
+            possibility only. No dates, no "almost", nothing that reads as a plan;
+            the study team still decides. */}
+        {notYet.length > 0 && (statusFilter === "all" || statusFilter === "near") && (
+          <>
+            <div className="section-h">
+              Not open to you yet ({notYet.length}) <span>— every criterion listed here is one that could still change</span>
+            </div>
+            {notYet.map((m) => (
+              <details key={m.nctId} className="ruled-collapse notyet-collapse">
+                <summary className="ruled-summary notyet-summary">
+                  <div className="notyet-row">
+                    <span className="ruled-chev" aria-hidden>
+                      ▶
+                    </span>
+                    <span className="ruled-dot notyet-dot" aria-hidden />
+                    <span className="ruled-tag notyet-tag">Not yet</span>
+                    <span className="mono ruled-nct">{m.nctId}</span>
+                    <span className="ruled-title">{m.title}</span>
+                    <span className="mono ruled-phase">{m.phase}</span>
+                  </div>
+                  <div className="notyet-why">Could change: {notYetWhy(m.criteria)}</div>
+                </summary>
+                <div className="ruled-body">
+                  <DecisionCard
+                    m={m}
+                    entrant={entrant}
+                    saved={saved.has(m.nctId)}
+                    onSave={() => onToggleSave(m.nctId)}
+                    reasons={active ? prefReasons(m, prefs) : []}
+                    flash={flash === m.nctId}
+                    onResolve={onResolve}
+                    onOpenNextSteps={onOpenNextSteps}
+                    onRefer={onRefer}
+                    hideHead
+                  />
+                </div>
+              </details>
+            ))}
+          </>
+        )}
+
         {ruledOut.length > 0 && (statusFilter === "all" || statusFilter === "near") && (
           <>
             <div className="section-h">
@@ -3582,6 +3729,12 @@ const DecisionCard = memo(function DecisionCard({
   // their question is "what is still missing and where do I get it", which is the
   // ledger. So for a clinician the two swap places. No eligibility rule changes.
   const clinical = entrant === "clinician";
+  // A caregiver's question is not "do I want this" (the patient's question,
+  // which the brief below still answers for them) but "is this doable" — how
+  // far, how demanding, what's actually scheduled. The brief stays exactly
+  // where it is; this only adds the logistics row further down. No eligibility
+  // rule changes here either — same invariant as `clinical` above.
+  const caring = entrant === "caregiver";
   // Open items, in the order a coordinator works them: the ones nothing in the
   // record addresses first, since those are the phone calls.
   const openItems = m.criteria
@@ -3730,7 +3883,10 @@ const DecisionCard = memo(function DecisionCard({
               premature on "Needs info" cards where eligibility isn't established yet. */}
           {m.status === "eligible" && m.brief.questionsToAsk.length > 0 && (
             <div className="qask">
-              <div className="qask-h">Questions to ask your care team</div>
+              {/* Caregiver is the one who will actually be asking these — address
+                  them directly rather than the generic "your care team", which
+                  reads as if the patient is the one holding the list. */}
+              <div className="qask-h">{caring ? "Questions to ask your loved one's care team" : "Questions to ask your care team"}</div>
               <ul>
                 {m.brief.questionsToAsk.map((q, i) => (
                   <li key={i}>{q}</li>
@@ -3739,6 +3895,66 @@ const DecisionCard = memo(function DecisionCard({
             </div>
           )}
         </>
+      )}
+
+      {/* CAREGIVER ADDITION — logistics, not a swap, and deliberately BELOW the
+          brief rather than above it. You cannot weigh "is the travel worth it"
+          before you know what is on offer, so the brief still leads and this
+          answers the second question. The brief above answers "do we want this";
+          this answers "is it doable",
+          promoting exactly the fields DecisionFactors already computes.
+          Unconditional on match status (unlike the brief, which hides on a
+          near-miss): whether a site travels or a study demands much of a
+          patient is true regardless of whether they qualify for it, and
+          "nothing silently dropped" applies to this reader too. */}
+      {caring && (
+        <div className="logistics">
+          <div className="logistics-h">Trial logistics</div>
+          <div className="logistics-grid">
+            <div className="lg-item">
+              <span className="lg-k">Nearest listed site</span>
+              <span className="lg-v" title="Approximate — matched on city/state, not an exact distance.">
+                {m.factors.nearestSite}
+              </span>
+              {m.factors.locationUnknown ? (
+                <span className="lg-note">This study lists no site we could match to the location you gave.</span>
+              ) : !m.factors.nearestSiteActive ? (
+                <span className="lg-note">This site is not currently listed as recruiting — confirm before planning around it.</span>
+              ) : m.factors.withinRange === true ? (
+                <span className="lg-note">Within the travel distance you selected.</span>
+              ) : m.factors.withinRange === false ? (
+                <span className="lg-note">Outside the travel distance you selected.</span>
+              ) : (
+                <span className="lg-note">Travel distance was not checked.</span>
+              )}
+            </div>
+            <div className="lg-item">
+              <span className="lg-k">Day-to-day demand</span>
+              <span className="lg-v">{BURDEN_LABEL[m.factors.burdenProxy]}</span>
+              <span className="lg-note" title="A rough estimate from the study's phase and type — not a count of visits.">
+                A rough estimate, not a visit count
+              </span>
+            </div>
+            <div className="lg-item">
+              <span className="lg-k">Study design</span>
+              <span className="lg-v">
+                {m.factors.randomized ? "Randomized — a placebo or unassigned arm is possible" : "Open-label — no random assignment"}
+              </span>
+              {!m.interventional && <span className="lg-note">Observational: it gathers information; no treatment is given.</span>}
+            </div>
+            {(enroll || (m.factors.registryStale && m.factors.registryAgeDays !== null)) && (
+              <div className="lg-item">
+                <span className="lg-k">Timing</span>
+                {enroll && <span className="lg-v">{enroll}</span>}
+                {m.factors.registryStale && m.factors.registryAgeDays !== null && (
+                  <span className="lg-note">
+                    Registry entry {monthsAgo(m.factors.registryAgeDays)} old — may not reflect whether the study is still enrolling.
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Design / commitment signals only — identity (phase · site · NCT) lives in the sub-line above. */}
@@ -3780,6 +3996,7 @@ const DecisionCard = memo(function DecisionCard({
           {ledgerOpen && (
             <Ledger
               criteria={m.criteria}
+              entrant={entrant}
               onResolve={(critIndex, answer) => onResolve(m.nctId, critIndex, answer)}
               onOpenNextSteps={onOpenNextSteps}
             />
@@ -3826,10 +4043,12 @@ function ledgerTally(criteria: Criterion[]) {
 
 function Ledger({
   criteria,
+  entrant,
   onResolve,
   onOpenNextSteps,
 }: {
   criteria: Criterion[];
+  entrant: Entrant;
   onResolve: (critIndex: number, answer: string) => Promise<boolean>;
   onOpenNextSteps: () => void;
 }) {
@@ -3859,7 +4078,7 @@ function Ledger({
       </div>
       {shown.map((g) => {
         const rows = groups[g.key].map(({ c, idx }) => (
-          <LedgerRow key={idx} c={c} index={idx} onResolve={onResolve} onOpenNextSteps={onOpenNextSteps} />
+          <LedgerRow key={idx} c={c} index={idx} entrant={entrant} onResolve={onResolve} onOpenNextSteps={onOpenNextSteps} />
         ));
         if (g.key === "met") {
           return (
@@ -3892,15 +4111,22 @@ function Ledger({
 function LedgerRow({
   c,
   index,
+  entrant,
   onResolve,
   onOpenNextSteps,
 }: {
   c: Criterion;
   index: number;
+  entrant: Entrant;
   onResolve: (critIndex: number, answer: string) => Promise<boolean>;
   onOpenNextSteps: () => void;
 }) {
   const cls = verdictRowClass(c.verdict);
+  // A clinician's ledger is already dense reference material and the reader
+  // doesn't need "measurable disease means…" spelled out — the gloss is a
+  // patient/caregiver aid only. Same criteria, same verdicts either way; this
+  // only changes what renders, never what was decided.
+  const showGloss = entrant !== "clinician";
   const resolvable = c.verdict === "confirm";
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -3940,6 +4166,12 @@ function LedgerRow({
             </span>
           )}
           {c.evidence ? <span className="ev">{c.evidence}</span> : null}
+          {showGloss && c.gloss && (
+            <details className="lgloss">
+              <summary>what does this mean?</summary>
+              <div className="lgloss__body">{c.gloss}</div>
+            </details>
+          )}
         </span>
         {resolvable ? (
           <button
@@ -4171,6 +4403,10 @@ function NextStepsPanel({ matches, onClose, onRefer }: { matches: TrialMatch[]; 
   }, [onClose]);
 
   const trials = matches.filter((m) => m.status === "eligible");
+  // §P1 — when there's nothing to act on, say whether there's something to
+  // read instead, rather than just going quiet. Uses the same shared splitter
+  // Results does, so this count can never disagree with what that section shows.
+  const { notYet } = splitNearMisses(matches);
 
   return (
     <div className="ns-overlay" role="dialog" aria-modal="true" aria-label="Your next steps" onClick={onClose}>
@@ -4183,7 +4419,9 @@ function NextStepsPanel({ matches, onClose, onRefer }: { matches: TrialMatch[]; 
                 ? `${trials.length} trial${trials.length > 1 ? "s" : ""} you match on record. Bring ${
                     trials.length > 1 ? "these" : "this"
                   } to your care team to confirm and start a referral — a study team makes the final eligibility call.`
-                : "No fully-eligible trials yet. Once you match a trial on record, its next steps show up here."}
+                : notYet.length > 0
+                  ? `No fully-eligible trials yet. ${notYet.length} ${notYet.length > 1 ? "studies" : "study"} on the results page list only criteria that could still change — see “Not open to you yet”, above the ruled-out list.`
+                  : "No fully-eligible trials yet. Once you match a trial on record, its next steps show up here."}
             </p>
           </div>
           <button className="ns-close" onClick={onClose} aria-label="Close next steps">
@@ -4193,7 +4431,11 @@ function NextStepsPanel({ matches, onClose, onRefer }: { matches: TrialMatch[]; 
 
         <div className="ns-body">
           {trials.length === 0 && (
-            <div className="ns-empty">Nothing to act on yet — once you fully match a trial on record, its next steps appear here.</div>
+            <div className="ns-empty">
+              {notYet.length > 0
+                ? `Nothing to act on yet. ${notYet.length} ${notYet.length > 1 ? "studies" : "study"} in “Not open to you yet” list what's standing in the way — worth reading with your care team, though the study team still decides.`
+                : "Nothing to act on yet — once you fully match a trial on record, its next steps appear here."}
+            </div>
           )}
           {trials.map((m) => (
             <section className="ns-trial" key={m.nctId}>

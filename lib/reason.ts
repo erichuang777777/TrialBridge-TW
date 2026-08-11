@@ -42,6 +42,8 @@ For EACH criterion, also set \`provenance\` — where the evidence for your judg
 - "you": you relied on something the patient stated/told us directly.
 - "not_documented": nothing in the record addresses this criterion. Use this ONLY together with a "confirm" verdict (it marks the gap the coordinator would otherwise phone to discover).
 
+Also set \`gloss\` on EACH criterion — a short plain-language "what does this mean?" for any clinical term in \`requirement\`, ~8th-grade reading level, regardless of who the addressee is. Empty string when the requirement uses no term that needs glossing. This is descriptive only and never changes the verdict.
+
 THEN produce a patient-facing decision brief (the \`brief\` field) to help this person weigh the trial with their care team:
 - Write for the reader named in the ADDRESSEE section at the end of this prompt — follow its voice and plain-language rules. Apply the same addressee to the headline field (it overrides any "speak to you" wording in the field schema when the addressee is a caregiver or clinician).
 - Ground offers / commitment / uncertainty ONLY in the trial facts given to you (phase, purpose, randomization/masking, interventions, nearest site) and your eligibility findings. Never invent efficacy, outcomes, or benefit.

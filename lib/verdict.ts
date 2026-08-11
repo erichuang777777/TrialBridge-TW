@@ -85,7 +85,7 @@ export function deriveStatus(criteria: Criterion[]): MatchStatus {
    model's self-reported confidence.
    -------------------------------------------------------------------------- */
 
-const STATUS_RANK: Record<MatchStatus, number> = {
+export const STATUS_RANK: Record<MatchStatus, number> = {
   eligible: 0,
   uncertain: 1,
   near: 2,
@@ -118,4 +118,85 @@ export function compareMatches(a: RankableMatch, b: RankableMatch): number {
     if (ka[i] !== kb[i]) return ka[i] - kb[i];
   }
   return 0;
+}
+
+/* ---- cohort ranking (§C1) ---------------------------------------------------
+   /api/screen holds the trial fixed and ranks PATIENTS against it — the mirror
+   of compareMatches, which holds the patient fixed and ranks trials. Same
+   discipline, same reason: absolute, code-derived counts only, never a
+   met/total ratio (identical argument as above — a patient whose ledger
+   happened to segment into more atomic criteria is not thereby a worse fit).
+
+   Order is what a coordinator actually triages on: who's in, then who has the
+   fewest open items to chase, then who has the fewest settled failures — a
+   coordinator can still work a patient with one open "confirm" faster than one
+   buried in hard fails, even though both are merely "uncertain"/"near". */
+
+export type CohortRankable = {
+  status: MatchStatus;
+  criteria: Criterion[];
+};
+
+export function cohortRankKey(p: CohortRankable): number[] {
+  return [STATUS_RANK[p.status], openCountOf(p.criteria), hardFailCountOf(p.criteria)];
+}
+
+/** Comparator over cohortRankKey(), for Array.prototype.sort. */
+export function compareCohortPatients(a: CohortRankable, b: CohortRankable): number {
+  const ka = cohortRankKey(a);
+  const kb = cohortRankKey(b);
+  for (let i = 0; i < ka.length; i++) {
+    if (ka[i] !== kb[i]) return ka[i] - kb[i];
+  }
+  return 0;
+}
+
+/* ---- near-miss presentation split (§P1) -------------------------------------
+   Zero fully-eligible trials is the normal result for later-line disease, and
+   today that is exactly where the product goes quiet: every "near" trial —
+   the ones with a hard, fixed failure and the ones with only a washout that
+   will elapse — lands in one collapsed "Ruled out" pile. That erases the
+   distinction the ledger already carries via `remediable`.
+
+   This is a PRESENTATION split, not a new verdict: both groups stay status
+   "near", both still count toward the "near" bucket, and `deriveStatus` does
+   not change. It only decides which of two sections a card renders in. */
+
+/** Minimal shape splitNearMisses needs — structural, like RankableMatch, so
+ *  the eval harness can drive it with plain objects instead of a full
+ *  TrialMatch. */
+export type NearMissLike = {
+  status: MatchStatus;
+  criteria: Criterion[];
+};
+
+/** Split "near" matches into the workable ones — every failing criterion is
+ *  remediable (a washout, a scan that can be ordered) — and the rest. A trial
+ *  with zero criteria is "screened", not "near" (see deriveStatus), but this
+ *  function is defensive about that anyway: an empty criteria list must never
+ *  read as "no hard failures" and slide into "not yet" by default. */
+export function splitNearMisses<T extends NearMissLike>(matches: T[]): { notYet: T[]; ruledOut: T[] } {
+  const notYet: T[] = [];
+  const ruledOut: T[] = [];
+  for (const m of matches) {
+    if (m.status !== "near") continue;
+    if (m.criteria.length > 0 && hardFailCountOf(m.criteria) === 0) {
+      notYet.push(m);
+    } else {
+      ruledOut.push(m);
+    }
+  }
+  return { notYet, ruledOut };
+}
+
+/** Bucket a cohort by derived status. Every status a row can hold gets a bucket,
+ *  so the buckets always sum to `total` — the same invariant the results screen
+ *  holds itself to ("the header and the buckets can never disagree"). It lives
+ *  here, and is tested, because a count that quietly stops reconciling is a bug
+ *  that reads as a fact: a screen of 20 patients reporting four zeroes and no
+ *  explanation looks like a finding rather than a dropped bucket. */
+export function cohortCounts(rows: { status: MatchStatus }[]): Record<MatchStatus, number> & { total: number } {
+  const counts = { eligible: 0, uncertain: 0, near: 0, screened: 0, excluded: 0 };
+  for (const r of rows) counts[r.status]++;
+  return { ...counts, total: rows.length };
 }
