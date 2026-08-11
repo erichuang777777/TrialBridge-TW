@@ -920,13 +920,17 @@ button:active:not(:disabled){transform:scale(.97);}   /* nothing responsive stay
 .legal-callout b{font-weight:600;}
 .legal-sec{margin:0 0 24px;}
 .legal-sec h2{font-size:16px;font-weight:650;letter-spacing:-.01em;margin:0 0 10px;}
+.legal-sec h3{font-size:14px;font-weight:650;letter-spacing:-.01em;margin:0 0 8px;}
 .legal-sec p{font-size:14px;line-height:1.62;color:var(--ink-2);margin:0 0 10px;max-width:66ch;}
 .legal-sec ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;}
 .legal-sec li{font-size:14px;line-height:1.6;color:var(--ink-2);max-width:64ch;}
 .legal-sec li b{color:var(--ink);font-weight:600;}
 .legal-foot{margin:28px 0 0;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;}
 
-/* ---- /watch — weekly breast-cancer trial digest ---- */
+/* ---- /watch — weekly clinician trial digest ---- */
+.watch-condition{margin:0 0 36px;padding-top:28px;border-top:1px solid var(--line);}
+.watch-condition:first-of-type{padding-top:0;border-top:none;}
+.watch-condition__h2{font-size:20px;font-weight:650;letter-spacing:-.01em;margin:0 0 16px;display:flex;align-items:baseline;gap:10px;}
 .watch-count{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink-3);}
 .watch-list{display:flex;flex-direction:column;gap:10px;}
 .watch-empty{font-size:13.5px;color:var(--ink-3);margin:0 0 10px;}

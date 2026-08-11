@@ -1,25 +1,25 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { Trial } from "@/lib/types";
-import { fetchWeeklyBreastCancerDigest, type WeeklyDigest } from "@/lib/trialWatch";
+import { fetchWeeklyDigests, type WeeklyDigest } from "@/lib/trialWatch";
 
 export const metadata: Metadata = {
-  title: "Breast cancer trial watch · Trialign",
+  title: "Clinician trial watch · Trialign",
   description:
-    "Breast-cancer studies ClinicalTrials.gov touched this week, grouped by current status — recruiting, closed early, completed.",
+    "Tracked-cancer studies ClinicalTrials.gov touched this week, grouped by current status — recruiting, closed early, completed.",
 };
 
 // Always live — this is a "what changed" digest, a cached page would defeat the point.
 export const dynamic = "force-dynamic";
 
 /* ============================================================================
-   /watch — weekly breast-cancer trial digest (WO42633 follow-up)
+   /watch — weekly clinician trial digest (WO42633 follow-up)
 
-   Standalone page, no patient data: a public read of breast-cancer studies
-   ClinicalTrials.gov touched this week, by current status (see lib/trialWatch.ts
-   for why that's not the same as "changed status this week"). Pairs with the
-   weekly automation that reports this same digest directly; this page is the
-   always-current, load-anytime view of it.
+   Standalone page, no patient data: a public read of studies ClinicalTrials.gov
+   touched this week for each cancer in lib/trialWatch.ts's TRACKED_CONDITIONS,
+   by current status (see that file for why that's not the same as "changed
+   status this week"). Pairs with the weekly automation that reports this same
+   digest directly; this page is the always-current, load-anytime view of it.
    ========================================================================== */
 
 function fmtDate(iso: string): string {
@@ -27,6 +27,10 @@ function fmtDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function TrialRow({ trial, badge, badgeLabel }: { trial: Trial; badge: "eligible" | "near" | "screened"; badgeLabel: string }) {
@@ -64,9 +68,9 @@ function Section({
 }) {
   return (
     <section className="legal-sec">
-      <h2>
+      <h3>
         {title} <span className="watch-count">{trials.length}</span>
-      </h2>
+      </h3>
       <p className="legal-lede" style={{ marginBottom: 14 }}>
         {hint}
       </p>
@@ -83,14 +87,64 @@ function Section({
   );
 }
 
+function ConditionBlock({ digest }: { digest: WeeklyDigest }) {
+  const label = titleCase(digest.condition);
+  return (
+    <div className="watch-condition">
+      <h2 className="watch-condition__h2">
+        {label} <span className="watch-count">{digest.totalUpdated} touched</span>
+      </h2>
+      <Section
+        title="Currently recruiting"
+        hint="Open to enrollment, with a registry update this week — may have been recruiting for a while."
+        trials={digest.recruiting}
+        badge="eligible"
+        badgeLabel="recruiting"
+        emptyText={`No currently-recruiting ${digest.condition} studies had a registry update this week.`}
+      />
+      <Section
+        title="Closed early"
+        hint="Currently terminated, withdrawn, or suspended, with a registry update this week — worth a look at why; the closure itself may predate this week."
+        trials={digest.closedEarly}
+        badge="near"
+        badgeLabel="closed early"
+        emptyText={`No terminated, withdrawn, or suspended ${digest.condition} studies had a registry update this week.`}
+      />
+      <Section
+        title="Completed"
+        hint="Currently marked completed, with a registry update this week — the completion itself may predate this week."
+        trials={digest.completed}
+        badge="screened"
+        badgeLabel="completed"
+        emptyText={`No completed ${digest.condition} studies had a registry update this week.`}
+      />
+      {digest.other.length > 0 && (
+        <details className="legal-sec">
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+            Other statuses <span className="watch-count">{digest.other.length}</span>
+          </summary>
+          <div className="watch-list" style={{ marginTop: 14 }}>
+            {digest.other.map((t) => (
+              <TrialRow key={t.nctId} trial={t} badge="screened" badgeLabel={t.overallStatus.replace(/_/g, " ").toLowerCase()} />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export default async function WatchPage() {
-  let digest: WeeklyDigest | null = null;
+  let digests: WeeklyDigest[] | null = null;
   let error: string | null = null;
   try {
-    digest = await fetchWeeklyBreastCancerDigest(7);
+    digests = await fetchWeeklyDigests(7);
   } catch (err) {
     error = err instanceof Error ? err.message : "ClinicalTrials.gov request failed.";
   }
+
+  const totalTouched = digests?.reduce((sum, d) => sum + d.totalUpdated, 0) ?? 0;
+  const window = digests?.[0];
 
   return (
     <div className="legal">
@@ -100,18 +154,19 @@ export default async function WatchPage() {
         </p>
 
         <header className="legal-head">
-          <h1>Breast cancer trial watch</h1>
+          <h1>Clinician trial watch</h1>
           <p className="legal-lede">
-            Breast-cancer studies whose ClinicalTrials.gov record was touched in the last 7 days, grouped by their current
-            status — recruiting, closed before their planned end, or completed. The registry gives a current status and an
-            update date, not a change history, so a study here may have held that status for a while and just had something
-            else edited — this is a status snapshot, not a confirmed transition. Pulled live on every visit; nothing here is
-            patient-specific.
+            Studies whose ClinicalTrials.gov record was touched in the last 7 days, for the cancers tracked below, grouped by
+            their current status — recruiting, closed before their planned end, or completed. The registry gives a current
+            status and an update date, not a change history, so a study here may have held that status for a while and just
+            had something else edited — this is a status snapshot, not a confirmed transition. Pulled live on every visit;
+            nothing here is patient-specific.
           </p>
-          {digest && (
+          {window && (
             <p className="legal-meta">
-              Window: {fmtDate(digest.sinceDate)} – {fmtDate(digest.generatedAt)} · {digest.totalUpdated} studies touched · Source:{" "}
-              <a href="https://clinicaltrials.gov/search?cond=breast%20cancer" target="_blank" rel="noopener">
+              Window: {fmtDate(window.sinceDate)} – {fmtDate(window.generatedAt)} · {totalTouched} studies touched across{" "}
+              {digests?.length} tracked cancers · Source:{" "}
+              <a href="https://clinicaltrials.gov/search" target="_blank" rel="noopener">
                 ClinicalTrials.gov
               </a>
             </p>
@@ -120,46 +175,9 @@ export default async function WatchPage() {
 
         {error ? (
           <div className="err">Couldn&apos;t reach ClinicalTrials.gov: {error}. Try reloading in a moment.</div>
-        ) : digest ? (
-          <>
-            <Section
-              title="Currently recruiting"
-              hint="Open to enrollment, with a registry update this week — may have been recruiting for a while."
-              trials={digest.recruiting}
-              badge="eligible"
-              badgeLabel="recruiting"
-              emptyText="No currently-recruiting breast-cancer studies had a registry update this week."
-            />
-            <Section
-              title="Closed early"
-              hint="Currently terminated, withdrawn, or suspended, with a registry update this week — worth a look at why; the closure itself may predate this week."
-              trials={digest.closedEarly}
-              badge="near"
-              badgeLabel="closed early"
-              emptyText="No terminated, withdrawn, or suspended breast-cancer studies had a registry update this week."
-            />
-            <Section
-              title="Completed"
-              hint="Currently marked completed, with a registry update this week — the completion itself may predate this week."
-              trials={digest.completed}
-              badge="screened"
-              badgeLabel="completed"
-              emptyText="No completed breast-cancer studies had a registry update this week."
-            />
-            {digest.other.length > 0 && (
-              <details className="legal-sec">
-                <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-                  Other statuses <span className="watch-count">{digest.other.length}</span>
-                </summary>
-                <div className="watch-list" style={{ marginTop: 14 }}>
-                  {digest.other.map((t) => (
-                    <TrialRow key={t.nctId} trial={t} badge="screened" badgeLabel={t.overallStatus.replace(/_/g, " ").toLowerCase()} />
-                  ))}
-                </div>
-              </details>
-            )}
-          </>
-        ) : null}
+        ) : (
+          digests?.map((d) => <ConditionBlock key={d.condition} digest={d} />)
+        )}
 
         <p className="legal-meta" style={{ marginTop: 8 }}>
           Informational only — not medical advice. Registry data can lag a sponsor&apos;s actual decision by days to weeks.

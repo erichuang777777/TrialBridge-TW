@@ -1,11 +1,11 @@
 /* ============================================================================
-   Breast cancer trial watch — weekly "what changed" digest.
+   Clinician trial watch — weekly "what changed" digest, per tracked cancer.
 
    Server-side only (built on lib/ctgov.ts). Answers a different question than
    the matching pipeline: not "which trials fit this patient" but "what did
-   ClinicalTrials.gov touch this week" for breast cancer generally, grouped by
-   each study's CURRENT overallStatus. No model call, no PHI, nothing
-   patient-specific.
+   ClinicalTrials.gov touch this week" for a fixed list of cancer types a
+   clinician tracks, grouped by each study's CURRENT overallStatus. No model
+   call, no PHI, nothing patient-specific.
 
    Important limit: the v2 API gives a current status and a last-update date,
    not a status-change history, so a bucket here means "currently in status X,
@@ -17,6 +17,10 @@
 
 import type { Trial } from "./types";
 import { searchRecentlyUpdatedTrials } from "./ctgov";
+
+/** The clinician tool's fixed watch list — no free-text input yet, so this is
+ *  the single place to add or drop a tracked cancer type. */
+export const TRACKED_CONDITIONS = ["breast cancer", "lung cancer", "colorectal cancer"] as const;
 
 export type WeeklyDigest = {
   generatedAt: string;
@@ -55,13 +59,9 @@ function isoDateDaysAgo(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Fetch and bucket every breast-cancer study ClinicalTrials.gov updated in
- *  the last `windowDays` days. Default condition is "breast cancer"; callers
- *  needing a narrower slice (e.g. "HER2-low breast cancer") can override it. */
-export async function fetchWeeklyBreastCancerDigest(
-  windowDays = 7,
-  condition = "breast cancer",
-): Promise<WeeklyDigest> {
+/** Fetch and bucket every study for one condition that ClinicalTrials.gov
+ *  updated in the last `windowDays` days. */
+export async function fetchWeeklyConditionDigest(windowDays: number, condition: string): Promise<WeeklyDigest> {
   const sinceDate = isoDateDaysAgo(windowDays);
   const trials = await searchRecentlyUpdatedTrials({ cond: condition, sinceDate, pageSize: 100 });
 
@@ -89,4 +89,14 @@ export async function fetchWeeklyBreastCancerDigest(
     completed,
     other,
   };
+}
+
+/** One digest per tracked cancer type — the clinician tool's weekly report.
+ *  Runs the condition fetches concurrently since they're independent registry
+ *  calls. Defaults to TRACKED_CONDITIONS; pass a subset to scope a run. */
+export async function fetchWeeklyDigests(
+  windowDays = 7,
+  conditions: readonly string[] = TRACKED_CONDITIONS,
+): Promise<WeeklyDigest[]> {
+  return Promise.all(conditions.map((condition) => fetchWeeklyConditionDigest(windowDays, condition)));
 }
