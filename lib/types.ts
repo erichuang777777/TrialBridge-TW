@@ -103,6 +103,12 @@ export type Criterion = {
    *  "definitively ruled out" split that a coordinator actually triages on.
    *  Descriptive only — it never changes the verdict or the derived status. */
   remediable: boolean;
+  /** A short plain-language "what does this mean?" explanation of any clinical
+   *  term in `requirement` (design.md §9 — terms are always paired with a
+   *  gloss). Empty string when nothing needs glossing. Descriptive only — it
+   *  never changes the verdict, the derived status, or ranking, and it is
+   *  shown only to patient/caregiver readers; a clinician's card suppresses it. */
+  gloss: string;
 };
 
 /** Overall standing of a trial for this patient.

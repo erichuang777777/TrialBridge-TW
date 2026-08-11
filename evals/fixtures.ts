@@ -56,6 +56,7 @@ export function criterion(over: Partial<Criterion> = {}): Criterion {
     evidence: "Some evidence",
     provenance: "note",
     remediable: false,
+    gloss: "",
     ...over,
   };
 }

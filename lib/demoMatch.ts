@@ -33,7 +33,9 @@ type DemoMatchResponse = {
 };
 
 /** `remediable` defaults to false: it is only read on a "fails" verdict, and
- *  false is the conservative reading there ("this is a no", not "not yet"). */
+ *  false is the conservative reading there ("this is a no", not "not yet").
+ *  `gloss` defaults to "": most requirements here are plain English already
+ *  ("no prior X", disease-type restatements) and don't need one. */
 const c = (
   kind: "incl" | "excl",
   verdict: Criterion["verdict"],
@@ -41,7 +43,20 @@ const c = (
   evidence: string,
   provenance: Criterion["provenance"] = "note",
   remediable = false,
-): Criterion => ({ kind, verdict, requirement, evidence, provenance, remediable });
+  gloss = "",
+): Criterion => ({ kind, verdict, requirement, evidence, provenance, remediable, gloss });
+
+/* Glosses reused verbatim wherever the same jargon recurs across seeds — the
+ * point is a patient reading term, not a per-trial one, so the wording should
+ * not drift between trials that use the same word. */
+const ECOG_GLOSS =
+  "ECOG performance status is a 0-to-5 scale doctors use to rate how well a patient can carry out daily activities; 0 or 1 means fully active or only slightly limited.";
+const PIK3CA_GLOSS =
+  "PIK3CA is a gene that can pick up a change (mutation) that helps some breast cancers grow; a tumor or blood test can check for it.";
+const CDK46_TREATMENT_GLOSS =
+  "An aromatase inhibitor is a hormone-blocking pill; a CDK4/6 inhibitor is a pill that blocks a protein cancer cells use to divide — both are common early treatments for this cancer type.";
+const CDK46_EXCLUSION_GLOSS =
+  "A CDK4/6 inhibitor is a pill that blocks a protein cancer cells use to divide; this trial is only open to patients who have not yet had one for metastatic disease.";
 
 const DFCI = { facility: "Dana-Farber Cancer Institute", city: "Boston", state: "Massachusetts", country: "United States", status: "RECRUITING", contacts: [] };
 const MGH = { facility: "Massachusetts General Hospital", city: "Boston", state: "Massachusetts", country: "United States", status: "RECRUITING", contacts: [] };
@@ -149,9 +164,9 @@ const SEEDS: Seed[] = [
     headline: "You meet every criterion we could check — the PIK3CA/AKT pathway alteration this trial targets is documented.",
     criteria: [
       c("incl", "meets", "HR-positive, HER2-negative advanced breast cancer", "ER 90% / PR 60%, HER2 IHC 1+ (negative), stage IV.", "note"),
-      c("incl", "meets", "Progression on/after an aromatase inhibitor ± CDK4/6 inhibitor", "Progressed on 1L letrozole + palbociclib (Dec 2025).", "note"),
-      c("incl", "meets", "Qualifying PI3K/AKT pathway alteration (PIK3CA/AKT1/PTEN)", "PIK3CA H1047R positive.", "note"),
-      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note"),
+      c("incl", "meets", "Progression on/after an aromatase inhibitor ± CDK4/6 inhibitor", "Progressed on 1L letrozole + palbociclib (Dec 2025).", "note", false, CDK46_TREATMENT_GLOSS),
+      c("incl", "meets", "Qualifying PI3K/AKT pathway alteration (PIK3CA/AKT1/PTEN)", "PIK3CA H1047R positive.", "note", false, PIK3CA_GLOSS),
+      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note", false, ECOG_GLOSS),
       c("excl", "clear", "No prior AKT inhibitor", "No prior capivasertib or other AKT inhibitor.", "note"),
     ],
     brief: {
@@ -178,10 +193,18 @@ const SEEDS: Seed[] = [
     enrollmentWindow: "Open now · est. closes before ~Mar 2027",
     headline: "Your HER2 IHC 1+ result makes you HER2-low — the exact population this trial enrolls.",
     criteria: [
-      c("incl", "meets", "HER2-low disease (IHC 1+, or IHC 2+/ISH-negative)", "HER2 IHC 1+ = HER2-low.", "note"),
+      c(
+        "incl",
+        "meets",
+        "HER2-low disease (IHC 1+, or IHC 2+/ISH-negative)",
+        "HER2 IHC 1+ = HER2-low.",
+        "note",
+        false,
+        "HER2-low means a tumor test (called IHC) found a small amount of the HER2 protein — not enough to count as HER2-positive, but enough for certain newer drugs to target.",
+      ),
       c("incl", "meets", "HR-positive, previously treated with endocrine therapy", "ER/PR-positive; prior letrozole and fulvestrant.", "note"),
       c("incl", "meets", "Endocrine-refractory / progression on prior endocrine therapy", "Progressed through two lines of endocrine-based therapy.", "note"),
-      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note"),
+      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note", false, ECOG_GLOSS),
       c("excl", "clear", "No prior anti-HER2 therapy or HER2-directed ADC", "No prior trastuzumab deruxtecan or other anti-HER2 agent.", "note"),
     ],
     brief: {
@@ -211,7 +234,7 @@ const SEEDS: Seed[] = [
       c("incl", "meets", "Inoperable or metastatic HR-positive, HER2-negative breast cancer", "Stage IV HR+/HER2- disease.", "note"),
       c("incl", "meets", "Progression on endocrine therapy; not a candidate for further endocrine therapy", "Progressed on letrozole+palbociclib and on fulvestrant.", "note"),
       c("incl", "meets", "Endocrine-refractory per investigator", "Two prior endocrine-based lines with progression.", "note"),
-      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note"),
+      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note", false, ECOG_GLOSS),
       c("excl", "clear", "No prior TROP2-directed antibody-drug conjugate", "No prior datopotamab or sacituzumab govitecan.", "note"),
     ],
     brief: {
@@ -237,8 +260,24 @@ const SEEDS: Seed[] = [
     headline: "A strong fit on treatment history — but the record does not show your ESR1 mutation status, which this trial keys on.",
     criteria: [
       c("incl", "meets", "ER-positive, HER2-negative advanced breast cancer", "ER 90%, HER2 IHC 1+ (negative).", "note"),
-      c("incl", "meets", "Progression on prior endocrine therapy + a CDK4/6 inhibitor", "Post letrozole+palbociclib and fulvestrant.", "note"),
-      c("incl", "confirm", "ESR1 mutation detected by ctDNA", "The record does not document an ESR1 mutation test — order/confirm before screening.", "not_documented"),
+      c(
+        "incl",
+        "meets",
+        "Progression on prior endocrine therapy + a CDK4/6 inhibitor",
+        "Post letrozole+palbociclib and fulvestrant.",
+        "note",
+        false,
+        "A CDK4/6 inhibitor is a pill that blocks a protein cancer cells use to divide — a common early treatment added to hormone therapy.",
+      ),
+      c(
+        "incl",
+        "confirm",
+        "ESR1 mutation detected by ctDNA",
+        "The record does not document an ESR1 mutation test — order/confirm before screening.",
+        "not_documented",
+        false,
+        "ESR1 is a gene that can mutate after long-term hormone therapy; ctDNA is a blood test that finds tumor DNA in your bloodstream, so this mutation can often be checked without a new biopsy.",
+      ),
       c("incl", "confirm", "Adequate hematologic and hepatic function within 14 days", "Recent CBC and liver panel are not in the record.", "not_documented"),
       c("excl", "clear", "No prior oral SERD (e.g., elacestrant)", "No prior elacestrant.", "note"),
     ],
@@ -268,13 +307,29 @@ const SEEDS: Seed[] = [
     enrollmentWindow: "Open now · est. closes before ~Jun 2027",
     headline: "Ruled out: this is a first-line study and you have already received a CDK4/6 inhibitor for metastatic disease.",
     criteria: [
-      c("incl", "meets", "PIK3CA-mutated HR-positive, HER2-negative breast cancer", "PIK3CA H1047R positive; ER/PR+, HER2 IHC 1+.", "note"),
+      c("incl", "meets", "PIK3CA-mutated HR-positive, HER2-negative breast cancer", "PIK3CA H1047R positive; ER/PR+, HER2 IHC 1+.", "note", false, PIK3CA_GLOSS),
       // Not remediable: prior exposure is a fact of the treatment history and
       // nothing the patient does from here can undo it. This is a "no", not a
       // "not yet" — the distinction the ruled-out section is sorted on.
-      c("excl", "fails", "No prior CDK4/6 inhibitor in the advanced/metastatic setting", "Received palbociclib as first-line therapy for metastatic disease (2024).", "note", false),
-      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note"),
-      c("incl", "meets", "Measurable or evaluable metastatic disease", "Stage IV metastatic disease.", "note"),
+      c(
+        "excl",
+        "fails",
+        "No prior CDK4/6 inhibitor in the advanced/metastatic setting",
+        "Received palbociclib as first-line therapy for metastatic disease (2024).",
+        "note",
+        false,
+        CDK46_EXCLUSION_GLOSS,
+      ),
+      c("incl", "meets", "ECOG performance status 0–1", "ECOG 1.", "note", false, ECOG_GLOSS),
+      c(
+        "incl",
+        "meets",
+        "Measurable or evaluable metastatic disease",
+        "Stage IV metastatic disease.",
+        "note",
+        false,
+        "Measurable disease means the cancer shows up on a scan as a spot large enough to track over time; evaluable disease can still be followed even without a precise measurement.",
+      ),
     ],
     brief: {
       offers: "Adds a PI3K inhibitor in the first-line setting — but it enrolls patients who have not yet had a CDK4/6 inhibitor for metastatic disease.",

@@ -52,6 +52,15 @@ with a summary tally (`5 met · 4 to confirm · 2 not met`). Opened, it's **grou
 first instead of a flat list. Ruled-out trials open the ledger by default, because *why not* is
 the point there.
 
+**5. Plain-language glosses on the ledger itself.** design.md §9 requires clinical terms to be
+paired with a plain-language gloss; the clarification cards already did this and the ledger — the
+product's signature surface — didn't. Each criterion now carries a `gloss`: a short, ~8th-grade
+"what does this mean?" explanation of any clinical term in its requirement, tucked behind the same
+quiet disclosure pattern as the clarification cards, collapsed by default so it never competes with
+the requirement or the verdict. It's descriptive only — set by the model alongside `provenance` and
+`remediable`, never touching a verdict or the derived status — and it renders only for patient and
+caregiver readers; a clinician's ledger stays exactly as dense as before.
+
 ## How risk/benefit stays honest
 
 The brief is **grounded only in real trial attributes** pulled live from ClinicalTrials.gov —

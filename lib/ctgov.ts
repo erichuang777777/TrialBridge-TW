@@ -118,36 +118,43 @@ export async function searchTrials(opts: SearchOptions): Promise<Trial[]> {
   return (data.studies ?? []).map(normalizeStudy).filter((t): t is Trial => t !== null);
 }
 
-export type RecentUpdatesOptions = {
-  cond: string;
-  /** Inclusive lower bound on the registry's last-update date, "YYYY-MM-DD". */
-  sinceDate: string;
-  pageSize?: number; // default 50
-};
+/* ---- fetch one study by NCT id (cohort screening, §C1) ----
+   The v2 API serves a single study at GET /studies/{nctId} with the same
+   `fields=` allowlist as the list endpoint, so we reuse FIELDS and
+   normalizeStudy rather than keeping a second copy of either in sync. */
 
-/** Studies of ANY status whose registry record changed on/after `sinceDate`,
- *  newest first — deliberately unfiltered by overallStatus (unlike
- *  searchTrials, which defaults to RECRUITING) so a "what changed" digest
- *  also catches trials that just closed, completed, or stopped early. */
-export async function searchRecentlyUpdatedTrials(opts: RecentUpdatesOptions): Promise<Trial[]> {
+/** An NCT id is "NCT" followed by 8 digits. Reject anything else rather than
+ *  forwarding an arbitrary path segment to the registry. */
+export function isValidNctId(id: string): boolean {
+  return /^NCT\d{8}$/.test(id.trim());
+}
+
+/** Fetch and normalize one study by its NCT id. Returns null when the registry
+ *  has no such record (404) — a real, expected answer, not an error. Throws on
+ *  any other non-OK response, same as searchTrials. */
+export async function getTrial(nctId: string): Promise<Trial | null> {
+  const id = nctId.trim();
+  if (!isValidNctId(id)) {
+    throw new Error(`Invalid NCT id: "${nctId}". Expected the form NCT followed by 8 digits.`);
+  }
+
   const params = new URLSearchParams();
-  params.set("query.cond", opts.cond);
-  params.set("filter.advanced", `AREA[LastUpdatePostDate]RANGE[${opts.sinceDate},MAX]`);
-  params.set("sort", "LastUpdatePostDate:desc");
-  params.set("pageSize", String(opts.pageSize ?? 50));
   params.set("fields", FIELDS);
 
-  const res = await fetch(`${BASE}?${params.toString()}`, {
+  const res = await fetch(`${BASE}/${id}?${params.toString()}`, {
     headers: { Accept: "application/json" },
+    // Same reasoning as searchTrials: a stale cached page could hide a status
+    // change (a study closing, a criterion amendment) between screenings.
     cache: "no-store",
   });
 
+  if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`ClinicalTrials.gov responded ${res.status} ${res.statusText}`);
   }
 
-  const data = (await res.json()) as { studies?: RawStudy[] };
-  return (data.studies ?? []).map(normalizeStudy).filter((t): t is Trial => t !== null);
+  const data = (await res.json()) as RawStudy;
+  return normalizeStudy(data);
 }
 
 /* ---- normalization ---- */
@@ -212,6 +219,43 @@ const SITE_OPEN = new Set(["RECRUITING", "AVAILABLE", "ENROLLING_BY_INVITATION",
 
 export function siteIsRecruiting(loc: { status: string }): boolean {
   return SITE_OPEN.has((loc.status ?? "").trim().toUpperCase());
+}
+
+/* ---- site status, in words ----
+   Same registry values as SITE_OPEN above, but for a screen a patient reads
+   right before dialing a number — "NOT_YET_RECRUITING" reads like a filter
+   value, not a sentence. This only changes how a status is written, never
+   whether it counts as open; siteIsRecruiting stays the one predicate for that. */
+const SITE_STATUS_WORDS: Record<string, string> = {
+  RECRUITING: "Recruiting",
+  AVAILABLE: "Available",
+  ENROLLING_BY_INVITATION: "Enrolling by invitation",
+  NOT_YET_RECRUITING: "Not yet recruiting",
+  ACTIVE_NOT_RECRUITING: "Active, not recruiting",
+  SUSPENDED: "Suspended",
+  TERMINATED: "Terminated",
+  WITHDRAWN: "Withdrawn",
+  COMPLETED: "Completed",
+  UNKNOWN: "Status unknown",
+};
+
+export function formatSiteStatus(status: string): string {
+  const key = (status ?? "").trim().toUpperCase();
+  if (!key) return "";
+  return SITE_STATUS_WORDS[key] ?? titleCase(key.replace(/_/g, " "));
+}
+
+/* ---- cap-safe ordering for the referral screen ----
+   The contact screen caps how many sites it prints (each one is taller now that
+   it can carry its own contacts). Locations arrive nearest-first; this moves
+   every open site ahead of every closed one, WITHOUT reordering within either
+   group, so a farther-but-open site is never bumped out of the cap by a
+   nearer site nobody there can actually enroll a patient into. */
+export function prioritizeOpenSites<T extends { status: string }>(locations: readonly T[]): T[] {
+  const open: T[] = [];
+  const closed: T[] = [];
+  for (const loc of locations) (siteIsRecruiting(loc) ? open : closed).push(loc);
+  return [...open, ...closed];
 }
 
 function normalizeContact(c: RawContact): TrialContact {
@@ -304,7 +348,7 @@ function formatPhases(phases?: string[]): string {
   return labels.join(", ");
 }
 
-function titleCase(s: string): string {
+export function titleCase(s: string): string {
   if (!s) return s;
   return s
     .toLowerCase()

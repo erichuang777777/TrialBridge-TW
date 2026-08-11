@@ -14,9 +14,16 @@
    set by someone qualified: an oncologist or a research nurse labelling each
    case independently. Until then this measures self-consistency and catches
    regressions, which is worth having and is not the same thing as accuracy.
+
+   That is what evals/cases/adjudicated/ is for. A coordinator who learns the
+   real outcome files a correction from /screen and drops the JSON there; the
+   loader merges those in and evals/ledger.ts counts them apart from these, so
+   the caveat above shrinks case by case instead of being restated forever.
+   The cases in THIS file remain authored, and stay marked as such.
    ========================================================================== */
 
 import type { Trial } from "../../lib/types";
+import type { ScreeningCorrection } from "../../lib/feedback.ts";
 import { trial } from "../fixtures.ts";
 
 export type LedgerCase = {
@@ -36,6 +43,20 @@ export type LedgerCase = {
   /** When set, a failing criterion matching this substring must carry the given
    *  remediable reading. */
   remediableFail?: { match: string; remediable: boolean };
+  /** true only for a case loaded from evals/cases/adjudicated/ (see
+   *  adjudicated-loader.ts) — a real coordinator's post-screening correction,
+   *  not a case someone here authored. Every case in CASES above leaves this
+   *  undefined; it exists so evals/ledger.ts can report, honestly, how many
+   *  of the gold cases it just ran are clinically adjudicated versus
+   *  authored — see the header comment in evals/ledger.ts and the paragraph
+   *  above about what these expectations are (and are not) evidence of. */
+  adjudicated?: true;
+  /** The full correction an adjudicated case was built from — present only
+   *  when `adjudicated` is true. Carries the app's own derived status, the
+   *  reviewer's claim, and whether the app named the true failing criterion,
+   *  so the harness (or a human) can inspect the clinician's reasoning, not
+   *  just the bottom-line `expected`. */
+  correction?: ScreeningCorrection;
 };
 
 const MARGARET = {
