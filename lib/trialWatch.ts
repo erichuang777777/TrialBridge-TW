@@ -16,11 +16,32 @@
    ========================================================================== */
 
 import type { Trial } from "./types";
-import { searchRecentlyUpdatedTrials } from "./ctgov";
+import { getTrial, searchRecentlyUpdatedTrials } from "./ctgov";
 
 /** The clinician tool's fixed watch list — no free-text input yet, so this is
  *  the single place to add or drop a tracked cancer type. */
 export const TRACKED_CONDITIONS = ["breast cancer", "lung cancer", "colorectal cancer"] as const;
+
+/** Individual trials to always show current status for, regardless of
+ *  whether they fall inside a given week's "recently updated" window — a
+ *  condition-level sweep can miss a specific trial of interest for weeks at a
+ *  time between registry edits.
+ *
+ *  - NCT04873362 "ASTEFANIA" (Roche protocol WO42633): adjuvant atezolizumab
+ *    + T-DM1 vs. placebo + T-DM1, HER2+ breast cancer. As of 2024-06-04 the
+ *    study stopped accepting new participants — the PD-L1+ subgroup was
+ *    dropped from co-primary status, leaving ITT/IDFS as the sole primary
+ *    endpoint, and the recalculated sample size (~1150 vs. the original
+ *    ~1700) meant enrollment had already met its target early. */
+export const TRACKED_NCT_IDS = ["NCT04873362"] as const;
+
+/** Fetch current registry state for each tracked NCT id. Trials the registry
+ *  no longer serves (a 404 from getTrial) are silently dropped rather than
+ *  thrown — a delisted study shouldn't break the whole digest. */
+export async function fetchStarredTrials(nctIds: readonly string[] = TRACKED_NCT_IDS): Promise<Trial[]> {
+  const results = await Promise.all(nctIds.map((id) => getTrial(id)));
+  return results.filter((t): t is Trial => t !== null);
+}
 
 export type WeeklyDigest = {
   generatedAt: string;

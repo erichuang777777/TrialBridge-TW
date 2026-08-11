@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { Trial } from "@/lib/types";
-import { fetchWeeklyDigests, type WeeklyDigest } from "@/lib/trialWatch";
+import { fetchStarredTrials, fetchWeeklyDigests, type WeeklyDigest } from "@/lib/trialWatch";
 
 export const metadata: Metadata = {
   title: "Clinician trial watch · Trialign",
@@ -31,6 +31,17 @@ function fmtDate(iso: string): string {
 
 function titleCase(s: string): string {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const CLOSED_EARLY_STATUSES = new Set(["TERMINATED", "WITHDRAWN", "SUSPENDED"]);
+
+/** Same status→badge mapping the weekly buckets use, for a trial shown on
+ *  its own rather than inside a WeeklyDigest bucket. */
+function badgeForStatus(status: string): { badge: "eligible" | "near" | "screened"; label: string } {
+  const s = status.toUpperCase();
+  if (s === "RECRUITING") return { badge: "eligible", label: "recruiting" };
+  if (CLOSED_EARLY_STATUSES.has(s)) return { badge: "near", label: "closed early" };
+  return { badge: "screened", label: status.replace(/_/g, " ").toLowerCase() || "unknown" };
 }
 
 function TrialRow({ trial, badge, badgeLabel }: { trial: Trial; badge: "eligible" | "near" | "screened"; badgeLabel: string }) {
@@ -87,6 +98,27 @@ function Section({
   );
 }
 
+function StarredSection({ trials }: { trials: Trial[] }) {
+  if (trials.length === 0) return null;
+  return (
+    <div className="watch-condition">
+      <h2 className="watch-condition__h2">
+        Starred trials <span className="watch-count">{trials.length}</span>
+      </h2>
+      <p className="legal-lede" style={{ marginBottom: 14 }}>
+        Specific trials tracked by NCT id (see TRACKED_NCT_IDS in lib/trialWatch.ts) — always shown at current status,
+        regardless of whether the registry touched them this week.
+      </p>
+      <div className="watch-list">
+        {trials.map((t) => {
+          const { badge, label } = badgeForStatus(t.overallStatus);
+          return <TrialRow key={t.nctId} trial={t} badge={badge} badgeLabel={label} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ConditionBlock({ digest }: { digest: WeeklyDigest }) {
   const label = titleCase(digest.condition);
   return (
@@ -136,9 +168,10 @@ function ConditionBlock({ digest }: { digest: WeeklyDigest }) {
 
 export default async function WatchPage() {
   let digests: WeeklyDigest[] | null = null;
+  let starred: Trial[] = [];
   let error: string | null = null;
   try {
-    digests = await fetchWeeklyDigests(7);
+    [digests, starred] = await Promise.all([fetchWeeklyDigests(7), fetchStarredTrials()]);
   } catch (err) {
     error = err instanceof Error ? err.message : "ClinicalTrials.gov request failed.";
   }
@@ -176,7 +209,10 @@ export default async function WatchPage() {
         {error ? (
           <div className="err">Couldn&apos;t reach ClinicalTrials.gov: {error}. Try reloading in a moment.</div>
         ) : (
-          digests?.map((d) => <ConditionBlock key={d.condition} digest={d} />)
+          <>
+            <StarredSection trials={starred} />
+            {digests?.map((d) => <ConditionBlock key={d.condition} digest={d} />)}
+          </>
         )}
 
         <p className="legal-meta" style={{ marginTop: 8 }}>
