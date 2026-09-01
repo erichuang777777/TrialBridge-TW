@@ -33,6 +33,16 @@ After adding the bounded, downloadable WebMCP session capability receipt and its
 
 After adding the visible 19-group bilingual registry query bridge and structured WebMCP query provenance, `/trials` recorded Performance 95, Accessibility 100, Best Practices 100, SEO 63, FCP 0.9 s, LCP 2.2 s, TBT 210 ms, CLS 0, and zero console-error audit items while its initial live public-registry search remained enabled. `/webmcp` recorded Performance 99, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.3 s, TBT 60 ms, CLS 0, and zero console-error audit items.
 
+After adding the fail-closed public-discovery profile, page-specific canonical/share metadata, manifest, dynamic robots/sitemap routes, and local-font Open Graph/Twitter images, a production build with the explicit synthetic evaluation profile `SITE_URL=https://trialbridge.example` plus `SITE_INDEXING_ENABLED=true` recorded:
+
+| Route | Performance | Accessibility | Best Practices | SEO | FCP | LCP | TBT | CLS | Console errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/` | 97 | 100 | 100 | 100 | 1.1 s | 2.5 s | 80 ms | 0 | 0 |
+| `/webmcp` | 97 | 100 | 100 | 100 | 1.0 s | 2.3 s | 130 ms | 0 | 0 |
+| `/trials` | 98 | 100 | 100 | 100 | 0.9 s | 2.0 s | 130 ms | 0 | 0 |
+
+That profile was exercised only to prove deploy-time behavior; `trialbridge.example` is a reserved synthetic origin, not a claim of publication. Runtime inspection confirmed `index, follow`, five sitemap URLs, `/api/` exclusion, and matching canonical/Open Graph origins. The build artifact was then rebuilt in the default fail-closed profile before handoff.
+
 Command shape:
 
 ```powershell
@@ -43,7 +53,7 @@ The Chrome launcher produced an `EPERM` while deleting its temporary profile aft
 
 ## Deliberate SEO boundary
 
-The only SEO failure is crawlability. `app/layout.tsx` and `public/robots.txt` intentionally disable indexing because `docs/READINESS.md` classifies this build as an engineering MVP, not a public clinical service. Do not remove that gate merely to raise a competition score. Indexing requires the public-clinical readiness, legal, governance, monitoring, and incident-response gates to be approved first.
+The default profile's only SEO failure is crawlability. `app/layout.tsx` and `app/robots.ts` intentionally disable indexing because `docs/READINESS.md` classifies this build as an engineering MVP, not a public clinical service. Do not enable the reviewed discovery profile merely to raise a competition score. Indexing requires the public-clinical readiness, legal, governance, monitoring, and incident-response gates to be approved first, plus an exact non-loopback HTTPS `SITE_URL` and `SITE_INDEXING_ENABLED=true`.
 
 ## Verification boundary
 

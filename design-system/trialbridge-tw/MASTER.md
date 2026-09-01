@@ -43,6 +43,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - The WebMCP capability layer has one compact, collapsible live-status surface. Its atomic status sentence reports browser support and verified registration; tool names, permission locks, safety boundaries, and judge prompts appear only on disclosure.
 - The disclosed WebMCP session receipt is a compact metadata timeline, not a second live region. It shows UTC time and plain-text lifecycle changes, retains at most 20 events, stacks on small screens, and gives its explicit local JSON download a clear disabled and completion state.
 - Outside the medical workflow, `/webmcp` may provide a dedicated competition-evidence dashboard. It leads with a single contextual status, uses text plus color for every check, progressively discloses execution output, and never requests medical context.
+- Social preview imagery uses the same calm editorial tokens and verified capability facts. It contains no patient imagery, testimonials, outcome claims, or remotely fetched fonts.
 
 ## Prohibited patterns
 

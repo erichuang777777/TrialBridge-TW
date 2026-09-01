@@ -20,4 +20,17 @@ The MVP applies fixed-window, per-process limits before parsing bodies on cloud 
 
 Before release, resolve every item in `READINESS.md`, host TFDA snapshots outside request-time decompression, replace process-local limits with distributed rate limiting and payload-free monitoring, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
 
+### Public discovery profile
+
+The default build emits `noindex`, blocks crawlers in `/robots.txt`, and returns an empty sitemap. It still provides canonical/page metadata, `/manifest.webmanifest`, and local-font social preview images so the release surface can be inspected without weakening the clinical-readiness boundary.
+
+Only after every required readiness, legal, governance, monitoring, and incident-response gate is approved may deployment set both:
+
+```text
+SITE_URL=https://the-exact-reviewed-origin.example
+SITE_INDEXING_ENABLED=true
+```
+
+`SITE_URL` accepts an origin only—no path, query, credentials, or fragment. Indexing requires non-loopback HTTPS; an unsafe or malformed requested profile fails the build instead of silently becoming public. The generated sitemap lists only the five human-facing routes and `robots.txt` continues to exclude `/api/`.
+
 No deployment may enable automated outreach, enrollment, booking, consent, or treatment recommendations.

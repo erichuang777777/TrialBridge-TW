@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { createPageMetadata } from "@/lib/site/metadata";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "WebMCP Competition Evidence",
+  description: "Inspect TrialBridge TW's declarative and imperative WebMCP capabilities, live browser diagnostics, tool-selection evidence, and authority boundaries.",
+  path: "/webmcp",
+});
 
 const tools = [
   { name: "search_public_trial_form", kind: "Declarative", availability: "Visible on /trials", boundary: "Public condition only" },

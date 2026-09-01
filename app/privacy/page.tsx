@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { createPageMetadata } from "@/lib/site/metadata";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Privacy Boundaries",
+  description: "Review TrialBridge TW's identifier masking, volatile data handling, cloud-model boundary, and minimized WebMCP context.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

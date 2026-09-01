@@ -1,11 +1,23 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { createPageMetadata, getSiteConfig, siteDescription, siteName } from "@/lib/site/metadata";
 import "./globals.css";
 
+const siteConfig = getSiteConfig();
+const homeMetadata = createPageMetadata({ title: siteName, description: siteDescription, path: "/" });
+
 export const metadata: Metadata = {
-  title: "TrialBridge TW 試驗橋",
-  description: "A Taiwan-first bilingual guide that helps people with cancer and caregivers understand clinical-trial information.",
-  robots: { index: false, follow: false },
+  ...homeMetadata,
+  metadataBase: new URL(siteConfig.origin),
+  title: { default: siteName, template: "%s | TrialBridge TW" },
+  applicationName: "TrialBridge TW",
+  category: "health",
+  manifest: "/manifest.webmanifest",
+  robots: {
+    index: siteConfig.indexingEnabled,
+    follow: siteConfig.indexingEnabled,
+    googleBot: { index: siteConfig.indexingEnabled, follow: siteConfig.indexingEnabled },
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

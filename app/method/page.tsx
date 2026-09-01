@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { createPageMetadata } from "@/lib/site/metadata";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "How TrialBridge TW Works",
+  description: "Understand the human-confirmed, privacy-aware, Taiwan-first clinical-trial navigation method and its constrained WebMCP tools.",
+  path: "/method",
+});
 
 export default function MethodPage() {
   return (

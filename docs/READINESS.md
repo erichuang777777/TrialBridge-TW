@@ -18,6 +18,7 @@
 - A bounded, payload-free WebMCP session receipt that makes capability registration changes and tool lifecycle states visible and optionally downloadable without server persistence.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.
 - A payload-free configuration health endpoint and pre-body, process-local rate limits with machine-readable `429`/`Retry-After` responses.
+- Fail-closed public discovery: canonical and share metadata, local-font Open Graph/Twitter images, a manifest, and dynamic robots/sitemap routes. Indexing requires an explicit non-loopback HTTPS deployment profile and remains disabled by default.
 
 ## Not yet proven and required before public clinical use
 

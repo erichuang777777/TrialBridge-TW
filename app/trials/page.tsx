@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { createPageMetadata } from "@/lib/site/metadata";
 import { BrandMark } from "../components/BrandMark";
 import { TrialDatabase } from "../components/TrialDatabase";
 
-export const metadata: Metadata = {
-  title: "Trial Database | TrialBridge TW",
-  description: "Search public TFDA and ClinicalTrials.gov records directly, with Taiwan-first ordering.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Bilingual Trial Database",
+  description: "Search public TFDA and ClinicalTrials.gov cancer trial records with a visible bilingual query plan and Taiwan-first ordering.",
+  path: "/trials",
+});
 
 export default function TrialsPage() {
   return (
