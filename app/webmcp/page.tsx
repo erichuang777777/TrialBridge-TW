@@ -66,6 +66,12 @@ export default function WebMcpProofPage() {
       <div className="method-proof-grid"><article><strong>Data minimized</strong><p>Raw and masked notes never enter a WebMCP schema or result.</p></article><article><strong>Visible state controls capability</strong><p>Question recovery follows pending state; shortlist comparison appears only after two user selections.</p></article><article><strong>No consequential writes</strong><p>No tool can enroll, send, book, consent, or change treatment.</p></article></div>
     </section>
 
+    <section className="proof-section receipt-proof" aria-labelledby="receipt-proof-title">
+      <div className="proof-section-heading"><p className="eyebrow">Judge-visible lifecycle</p><h2 id="receipt-proof-title">Capability changes leave a payload-free session receipt.</h2><p>Open <strong>WebMCP Live</strong> in the guided workflow to watch public, permission-gated, and shortlist-dependent tools appear or disappear. The tab keeps only the latest 20 lifecycle events and can download them as a local JSON receipt.</p></div>
+      <div className="method-proof-grid"><article><strong>What it records</strong><p>UTC time, verified tool names, additions, removals, and running/completed/failed/cancelled states.</p></article><article><strong>What it excludes</strong><p>No medical note, profile fact, trial result, prompt, tool argument, tool output, or registration error detail.</p></article><article><strong>Where it lives</strong><p>Volatile React state in the current tab. Download happens only after a visible user action; TrialBridge never uploads it.</p></article></div>
+      <Link className="secondary-action action-link" href="/#private-chat">Open the guided workflow receipt</Link>
+    </section>
+
     <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation and current-browser lifecycle. Natural-language tool selection and permission transitions must still be demonstrated in Chrome Model Context Tool Inspector.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
   </main>;
 }

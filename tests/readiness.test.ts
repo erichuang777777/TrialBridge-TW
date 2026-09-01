@@ -26,7 +26,7 @@ test("accessibility foundation includes skip link, focus, touch size, and reduce
 });
 
 test("no browser persistence API is used in product code", async () => {
-  const files = ["app/components/TrialBridgeChat.tsx", "lib/chat/state.ts", "lib/privacy/mask.ts"];
+  const files = ["app/components/TrialBridgeChat.tsx", "app/components/WebMcpBridge.tsx", "lib/chat/state.ts", "lib/privacy/mask.ts", "lib/webmcp/receipt.ts"];
   for (const file of files) {
     const content = await readFile(path.join(process.cwd(), file), "utf8");
     assert.doesNotMatch(content, /localStorage|sessionStorage|indexedDB/i, file);
@@ -83,6 +83,8 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /review_trial_followups/);
   assert.match(page, /draft_trial_discussion_brief/);
   assert.match(page, /compare_shortlisted_trials/);
+  assert.match(page, /Capability changes leave a payload-free session receipt/);
+  assert.match(page, /latest 20 lifecycle events/);
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /getTools/);
   assert.match(diagnostic, /executeTool/);
@@ -126,6 +128,7 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   const clarification = await readFile(path.join(root, "app", "components", "ClarificationPanel.tsx"), "utf8");
   const chat = await readFile(path.join(root, "app", "components", "TrialBridgeChat.tsx"), "utf8");
   const webmcp = await readFile(path.join(root, "app", "components", "WebMcpBridge.tsx"), "utf8");
+  const receipt = await readFile(path.join(root, "lib", "webmcp", "receipt.ts"), "utf8");
   const brief = await readFile(path.join(root, "app", "components", "DiscussionBriefPanel.tsx"), "utf8");
   const shortlist = await readFile(path.join(root, "app", "components", "TrialShortlistPanel.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
@@ -171,6 +174,10 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(webmcp, /draft_trial_discussion_brief/);
   assert.match(webmcp, /compare_shortlisted_trials/);
   assert.match(webmcp, /Select 2 trials to activate/);
+  assert.match(webmcp, /Session capability receipt/);
+  assert.match(webmcp, /createWebMcpSessionReceipt/);
+  assert.match(receipt, /No medical note, profile fact, trial result, prompt, tool argument, or tool output/);
+  assert.match(receipt, /maxWebMcpReceiptEvents = 20/);
   assert.match(shortlist, /Human-controlled shortlist/);
   assert.match(shortlist, /Compare up to three trials/);
   assert.match(shortlist, /Public-record comparison only/);

@@ -7,6 +7,7 @@ import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { webMcpJourneyCases } from "../evals/webmcp-journeys.ts";
 import { requiredCloudModel } from "../lib/llm/cloud.ts";
 import { webMcpSelectionDatasetDigest, webMcpSelectionToolContractDigest } from "../lib/webmcp/selectionEval.ts";
+import { appendCapabilitySet, appendToolExecution, createWebMcpSessionReceipt, maxWebMcpReceiptEvents } from "../lib/webmcp/receipt.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -65,6 +66,15 @@ const metadata = JSON.stringify(shortlistTools.map(({ name, description, inputSc
 check(!metadata.includes("rawnote") && !metadata.includes("maskednote"), "Raw or masked note fields must never enter an imperative tool contract.");
 check(JSON.stringify(capWebMcpOutput("x".repeat(maxWebMcpOutputChars * 2))).length <= maxWebMcpOutputChars + 32, "Tool-output cap is not effective.");
 
+let receiptEvents = appendCapabilitySet([], publicTools.map((tool) => tool.name), "2026-09-02T00:00:00.000Z", 1);
+receiptEvents = appendCapabilitySet(receiptEvents, allTools.map((tool) => tool.name), "2026-09-02T00:00:01.000Z", 2);
+receiptEvents = appendToolExecution(receiptEvents, "trialbridge_method", "completed", "2026-09-02T00:00:02.000Z", 3);
+const sessionReceipt = createWebMcpSessionReceipt(receiptEvents, "2026-09-02T00:00:03.000Z", "https://trialbridge.example");
+const serializedReceipt = JSON.stringify(sessionReceipt);
+check(sessionReceipt.events.length <= maxWebMcpReceiptEvents, "WebMCP session receipt exceeds its event cap.");
+check(sessionReceipt.events[1]?.kind === "capability_set" && sessionReceipt.events[1].addedToolNames.length === 4, "WebMCP receipt must expose confirmed-context capability additions.");
+check(!/gastric cancer|fact_conformance|"(?:rawText|maskedText|medicalNote|profileFact|trialResult|prompt|argument|output)"\s*:/i.test(serializedReceipt), "WebMCP receipt contains health content or tool payload fields.");
+
 const knownToolNames = new Set(["search_public_trial_form", ...names]);
 check(webMcpJourneyCases.length >= 10, "At least ten WebMCP journey eval cases are required.");
 check(webMcpJourneyCases.some((item) => item.intent === "ambiguous"), "Journey evals must include ambiguous prompts.");
@@ -116,7 +126,7 @@ for (const marker of ["const declarativeToolName = \"search_public_trial_form\""
 check((declarative.match(/toolname=/g) ?? []).length === 1, "The public database must expose one visible declarative form tool.");
 
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
-for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]"]) {
+for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt"]) {
   check(bridge.includes(marker), `Imperative bridge is missing ${marker}.`);
 }
 
@@ -141,6 +151,7 @@ if (findings.length > 0) {
     selectionBaseline: `${selectionBaseline.summary.passed}/${selectionBaseline.summary.samples}`,
     forbiddenAbstention: `${forbiddenSamples.filter((sample) => sample.passed).length}/${forbiddenSamples.length}`,
     shortlistSelection: `${shortlistSamples.filter((sample) => sample.passed).length}/${shortlistSamples.length}`,
+    receiptLimitEvents: maxWebMcpReceiptEvents,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,
   }));

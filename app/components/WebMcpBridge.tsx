@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
 import type { WebMcpActivity } from "@/lib/webmcp/tools";
+import { appendCapabilitySet, appendRuntimeState, appendToolExecution, createWebMcpSessionReceipt } from "@/lib/webmcp/receipt";
+import type { WebMcpReceiptEvent } from "@/lib/webmcp/receipt";
 import type { TrialMatch } from "@/lib/matching/engine";
 import type { FollowUpQuestion } from "@/lib/matching/followUp";
 import type { ConfirmedProfile } from "@/lib/profile/schema";
@@ -35,8 +37,17 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [copiedPrompt, setCopiedPrompt] = useState<number>();
+  const [receiptDownloaded, setReceiptDownloaded] = useState(false);
   const [lastActivity, setLastActivity] = useState<WebMcpActivity>();
-  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, onActivity: setLastActivity }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent]);
+  const [receiptEvents, setReceiptEvents] = useState<WebMcpReceiptEvent[]>([]);
+  const receiptSequence = useRef(0);
+  const nextReceiptMetadata = useCallback(() => ({ id: ++receiptSequence.current, occurredAt: new Date().toISOString() }), []);
+  const recordActivity = useCallback((activity: WebMcpActivity) => {
+    setLastActivity(activity);
+    const metadata = nextReceiptMetadata();
+    setReceiptEvents((current) => appendToolExecution(current, activity.toolName, activity.state, metadata.occurredAt, metadata.id));
+  }, [nextReceiptMetadata]);
+  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, onActivity: recordActivity }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, recordActivity]);
   const contextualUnlocked = Boolean(profile && sensitiveConsent);
 
   useEffect(() => {
@@ -52,6 +63,8 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     setErrorMessage("");
     if (!modelContext) {
       setRegistrationState("unsupported");
+      const metadata = nextReceiptMetadata();
+      setReceiptEvents((current) => appendRuntimeState(current, "unsupported", metadata.occurredAt, metadata.id));
       return () => controller.abort();
     }
 
@@ -67,13 +80,19 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
         if (verifiedNames.length !== expectedNames.size) {
           setErrorMessage(`Expected ${expectedNames.size} tools but verified ${verifiedNames.length}.`);
           setRegistrationState("error");
+          const metadata = nextReceiptMetadata();
+          setReceiptEvents((current) => appendRuntimeState(current, "error", metadata.occurredAt, metadata.id));
         } else {
           setRegistrationState("ready");
+          const metadata = nextReceiptMetadata();
+          setReceiptEvents((current) => appendCapabilitySet(current, verifiedNames, metadata.occurredAt, metadata.id));
         }
       } catch (error) {
         if (!active || controller.signal.aborted) return;
         setErrorMessage(error instanceof Error ? error.message : "WebMCP registration failed");
         setRegistrationState("error");
+        const metadata = nextReceiptMetadata();
+        setReceiptEvents((current) => appendRuntimeState(current, "error", metadata.occurredAt, metadata.id));
       }
     })();
 
@@ -81,7 +100,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
       active = false;
       controller.abort();
     };
-  }, [tools]);
+  }, [tools, nextReceiptMetadata]);
 
   const copy = language === "en" ? {
     state: {
@@ -103,6 +122,12 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     tryTitle: "Judge prompts",
     copyPrompt: "Copy prompt",
     copied: "Copied",
+    receiptTitle: "Session capability receipt",
+    receiptSubtitle: "Local to this tab · capability metadata only",
+    receiptPrivacy: "Records tool names and lifecycle states—not medical content, prompts, arguments, or outputs.",
+    receiptEmpty: "No capability lifecycle event has been observed yet.",
+    receiptDownload: "Download JSON receipt",
+    receiptDownloaded: "Downloaded",
     setup: "Enable local WebMCP in Chrome",
     method: "Why WebMCP matters",
     activity: {
@@ -131,6 +156,12 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     tryTitle: "評審測試語句",
     copyPrompt: "複製語句",
     copied: "已複製",
+    receiptTitle: "本次能力活動收據",
+    receiptSubtitle: "僅限目前分頁 · 只有能力中繼資料",
+    receiptPrivacy: "只記錄工具名稱與生命週期狀態，不含病歷內容、提示語、參數或輸出。",
+    receiptEmpty: "目前尚未觀察到能力生命週期事件。",
+    receiptDownload: "下載 JSON 收據",
+    receiptDownloaded: "已下載",
     setup: "在 Chrome 啟用本機 WebMCP",
     method: "為什麼 WebMCP 很重要",
     activity: {
@@ -149,6 +180,20 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     } catch {
       setCopiedPrompt(undefined);
     }
+  }
+
+  function downloadSessionReceipt() {
+    if (receiptEvents.length === 0) return;
+    const generatedAt = new Date().toISOString();
+    const receipt = createWebMcpSessionReceipt(receiptEvents, generatedAt, location.origin);
+    const url = URL.createObjectURL(new Blob([`${JSON.stringify(receipt, null, 2)}\n`], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `trialbridge-webmcp-receipt-${generatedAt.slice(0, 10)}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    setReceiptDownloaded(true);
+    window.setTimeout(() => setReceiptDownloaded(false), 4_000);
   }
 
   function toolState(name: string, contextual: boolean) {
@@ -176,6 +221,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
         <div><strong>{copy.tryTitle}</strong><span>{language === "en" ? "Use in Model Context Tool Inspector" : "可貼入 Model Context Tool Inspector"}</span></div>
         {judgePrompts[language].map((prompt, index) => <div className="judge-prompt" key={prompt}><code>{prompt}</code><button type="button" onClick={() => void copyJudgePrompt(prompt, index)}>{copiedPrompt === index ? copy.copied : copy.copyPrompt}</button></div>)}
       </div>
+      <SessionCapabilityReceipt events={receiptEvents} language={language} activityCopy={copy.activity} title={copy.receiptTitle} subtitle={copy.receiptSubtitle} privacy={copy.receiptPrivacy} empty={copy.receiptEmpty} downloadLabel={receiptDownloaded ? copy.receiptDownloaded : copy.receiptDownload} onDownload={downloadSessionReceipt} />
       <div className="webmcp-live-links"><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">{copy.setup}</a><a href="/method">{copy.method}</a></div>
     </div>
   </details>{lastActivity && <p className={`webmcp-agent-activity activity-${lastActivity.state}`} role="status" aria-atomic="true"><strong>{lastActivity.toolName}</strong><span>{copy.activity[lastActivity.state]}</span></p>}</>;
@@ -186,4 +232,36 @@ function ToolGroup({ title, names, getState }: { title: string; names: string[];
     const state = getState(name);
     return <li key={name}><code>{name}</code><span className={state.className}>{state.label}</span></li>;
   })}</ul></section>;
+}
+
+function SessionCapabilityReceipt({ events, language, activityCopy, title, subtitle, privacy, empty, downloadLabel, onDownload }: {
+  events: WebMcpReceiptEvent[];
+  language: Language;
+  activityCopy: Record<WebMcpActivity["state"], string>;
+  title: string;
+  subtitle: string;
+  privacy: string;
+  empty: string;
+  downloadLabel: string;
+  onDownload: () => void;
+}) {
+  return <section className="webmcp-session-receipt" aria-labelledby="webmcp-session-receipt-title">
+    <div className="receipt-heading">
+      <div><strong id="webmcp-session-receipt-title">{title}</strong><span>{subtitle}</span></div>
+      <button type="button" disabled={events.length === 0} onClick={onDownload}>{downloadLabel}</button>
+    </div>
+    <p>{privacy}</p>
+    {events.length === 0 ? <p className="receipt-empty">{empty}</p> : <ol>{events.slice(-6).reverse().map((event) => {
+      const time = `${event.occurredAt.slice(11, 19)} UTC`;
+      if (event.kind === "capability_set") {
+        const change = [
+          event.addedToolNames.length > 0 ? `${language === "en" ? "Added" : "新增"} ${event.addedToolNames.join(", ")}` : "",
+          event.removedToolNames.length > 0 ? `${language === "en" ? "Removed" : "移除"} ${event.removedToolNames.join(", ")}` : "",
+        ].filter(Boolean).join(" · ");
+        return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{language === "en" ? `${event.toolNames.length} tools verified` : `已驗證 ${event.toolNames.length} 項工具`}</strong><code>{change || (language === "en" ? "Capability set unchanged" : "能力集合未變更")}</code></div></li>;
+      }
+      if (event.kind === "tool_execution") return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{event.toolName}</strong><span>{activityCopy[event.state]}</span></div></li>;
+      return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{event.state === "unsupported" ? (language === "en" ? "Browser API unavailable" : "瀏覽器 API 不可用") : (language === "en" ? "Registration error" : "工具註冊錯誤")}</strong><span>{language === "en" ? "No medical content was recorded." : "未記錄任何病歷內容。"}</span></div></li>;
+    })}</ol>}
+  </section>;
 }

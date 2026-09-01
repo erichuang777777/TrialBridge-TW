@@ -12,7 +12,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - The reviewed masked note is sent through the localhost Ollama proxy to `gpt-oss:120b-cloud` only when the person selects the visible cloud-organization action; there is no redundant checkbox.
 - All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
-- The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (54/55 recorded pass; all forbidden and shortlist cases passed).
+- The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, a downloadable tab-local capability receipt, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (54/55 recorded pass; all forbidden and shortlist cases passed).
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
 - After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.

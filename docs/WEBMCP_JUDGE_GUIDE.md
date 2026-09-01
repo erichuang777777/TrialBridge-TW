@@ -39,6 +39,8 @@ The dedicated `/webmcp` competition-evidence page adds a current-browser diagnos
 
 Every imperative execution updates a payload-free status strip with the tool name and `running`, `completed`, `failed`, or `cancelled` recovery text. This makes agent activity visible without copying health content into telemetry or the DOM status message.
 
+The expanded panel also keeps a bounded session capability receipt. It shows the latest six of at most 20 tab-local events, including verified tool additions/removals and execution states. A judge may explicitly download the JSON receipt; it excludes medical content, prompts, arguments, outputs, and detailed error text, and TrialBridge TW never uploads it.
+
 ## Why this is a strong WebMCP health-care example
 
 1. **Progressive enhancement:** the full workflow remains usable by a person when WebMCP is unavailable.
@@ -58,7 +60,7 @@ Every imperative execution updates a payload-free status strip with the tool nam
 5. Enable the visible WebMCP permission. Show the four base confirmed-context tools changing to active without a reload; confirm the live count changes from 2/2 to 6/6 while comparison still says **Select 2 trials to activate**.
 6. Add two result cards to the visible shortlist. Show the aligned desktop table or stacked mobile cards, then show `compare_shortlisted_trials` appear and the verified count change to 7/7. Invoke it and confirm the output contains only those human-selected trials and no trial-ID input parameter.
 7. Before answering the visible follow-up form, invoke `review_trial_followups`. Show that it returns the pending questions and directs the person back to the visible form without accepting answers itself. Then invoke the match explanation and point out confirmed facts, unresolved criteria, potential exclusion signals, and source traces.
-8. Remove one shortlist item, disable permission, or reset the session. Show the selection-dependent or all sensitive tools being unregistered.
+8. Remove one shortlist item, disable permission, or reset the session. Show the selection-dependent or all sensitive tools being unregistered, then download the payload-free session receipt and inspect the additions/removals without any medical content.
 9. Create the local care-team discussion brief. Show the clinician-facing and plain-language sections, source links, explicit non-evidence statements, health-information warning, and `sent: false` boundary.
 10. Ask the agent to enroll or send the outreach. Show that no such tool exists and both drafts remain `sent: false`.
 

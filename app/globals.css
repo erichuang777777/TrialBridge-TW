@@ -218,6 +218,22 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .judge-prompt code { min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font-size: 0.76rem; overflow-wrap: anywhere; }
 .judge-prompt button { min-height: 44px; padding: 7px 12px; border: 1px solid var(--primary); border-radius: 8px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.76rem; font-weight: 800; cursor: pointer; }
 .judge-prompt button:hover { background: var(--mint); }
+.webmcp-session-receipt { margin-top: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #f8fbfb; }
+.receipt-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.receipt-heading > div { min-width: 0; display: grid; gap: 2px; }
+.receipt-heading strong { color: var(--ink); font-size: 0.86rem; }
+.receipt-heading span, .webmcp-session-receipt > p { color: var(--ink-soft); font-size: 0.75rem; }
+.receipt-heading button { min-height: 44px; flex: 0 0 auto; padding: 7px 12px; border: 1px solid var(--primary); border-radius: 8px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
+.receipt-heading button:hover:not(:disabled) { background: var(--mint); }
+.receipt-heading button:disabled { border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
+.webmcp-session-receipt > p { margin: 9px 0 0; line-height: 1.5; }
+.webmcp-session-receipt ol { display: grid; gap: 0; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
+.webmcp-session-receipt li { min-width: 0; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.webmcp-session-receipt time { color: var(--ink-soft); font-family: var(--font-mono); font-size: 0.68rem; font-variant-numeric: tabular-nums; }
+.webmcp-session-receipt li > div { min-width: 0; display: grid; gap: 3px; }
+.webmcp-session-receipt li strong { font-size: 0.78rem; overflow-wrap: anywhere; }
+.webmcp-session-receipt li span, .webmcp-session-receipt li code { color: var(--ink-soft); font-size: 0.7rem; line-height: 1.45; overflow-wrap: anywhere; white-space: normal; }
+.webmcp-session-receipt .receipt-empty { padding: 12px; border: 1px dashed var(--line); border-radius: 8px; background: var(--surface); }
 .webmcp-live-links { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 14px; }
 .webmcp-live-links a { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.8rem; font-weight: 800; }
 .chat-turn { padding: 32px; }
@@ -550,6 +566,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .tool-inventory span { padding: 3px 7px; border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.66rem; font-weight: 900; }
 .tool-inventory article > strong { font-size: 0.82rem; }
 .tool-inventory p { margin: 0; color: var(--ink-soft); font-size: 0.82rem; }
+.receipt-proof .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
+.receipt-proof .method-proof-grid { margin: 24px 0 18px; }
 .proof-next-step { margin-top: 54px; padding: 22px; border-left: 4px solid var(--focus); background: var(--warning); }
 .proof-next-step > p { margin: 5px 0 14px; color: var(--ink-soft); }
 .proof-next-step > div { display: flex; flex-wrap: wrap; gap: 10px 22px; }
@@ -662,6 +680,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .webmcp-tool-group li, .webmcp-judge-prompts > div:first-child { align-items: flex-start; flex-direction: column; }
   .judge-prompt { grid-template-columns: 1fr; }
   .judge-prompt button { width: 100%; }
+  .receipt-heading { align-items: stretch; flex-direction: column; }
+  .receipt-heading button { width: 100%; }
+  .webmcp-session-receipt li { grid-template-columns: 1fr; gap: 4px; }
   .proof-summary { grid-template-columns: 1fr; }
   .proof-summary span { min-height: 78px; }
   .diagnostic-console { padding: 20px; }

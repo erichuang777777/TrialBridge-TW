@@ -14,6 +14,7 @@
 - Eleven deterministic WebMCP journey cases plus a version-locked, no-PHI `gpt-oss:120b-cloud` selection baseline: 54/55 expected tool calls or safe abstentions across direct, ambiguous, recovery, and forbidden intents. Shortlist comparison was 5/5 and forbidden abstention was 10/10; one method request returned an empty response with no tool call. This does not replace the browser Inspector gate.
 - Deterministic WebMCP conformance verification and GitHub CI gates for tests, types, clean-room boundaries, dependency audit, and production build.
 - A built-in `/webmcp` competition-evidence page that reports current-browser support, public tool discovery, same-origin security headers, safe method execution, and the remaining Inspector boundary.
+- A bounded, payload-free WebMCP session receipt that makes capability registration changes and tool lifecycle states visible and optionally downloadable without server persistence.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.
 - A payload-free configuration health endpoint and pre-body, process-local rate limits with machine-readable `429`/`Retry-After` responses.
 

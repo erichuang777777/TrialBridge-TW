@@ -29,6 +29,8 @@ After adding the version-locked 50-sample cloud-model selection baseline and its
 
 After adding the user-controlled shortlist, responsive comparison, seventh conditional imperative tool, and 55-sample selection artifact, the home production audit recorded Performance 97, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.5 s, TBT 120 ms, CLS 0, and zero console-error audit items. Two sequential `/webmcp` runs recorded Performance 93 then 98, with identical Accessibility 100, Best Practices 100, SEO 63, CLS 0, and zero console-error audit items; TBT varied from 260 ms to 70 ms. Both results are retained as run-to-run variance rather than reporting only the higher score.
 
+After adding the bounded, downloadable WebMCP session capability receipt and its evidence section, a fresh sequential production audit recorded: home Performance 97, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.4 s, TBT 110 ms, CLS 0, and zero console-error audit items; `/webmcp` recorded Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.3 s, TBT 100 ms, CLS 0, and zero console-error audit items.
+
 Command shape:
 
 ```powershell

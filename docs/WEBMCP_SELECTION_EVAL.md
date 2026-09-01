@@ -22,7 +22,7 @@ The authoritative artifact is [`evals/webmcp-selection-baseline.json`](../evals/
 
 The evaluator supplies the imperative tools available in each synthetic page state to Ollama `/api/chat` as typed function definitions. Temperature is zero, GPT-OSS thinking effort is `low`, output is bounded, and each request has a 60-second timeout. It chooses at most one tool and never executes the selected tool.
 
-The ten cases cover:
+The eleven cases cover:
 
 - direct English and Traditional Chinese requests;
 - ambiguous public search and care-team brief phrasing;
