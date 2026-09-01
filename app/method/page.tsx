@@ -7,7 +7,7 @@ export default function MethodPage() {
       <p className="eyebrow">How it works</p>
       <h1>A three-stage, human-confirmed process</h1>
       <ol className="document-list">
-        <li><strong>Local organization:</strong> The browser masks direct identifiers before a truly local Ollama model creates a structured draft.</li>
+        <li><strong>Consented cloud organization:</strong> The browser masks direct identifiers. After the person reviews and explicitly approves the transfer, gpt-oss:120b-cloud creates a structured draft through the localhost Ollama proxy.</li>
         <li><strong>Human confirmation:</strong> The patient or caregiver corrects and confirms every item. Unconfirmed data cannot enter matching or WebMCP.</li>
         <li><strong>Regional search:</strong> Search follows Taiwan, Asia, then worldwide, with registry sources, update dates, unknown criteria and next questions.</li>
       </ol>

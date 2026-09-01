@@ -6,11 +6,10 @@ import { confirmProfile, profileDraftSchema, setCloudUseApproval } from "../lib/
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "zh-Hant", subjectRole: "patient", facts: [{ id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Draft, not advice." });
 const confirmed = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
 
-test("cloud dialogue requires separate approval and a cloud-suffixed model", () => {
+test("cloud dialogue requires separate approval and the required gpt-oss model", () => {
   assert.equal(cloudDialogueRequestSchema.safeParse({ profile: confirmed, question: "請解釋", trials: [], language: "zh-Hant" }).success, false);
-  assert.equal(validatedCloudModel("qwen3.5:cloud"), "qwen3.5:cloud");
   assert.equal(validatedCloudModel(), "gpt-oss:120b-cloud");
-  assert.throws(() => validatedCloudModel("medgemma-cpu:latest"), /cloud model/);
+  assert.throws(() => validatedCloudModel("qwen3.5:cloud"), /gpt-oss:120b-cloud/);
 });
 
 test("cloud dialogue sends only minimized confirmed facts", async () => {

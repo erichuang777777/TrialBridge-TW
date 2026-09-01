@@ -32,3 +32,24 @@ test("no browser persistence API is used in product code", async () => {
     assert.doesNotMatch(content, /localStorage|sessionStorage|indexedDB/i, file);
   }
 });
+
+test("all LLM surfaces require gpt-oss cloud and expose no local inference path", async () => {
+  const root = process.cwd();
+  const files = [
+    ".env.example",
+    "app/components/TrialBridgeChat.tsx",
+    "lib/llm/cloud.ts",
+    "lib/llm/extraction.ts",
+  ];
+  const combined = (await Promise.all(files.map((file) => readFile(path.join(root, file), "utf8")))).join("\n");
+  assert.match(combined, /gpt-oss:120b-cloud/);
+  assert.doesNotMatch(combined, /medgemma|modelPreference|\/api\/local-model/i);
+});
+
+test("the public trial database is directly linked from the English-first home page", async () => {
+  const root = process.cwd();
+  const home = await readFile(path.join(root, "app", "page.tsx"), "utf8");
+  const database = await readFile(path.join(root, "app", "trials", "page.tsx"), "utf8");
+  assert.match(home, /href="\/trials"/);
+  assert.match(database, /Search trial registries directly/);
+});

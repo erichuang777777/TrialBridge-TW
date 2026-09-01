@@ -9,7 +9,7 @@ TrialBridge TW helps people affected by cancer reduce the work of finding and di
 1. The person selects patient or caregiver context and language.
 2. They paste or type free text.
 3. The browser masks direct identifiers before any model request.
-4. A localhost Ollama model proposes structured facts with provenance, uncertainty, and missing fields.
+4. After an unchecked, explicit cloud-transfer consent, `gpt-oss:120b-cloud` proposes structured facts through the localhost Ollama proxy, with provenance, uncertainty, and missing fields.
 5. The person edits and confirms each fact.
 6. Only the patient-confirmed, de-identified profile enters matching.
 7. Results are retrieved Taiwan first, then Asia, then worldwide and explain source, freshness, possible mismatches, and unknowns.
@@ -35,6 +35,6 @@ The retrieval and schema layers support all cancers in one product. Each disease
 ## Success measures
 
 - Every match is traceable to registry fields and a confirmed profile fact.
-- No raw note reaches cloud assistance, trial registries, logs, analytics, or WebMCP.
+- No unmasked raw note reaches cloud assistance, trial registries, logs, analytics, or WebMCP. Masked notes reach only `gpt-oss:120b-cloud` after explicit transfer consent.
 - The user can correct every extracted fact before matching.
 - Critical flows are keyboard accessible and usable in Traditional Chinese and English.

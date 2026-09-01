@@ -6,7 +6,8 @@ WELCOME
   -> PRIVACY_NOTICE
   -> CAPTURE_FREE_TEXT
   -> MASKING_REVIEW
-  -> LOCAL_EXTRACTION
+  -> CLOUD_TRANSFER_CONSENT
+  -> GPT_OSS_CLOUD_EXTRACTION
   -> FACT_CONFIRMATION
   -> MATCH_CONSENT
   -> MATCHING
@@ -16,7 +17,7 @@ WELCOME
 
 ## Invariants
 
-- Raw text can move only from capture to masking and local extraction.
+- Raw text can move only from capture to browser masking. Only the reviewed masked text can enter cloud extraction after explicit consent.
 - `FACT_CONFIRMATION` cannot be skipped; every used fact has explicit confirmation.
 - Editing a confirmed matching fact invalidates prior results.
 - Cloud dialogue is optional and cannot start before confirmation plus a separate cloud-consent choice.

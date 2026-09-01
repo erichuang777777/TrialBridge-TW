@@ -9,8 +9,8 @@ This repository is a clean-room rebuild. Its product language, information archi
 - People may paste free-text medical information in Traditional Chinese or English.
 - Direct identifiers are masked in the browser before any model request.
 - The original free text is not persisted by default.
-- A local Ollama model extracts a draft; the person must review and confirm it before matching.
-- Cloud assistance, when enabled, receives only the confirmed, de-identified structured summary.
+- After a separate, unchecked consent, the reviewed masked note is sent through the localhost Ollama proxy to `gpt-oss:120b-cloud` for extraction.
+- All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
@@ -26,7 +26,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Model and registry integrations are added in later milestones; this foundation intentionally starts with a disabled intake action.
+Open `http://localhost:3000`. Guided matching is on the home page; `/trials` provides direct public-registry browsing without medical intake.
 
 ## Verification
 

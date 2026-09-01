@@ -20,7 +20,8 @@ export default function Home() {
           </span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link href="/method">How it works</Link>
+          <Link href="/trials">Trial database</Link>
+          <Link className="nav-optional" href="/method">How it works</Link>
           <Link href="/privacy">Privacy</Link>
         </nav>
       </header>
@@ -30,14 +31,14 @@ export default function Home() {
           <p className="eyebrow">Cancer clinical-trial navigation</p>
           <h1 id="hero-title">Turn complex trial information into questions you can discuss with your care team.</h1>
           <p className="lead">
-            Describe the situation in English or Chinese. Identifiers are masked before a local model organizes a draft. Searching starts only after you confirm every item.
+            Describe the situation in English or Chinese. Identifiers are masked before the reviewed content is sent to gpt-oss:120b-cloud with your consent. Searching starts only after you confirm every item.
           </p>
           <div className="trust-row" aria-label="Privacy and safety commitments">
             <span>No account required</span>
             <span>Original text is not saved by default</span>
             <span>Matching only after confirmation</span>
           </div>
-          <a className="primary-action action-link" href="#private-chat">Start a private conversation</a>
+          <div className="hero-actions"><a className="primary-action action-link" href="#private-chat">Start guided matching</a><Link className="secondary-action action-link" href="/trials">Browse trial database</Link></div>
         </div>
 
         <aside className="route-card" aria-label="Trial search order">

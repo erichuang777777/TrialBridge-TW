@@ -4,12 +4,13 @@
 raw free text
   -> browser memory only
   -> deterministic identifier masking
-  -> localhost proxy -> local Ollama extraction
+  -> explicit cloud-transfer consent
+  -> localhost Ollama proxy -> gpt-oss:120b-cloud extraction
   -> draft profile with uncertainty
   -> patient or caregiver review
   -> patient-confirmed de-identified profile
      -> registry query minimizer -> TFDA and ClinicalTrials.gov
-     -> optional localhost proxy -> cloud model for organization or conversation
+     -> optional localhost proxy -> gpt-oss:120b-cloud conversation
      -> consent-gated WebMCP tools
 ```
 
@@ -18,7 +19,7 @@ raw free text
 | Class | Examples | Allowed destinations |
 | --- | --- | --- |
 | Raw sensitive text | pasted note, names, record numbers | browser volatile memory only |
-| Masked text | note with direct identifiers replaced | localhost local-model proxy only |
+| Masked text | note with direct identifiers replaced | gpt-oss:120b-cloud through localhost proxy, only after explicit transfer consent |
 | Draft facts | model-extracted diagnosis, stage, biomarker | browser volatile memory only |
 | Confirmed profile | user-approved, de-identified structured facts | registry query builder; optional cloud assistant; gated WebMCP |
 | Public registry facts | study title, sites, criteria, update date | browser; matching engine; WebMCP with untrusted-content marking |

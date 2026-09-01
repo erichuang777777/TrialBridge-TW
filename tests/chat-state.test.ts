@@ -21,7 +21,7 @@ test("chat state cannot skip privacy, masking, extraction, or confirmation", () 
   assert.equal(chatReducer(capture, { type: "EXTRACTION_SUCCESS", draft }).stage, "capture");
 });
 
-test("raw text is discarded when local extraction begins", () => {
+test("raw text is discarded when consented cloud extraction begins", () => {
   let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
   state = chatReducer(state, { type: "ACCEPT_PRIVACY" });
   state = chatReducer(state, { type: "SET_RAW_TEXT", value: "synthetic medical text long enough" });

@@ -10,9 +10,11 @@ export const cloudDialogueRequestSchema = z.object({
   language: z.enum(["zh-Hant", "en"]),
 }).strict();
 
-export function validatedCloudModel(value = process.env.OLLAMA_CLOUD_MODEL ?? "gpt-oss:120b-cloud"): string {
+export const requiredCloudModel = "gpt-oss:120b-cloud";
+
+export function validatedCloudModel(value = process.env.OLLAMA_CLOUD_MODEL ?? requiredCloudModel): string {
   const model = value.trim();
-  if (!/^[a-z0-9][a-z0-9._/-]*:(?:[a-z0-9._-]+-)?cloud$/i.test(model)) throw new Error("Dialogue model must be an Ollama cloud model");
+  if (model !== requiredCloudModel) throw new Error(`Ollama cloud model must be ${requiredCloudModel}`);
   return model;
 }
 
@@ -21,7 +23,7 @@ export async function answerConfirmedDialogue(input: z.infer<typeof cloudDialogu
   const minimizedProfile = parsed.profile.facts.map((fact) => ({ id: fact.id, domain: fact.domain, value: fact.value }));
   const response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
     method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(120_000),
-    body: JSON.stringify({ model: validatedCloudModel(), stream: false, think: false, options: { temperature: 0.2, num_predict: 900 }, messages: [
+    body: JSON.stringify({ model: validatedCloudModel(), stream: false, think: false, options: { temperature: 0.2, num_predict: 4096 }, messages: [
       { role: "system", content: `You help a patient or caregiver understand public clinical-trial information in ${parsed.language}. Use only the confirmed summary and registry context. Distinguish registry facts, interpretation, and unknowns. Never diagnose, recommend treatment, claim benefit, or determine eligibility. End with questions for the care or study team.` },
       { role: "user", content: JSON.stringify({ confirmedSummary: minimizedProfile, publicTrials: parsed.trials, question: parsed.question }) },
     ] }),

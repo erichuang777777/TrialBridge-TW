@@ -5,11 +5,11 @@
 - Clean-room replacement and tracked-file legacy scan.
 - Anonymous in-memory chat state with no browser persistence API.
 - Browser masking fixtures plus server-side identifier rejection.
-- Loopback-only local model and prohibition on cloud extraction models.
+- Exact `gpt-oss:120b-cloud` allowlist, loopback-only proxy, and prohibition on local GPU or CPU inference.
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
 - Live TFDA zipped JSON parsing and ClinicalTrials.gov API v2 retrieval.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
-- Live synthetic local MedGemma extraction, confirmed-profile matching, and consented qwen cloud dialogue.
+- Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
 - Read-only WebMCP tool definitions, output limits, untrusted-content annotations, and consent-driven sensitive tool registration.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.
 
@@ -17,7 +17,7 @@
 
 - No cancer group is clinically validated. All 19 coverage groups are `unreviewed`; searchability is not accuracy.
 - Deterministic masking cannot guarantee removal of every name or contextual identifier.
-- The CPU extraction path took about one minute on this machine; production latency is not accepted.
+- Provider retention, data-processing location, terms, outage behavior, and production latency for cloud extraction are not yet accepted.
 - TFDA's full archive is currently decompressed on first request; production needs a scheduled validated snapshot.
 - Eligibility criteria beyond structured condition, recruitment, age, sex, and region are not yet atomically assessed.
 - No oncologist/research-nurse adjudicated gold set, false-eligible measurement, calibration, or subgroup fairness evaluation exists.

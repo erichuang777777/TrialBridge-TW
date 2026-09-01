@@ -10,7 +10,8 @@ export default function PrivacyPage() {
         <li>Anonymous use is supported; an account is not required.</li>
         <li>Direct identifiers are masked in the browser first.</li>
         <li>Original free text exists only in volatile page memory by default—not localStorage or server logs.</li>
-        <li>A cloud model may receive only a confirmed, de-identified structured summary after separate consent.</li>
+        <li>After an explicit checkbox consent, the reviewed masked note is sent to gpt-oss:120b-cloud through the localhost Ollama proxy for extraction.</li>
+        <li>Masking reduces direct identifiers but cannot guarantee complete de-identification; localhost is only a proxy and cloud inference is remote.</li>
         <li>WebMCP cannot read the original note; it can use only confirmed, minimized fields.</li>
         <li>External contact content is created only as an unsent draft.</li>
       </ul>
