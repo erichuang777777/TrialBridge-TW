@@ -135,7 +135,7 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
   return { trial, status, assessments, potentialExclusions };
 }
 
-export async function matchConfirmedProfile(profileInput: ConfirmedProfile, adapters?: TrialRegistryAdapter[]) {
+export async function matchConfirmedProfile(profileInput: ConfirmedProfile, adapters?: TrialRegistryAdapter[], signal?: AbortSignal) {
   const profile = confirmedProfileSchema.parse(profileInput);
   const condition = deriveConditionQuery(profile);
   const cancerFacts = factsFor(profile, ["cancer_type", "primary_site", "histology"]);
@@ -146,6 +146,7 @@ export async function matchConfirmedProfile(profileInput: ConfirmedProfile, adap
       TFDA: cancerFacts.map((fact) => fact.displayZhHant).join(" ").slice(0, 120),
       "ClinicalTrials.gov": cancerFacts.map((fact) => fact.displayEn).join(" ").slice(0, 120),
     },
+    { signal },
   );
   return { ...result, matches: result.trials.map((trial) => assessTrial(profile, trial)) };
 }

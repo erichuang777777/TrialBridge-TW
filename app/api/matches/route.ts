@@ -14,9 +14,10 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: "A valid patient-confirmed profile is required." }, { status: 400 });
   try {
-    const result = await matchConfirmedProfile(parsed.data.profile);
+    const result = await matchConfirmedProfile(parsed.data.profile, undefined, request.signal);
     return Response.json({ ...result, disclaimer: "This is a source-traceable navigation aid, not proof of benefit or a final eligibility decision." }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (request.signal.aborted) throw request.signal.reason;
     return Response.json({ error: error instanceof Error ? error.message : "Matching failed." }, { status: 422 });
   }
 }

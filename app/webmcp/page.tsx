@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createPageMetadata } from "@/lib/site/metadata";
 import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
+import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandscape";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
@@ -46,9 +47,9 @@ const standardsProfile = [
   },
   {
     label: "Lifecycle compatibility",
-    title: "Draft and Origin Trial behavior are covered",
-    code: "AbortSignal · toolcanceled · toolcancel",
-    detail: "Registration cleanup uses AbortSignal. Cancellation listens for the upstream draft event and the current Chromium Origin Trial event.",
+    title: "Registration and execution both cancel cleanly",
+    code: "register signal · execute signal · toolcanceled",
+    detail: "Registration cleanup preserves in-flight work, while an agent cancellation reaches the browser fetch, Next request, and each registry adapter.",
   },
   {
     label: "Origin security",
@@ -96,6 +97,15 @@ export default function WebMcpProofPage() {
       <div className="proof-section-heading"><p className="eyebrow">Standards alignment</p><h2 id="standards-evidence-title">One product surface, both WebMCP API styles.</h2><p>TrialBridge TW follows the upstream WebMCP draft while retaining the small compatibility boundary required by Chrome&apos;s current Origin Trial implementation. The human workflow remains the source of truth in both cases.</p></div>
       <div className="standards-grid" role="list">{standardsProfile.map((item) => <article key={item.label} role="listitem"><div><span>Implemented</span><small>{item.label}</small></div><h3>{item.title}</h3><code>{item.code}</code><p>{item.detail}</p></article>)}</div>
       <div className="standards-receipt"><p><strong>Compatibility profile audited <time dateTime="2026-09-02">2026-09-02</time></strong><span><code>webmcp-types@0.1.5</code> · upstream draft and Chromium main checked separately</span></p><div><a href="https://webmachinelearning.github.io/webmcp/" target="_blank" rel="noreferrer">WebMCP draft</a><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Chrome guide</a><a href="https://developer.chrome.com/docs/ai/webmcp/secure-tools" target="_blank" rel="noreferrer">Security guide</a></div></div>
+    </section>
+
+    <section className="proof-section implementation-evidence" aria-labelledby="implementation-evidence-title">
+      <div className="proof-section-heading"><p className="eyebrow">Implementation landscape</p><h2 id="implementation-evidence-title">The proposed standard is already crossing agent hosts.</h2><p>This is dated ecosystem evidence, not a compatibility claim about the browser currently viewing this page. Each status links to its primary project source.</p></div>
+      <div className="implementation-grid" role="list">{webMcpImplementationLandscape.entries.map((entry) => <article key={entry.platform} role="listitem">
+        <div><span className={`implementation-status implementation-${entry.status}`}>{entry.statusLabel}</span><small>Source-reported</small></div>
+        <h3>{entry.platform}</h3><p>{entry.detail}</p><a href={entry.sourceUrl} target="_blank" rel="noreferrer">{entry.sourceLabel}</a>
+      </article>)}</div>
+      <p className="implementation-boundary"><strong>Audited <time dateTime={webMcpImplementationLandscape.auditedAt}>{webMcpImplementationLandscape.auditedAt}</time></strong><span>Upstream commit <code>{webMcpImplementationLandscape.upstreamCommit}</code> · {webMcpImplementationLandscape.evidenceBoundary}</span></p>
     </section>
 
     <section className="proof-section selection-evidence" aria-labelledby="selection-evidence-title">

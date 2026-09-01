@@ -48,6 +48,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - The WebMCP critical-user-journey map states the user goal, initial state, capability, visible UI reaction, and recovery at every stage. It uses a wrapping two-column card sequence rather than a horizontally scrolling timeline.
 - Browser diagnostic evidence is download-only JSON with an adjacent atomic completion message. It contains runtime metadata only and never includes prompts, arguments, outputs, or health information.
 - Live provider availability is an explicit judge action, never an automatic page-load request. It uses fixed synthetic content, one atomic status, an aria-hidden elapsed countdown, a visible cancel/retry control, and a finite deadline; receipts retain metadata only.
+- Ecosystem implementation cards are static server-rendered evidence with a date, upstream commit, primary-source link, and visible `Source-reported` boundary. They never imply that the current browser or local runtime was tested.
 - The runbook's synthetic workflow uses a fixed `?demo=synthetic` deep link with no authored health content. It prepares the fictional note at the privacy boundary, announces that state in-page, and never bypasses masking, organization, confirmation, clarification, or matching. Clearing the anonymous conversation removes the fixed demo parameter.
 - Social preview imagery uses the same calm editorial tokens and verified capability facts. It contains no patient imagery, testimonials, outcome claims, or remotely fetched fonts.
 

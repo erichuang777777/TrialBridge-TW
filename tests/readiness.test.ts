@@ -125,7 +125,8 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /Standards alignment/);
   assert.match(page, /One product surface, both WebMCP API styles/);
   assert.match(page, /Compatibility profile audited/);
-  assert.match(page, /toolcanceled · toolcancel/);
+  assert.match(page, /register signal · execute signal · toolcanceled/);
+  assert.match(page, /agent cancellation reaches the browser fetch, Next request, and each registry adapter/);
   assert.match(page, /webmachinelearning\.github\.io\/webmcp/);
   assert.match(page, /Four-step judge path/);
   assert.match(page, /About 5 minutes/);
@@ -296,4 +297,24 @@ test("judge cloud smoke test is explicit, body-free, bounded, cancellable, and m
   assert.match(verifier, /storesModelContent !== false/);
   assert.match(css, /cloud-probe-actions button \{ min-height: 44px/);
   assert.match(css, /cloud-probe-receipt \{ grid-template-columns: 1fr/);
+});
+
+test("competition evidence separates source-reported WebMCP implementations from local verification", async () => {
+  const root = process.cwd();
+  const page = await readFile(path.join(root, "app", "webmcp", "page.tsx"), "utf8");
+  const landscape = await readFile(path.join(root, "lib", "webmcp", "implementationLandscape.ts"), "utf8");
+  const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
+  assert.match(page, /Implementation landscape/);
+  assert.match(page, /Source-reported/);
+  assert.match(page, /not a compatibility claim about the browser currently viewing this page/);
+  assert.match(page, /webMcpImplementationLandscape\.auditedAt/);
+  assert.match(page, /webMcpImplementationLandscape\.upstreamCommit/);
+  assert.match(landscape, /ChatGPT Desktop/);
+  assert.match(landscape, /Chrome 149/);
+  assert.match(landscape, /Brave Leo/);
+  assert.match(landscape, /not treat these entries as local runtime verification/);
+  assert.match(css, /implementation-grid \{ display: grid; grid-template-columns: repeat\(3/);
+  assert.match(css, /implementation-grid article > div \{ min-height: 30px/);
+  assert.match(css, /implementation-grid \{ grid-template-columns: 1fr/);
+  assert.match(css, /implementation-grid article > div \{ min-height: 0/);
 });

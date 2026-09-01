@@ -21,8 +21,10 @@ This repository is a clean-room rebuild. Its product language, information archi
 - Public condition search uses a versioned 19-group bilingual query bridge: exact curated terms become a Traditional Chinese TFDA query and an English ClinicalTrials.gov query, while unrecognized detailed terms pass through unchanged without inferred subtype, stage, or biomarker.
 - Registry receipts distinguish a live query, fresh server snapshot, and bounded stale snapshot with the true snapshot load time. TFDA data is fresh for 24 hours, may serve stale while one refresh runs for at most seven days, and fails closed beyond that limit.
 - Each public registry has an independent 20-second response deadline. The visible search and WebMCP output report per-source latency and complete/partial/unavailable coverage; one timeout does not erase verified results from another registry.
+- Imperative WebMCP cancellation propagates from the agent execution signal through browser fetch, the Next.js request, matching, and each registry adapter. A cancelled caller stops immediately without destroying a shared TFDA snapshot refresh that another request may still need.
 - Public discovery is fail-closed: canonical links, page-specific social metadata, a local-font Open Graph card, a manifest, and dynamic robots/sitemap routes are present, but indexing activates only with an explicit non-loopback HTTPS deployment profile after readiness approval.
 - The `/webmcp` page starts with a four-step judge runbook. Exact broad cancer aliases can use shareable `/trials?condition=...` links in the same visible declarative form; a fixed `/?demo=synthetic` link opens the fictional case at the privacy boundary without skipping any protected stage. Neither route stores patient-authored content in the URL.
+- The `/webmcp` page also shows a dated, source-linked implementation landscape for ChatGPT Desktop, Chrome, and Brave. Those cards are explicitly source-reported ecosystem evidence, not a claim that the current browser completed TrialBridge TW's runtime or Inspector checks.
 
 ## Delivery plan
 

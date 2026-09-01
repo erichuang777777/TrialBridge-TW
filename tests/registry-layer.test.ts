@@ -111,6 +111,44 @@ test("a registry deadline preserves another source and reports a machine-readabl
   }]);
 });
 
+test("caller cancellation aborts every registry source and rejects with the caller's reason", async () => {
+  const observedSignals: AbortSignal[] = [];
+  const never = (registry: TrialRegistryAdapter["registry"]): TrialRegistryAdapter => ({
+    registry,
+    search(_input, options: TrialAdapterSearchOptions = {}) {
+      assert.ok(options.signal);
+      observedSignals.push(options.signal);
+      return new Promise(() => undefined);
+    },
+  });
+  const controller = new AbortController();
+  const reason = new DOMException("Synthetic WebMCP cancellation", "AbortError");
+  const pending = searchTrialRegistries(
+    { condition: "胃癌", pageSize: 10, includeNotOpen: false },
+    [never("TFDA"), never("ClinicalTrials.gov")],
+    {},
+    { timeoutMs: 1_000, signal: controller.signal },
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.abort(reason);
+  await assert.rejects(pending, (error: unknown) => error === reason);
+  assert.equal(observedSignals.length, 2);
+  assert.equal(observedSignals.every((signal) => signal.aborted && signal.reason === reason), true);
+});
+
+test("TFDA stops one cancelled caller from waiting without cancelling the shared snapshot load", async () => {
+  let finishLoad: ((records: typeof tfdaFixture[]) => void) | undefined;
+  const loading = new Promise<typeof tfdaFixture[]>((resolve) => { finishLoad = resolve; });
+  const adapter = new TfdaAdapter(fetch, () => loading);
+  const controller = new AbortController();
+  const reason = new DOMException("Synthetic caller left", "AbortError");
+  const pending = adapter.search({ condition: "胃癌", pageSize: 10, includeNotOpen: false }, { signal: controller.signal });
+  controller.abort(reason);
+  await assert.rejects(pending, (error: unknown) => error === reason);
+  finishLoad?.([tfdaFixture]);
+  assert.equal((await adapter.search({ condition: "胃癌", pageSize: 10, includeNotOpen: false })).trials.length, 1);
+});
+
 test("successful source receipts expose independently measured latency", async () => {
   let clock = 100;
   const healthy = new TfdaAdapter(fetch, async () => {

@@ -89,6 +89,17 @@ After adding the explicit, body-free `gpt-oss:120b-cloud` smoke test, `/webmcp` 
 
 Both 375px runs are retained as observed run-to-run variance. The original-size 375px, landscape, and desktop screenshots were visually inspected: the probe description, optional state, single primary action, finite-limit copy, and receipt download stack into one column on narrow screens without clipping; landscape and desktop retain the compact horizontal action row. The Windows Chrome launcher again reported only the known post-artifact temporary-profile cleanup `EPERM`; every JSON report and inspected screenshot was already present and parseable.
 
+After propagating imperative WebMCP cancellation to the registry adapters and adding the source-reported implementation landscape, `/webmcp#implementation-evidence-title` was rebuilt and audited on an isolated production server. The first screenshot review found the longer Brave status wrapping at 844px and lowering its card title. The status row now reserves equal height in multi-column layouts and releases it in the single-column mobile layout; the final 375px and 844×390 screenshots confirm aligned titles, readable links, and no horizontal clipping.
+
+| `/webmcp` viewport | Performance | Accessibility | Best Practices | FCP | LCP | TBT | CLS | Console errors | Non-composited animations |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Lighthouse default mobile | 98 | 100 | 100 | 1.1 s | 2.2 s | 120 ms | 0 | 0 | 0 |
+| Explicit 375×812 | 97 | 100 | 100 | 1.1 s | 2.3 s | 110 ms | 0 | 0 | 0 |
+| 844×390 landscape | 97 | 100 | 100 | 1.1 s | 2.3 s | 120 ms | 0 | 0 | 0 |
+| Desktop | 100 | 100 | 100 | 0.3 s | 0.5 s | 0 ms | 0 | 0 | 0 |
+
+All accepted reports used an explicitly managed headless Chrome debugging session. Two desktop trace attempts on one reused Chrome session returned `NO_NAVSTART` and were discarded because they contained no navigation metrics; the successful desktop audit used a fresh managed Chrome session and exited with a complete report. The user development server on port 3001 remained available throughout.
+
 Command shape:
 
 ```powershell

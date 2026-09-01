@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const queryPlan = createRegistryQueryPlan(parsed.data.condition);
-  const result = await searchTrialRegistries(parsed.data, undefined, queryPlan.registryConditions);
+  const result = await searchTrialRegistries(parsed.data, undefined, queryPlan.registryConditions, { signal: request.signal });
   const status = result.sources.length === 0 ? 503 : 200;
   return Response.json({
     ...result,

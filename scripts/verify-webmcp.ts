@@ -12,6 +12,7 @@ import { bilingualCancerQueryLexicon, createRegistryQueryPlan } from "../lib/tri
 import { webMcpCriticalJourney } from "../lib/webmcp/criticalJourney.ts";
 import { createWebMcpDiagnosticReceipt } from "../lib/webmcp/diagnosticReceipt.ts";
 import { cloudProbeTimeoutMs } from "../lib/llm/cloudProbe.ts";
+import { webMcpImplementationLandscape } from "../lib/webmcp/implementationLandscape.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -204,6 +205,21 @@ for (const marker of ["registrySourceTimeoutMs = 20_000", "AbortController", "SO
   check(registryReliability.includes(marker), `Registry reliability contract is missing ${marker}.`);
 }
 
+const cancellationChain = [
+  readFileSync("lib/webmcp/tools.ts", "utf8"),
+  readFileSync("app/api/trials/search/route.ts", "utf8"),
+  readFileSync("app/api/matches/route.ts", "utf8"),
+  readFileSync("lib/trials/search.ts", "utf8"),
+  readFileSync("lib/trials/adapters/tfda.ts", "utf8"),
+  readFileSync("lib/trials/adapters/clinicalTrialsGov.ts", "utf8"),
+].join("\n");
+for (const marker of ["options.signal", "request.signal", "AbortSignal.any", "throwIfAborted", "waitForPromiseWithSignal"]) {
+  check(cancellationChain.includes(marker), `End-to-end WebMCP cancellation chain is missing ${marker}.`);
+}
+check(webMcpImplementationLandscape.auditedAt === "2026-09-02" && webMcpImplementationLandscape.upstreamCommit === "41d12f0", "Implementation landscape audit metadata is stale.");
+check(webMcpImplementationLandscape.entries.some((entry) => entry.platform === "ChatGPT Desktop" && entry.status === "supported"), "Implementation landscape must include upstream-reported ChatGPT Desktop support.");
+check(webMcpImplementationLandscape.evidenceBoundary.includes("not treat these entries as local runtime verification"), "Implementation landscape must preserve its source-reported evidence boundary.");
+
 if (findings.length > 0) {
   console.error(findings.join("\n"));
   process.exitCode = 1;
@@ -226,6 +242,9 @@ if (findings.length > 0) {
     cloudProbeEvidence: "metadata-only-no-health-data",
     executionCompatibilityProfiles: 2,
     registrySourceDeadlineMs: 20_000,
+    executionCancellation: "agent-to-registry",
+    implementationLandscape: webMcpImplementationLandscape.entries.length,
+    implementationLandscapeAudit: webMcpImplementationLandscape.auditedAt,
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

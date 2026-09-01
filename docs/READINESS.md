@@ -9,6 +9,7 @@
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
 - Live TFDA zipped JSON parsing with bounded 24-hour fresh/seven-day stale-while-revalidate snapshot state, plus ClinicalTrials.gov API v2 retrieval. Visible and WebMCP source receipts distinguish live, fresh-cache, and stale-cache reads with the true snapshot time.
 - Independent 20-second registry deadlines, upstream abort propagation for ClinicalTrials.gov, machine-readable timeout/unavailable codes, per-source latency receipts, and partial-result preservation when another source succeeds.
+- End-to-end imperative WebMCP cancellation from execution callback through browser fetch, Next.js request, matching, and both registry adapters, with exact abort-reason preservation and shared TFDA snapshot isolation covered by deterministic tests.
 - A visible, versioned bilingual query plan covering all 19 declared cancer groups, with exact-term mapping and non-inferential pass-through for unrecognized detail.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
@@ -20,6 +21,7 @@
 - An explicit no-input cloud availability probe for judges: fixed synthetic prompt, exact cloud-model allowlist, 30-second hard limit, cancel/retry states, three checks per 10 minutes, and metadata-only output/receipt with no model content.
 - Live no-PHI probe evidence on 2026-09-02: requested `gpt-oss:120b-cloud`, provider reported `gpt-oss:120b`, loopback proxy plus remote-cloud inference, 1,202 ms, with the request-body rejection boundary separately exercised as HTTP 400.
 - A judge-visible, dated WebMCP standards profile plus tested compatibility for the upstream object-input/current-Chrome serialized-input execution boundary and the upstream/current-Chromium cancellation event names.
+- A dated, primary-source-linked implementation landscape for ChatGPT Desktop, Chrome 149, and Brave Leo, explicitly bounded as source-reported ecosystem status rather than local runtime verification.
 - A responsive four-step judge runbook plus shareable broad-cancer search links that reopen the same visible declarative form. A fixed no-PHI synthetic-case deep link server-renders at the privacy boundary without skipping protected stages and removes itself when the anonymous conversation is cleared. URL state rejects direct identifiers, multiline content, and unrecognized detailed conditions; production Lighthouse verified default mobile, 375×667, and 844×390 landscape layouts.
 - A bounded, payload-free WebMCP session receipt that makes capability registration changes and tool lifecycle states visible and optionally downloadable without server persistence.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.

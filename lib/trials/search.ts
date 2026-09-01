@@ -32,6 +32,7 @@ export interface FederatedTrialSearchResult {
 interface RegistrySearchRuntime {
   timeoutMs?: number;
   now?: () => number;
+  signal?: AbortSignal;
 }
 
 type TimedAdapterSearch =
@@ -47,23 +48,36 @@ function runAdapterWithDeadline(
   const timeoutMs = Math.max(1, Math.round(runtime.timeoutMs ?? registrySourceTimeoutMs));
   const now = runtime.now ?? (() => performance.now());
   const startedAt = now();
-  const controller = new AbortController();
+  const deadlineController = new AbortController();
+  const signal = runtime.signal ? AbortSignal.any([runtime.signal, deadlineController.signal]) : deadlineController.signal;
 
   return new Promise((resolve) => {
     let finished = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const finish = (result: TimedAdapterSearch) => {
       if (finished) return;
       finished = true;
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
       resolve(result);
     };
-    const timer = setTimeout(() => {
-      controller.abort(new DOMException("Registry source deadline reached", "TimeoutError"));
-      finish({ status: "rejected", reason: controller.signal.reason, durationMs: timeoutMs, timedOut: true });
+    const onAbort = () => finish({
+      status: "rejected",
+      reason: signal.reason,
+      durationMs: deadlineController.signal.aborted && !runtime.signal?.aborted ? timeoutMs : Math.max(0, Math.round(now() - startedAt)),
+      timedOut: deadlineController.signal.aborted && !runtime.signal?.aborted,
+    });
+    timer = setTimeout(() => {
+      deadlineController.abort(new DOMException("Registry source deadline reached", "TimeoutError"));
     }, timeoutMs);
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
 
     void Promise.resolve()
-      .then(() => adapter.search({ ...input, condition }, { signal: controller.signal }))
+      .then(() => adapter.search({ ...input, condition }, { signal }))
       .then((value) => finish({ status: "fulfilled", value, durationMs: Math.max(0, Math.round(now() - startedAt)) }))
       .catch((reason) => finish({ status: "rejected", reason, durationMs: Math.max(0, Math.round(now() - startedAt)), timedOut: false }));
   });
@@ -86,6 +100,7 @@ export async function searchTrialRegistries(
     registryConditions[adapter.registry] ?? input.condition,
     runtime,
   )));
+  runtime.signal?.throwIfAborted();
   const trials: NormalizedTrial[] = [];
   const sources: FederatedTrialSearchResult["sources"] = [];
   const failures: RegistrySearchFailure[] = [];

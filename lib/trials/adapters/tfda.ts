@@ -1,12 +1,14 @@
 import { strFromU8, unzipSync } from "fflate";
 import { z } from "zod";
 import { normalizedTrialSchema } from "../schema.ts";
+import { waitForPromiseWithSignal } from "../../security/abort.ts";
 import { cleanText, containsCjk, normalizeIdentifier, uniqueText } from "../text.ts";
 import { StaleWhileRevalidateSnapshot, type SnapshotRead } from "../snapshotCache.ts";
 import type {
   NormalizedTrial,
   RecruitmentCategory,
   TrialAdapterResult,
+  TrialAdapterSearchOptions,
   TrialRegistryAdapter,
   TrialSearchInput,
 } from "../types.ts";
@@ -141,10 +143,12 @@ export class TfdaAdapter implements TrialRegistryAdapter {
     return officialSnapshot.read();
   }
 
-  async search(input: TrialSearchInput): Promise<TrialAdapterResult> {
+  async search(input: TrialSearchInput, options: TrialAdapterSearchOptions = {}): Promise<TrialAdapterResult> {
     const retrievedAt = new Date().toISOString();
     const query = input.condition.toLocaleLowerCase("zh-Hant").trim();
-    const snapshot = await this.records(retrievedAt);
+    options.signal?.throwIfAborted();
+    const snapshot = await waitForPromiseWithSignal(this.records(retrievedAt), options.signal);
+    options.signal?.throwIfAborted();
     const trials = snapshot.value
       .filter((record) => recordMatches(record, query))
       .map((record) => normalizeTfdaRecord(record, retrievedAt))

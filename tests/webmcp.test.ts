@@ -85,6 +85,30 @@ test("public WebMCP search preserves structured source failures when every regis
   ]);
 });
 
+test("public WebMCP cancellation reaches fetch and records a cancelled activity", async () => {
+  const activities: WebMcpActivity[] = [];
+  let observedSignal: AbortSignal | null | undefined;
+  const fetcher = ((async (_input: string | URL | Request, init?: RequestInit) => {
+    observedSignal = init?.signal;
+    return await new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    });
+  }) as unknown) as typeof fetch;
+  const controller = new AbortController();
+  const reason = new DOMException("Synthetic agent cancellation", "AbortError");
+  const tool = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, fetcher, onActivity: (activity) => activities.push(activity) }).find((candidate) => candidate.name === "search_public_cancer_trials");
+  assert.ok(tool);
+  const pending = Promise.resolve(tool.execute({ condition: "gastric cancer" }, { signal: controller.signal }));
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.abort(reason);
+  await assert.rejects(pending, (error: unknown) => error === reason);
+  assert.equal(observedSignal, controller.signal);
+  assert.deepEqual(activities, [
+    { toolName: "search_public_cancer_trials", state: "running" },
+    { toolName: "search_public_cancer_trials", state: "cancelled" },
+  ]);
+});
+
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {
   assert.equal(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: false }).length, 2);
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
