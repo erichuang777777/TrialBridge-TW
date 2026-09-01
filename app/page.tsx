@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandMark } from "./components/BrandMark";
+import { TrialBridgeChat } from "./components/TrialBridgeChat";
 
 const regions = [
   { step: "01", title: "台灣優先", detail: "先整理台灣試驗與可聯絡院所。" },
@@ -36,12 +37,7 @@ export default function Home() {
             <span>原文預設不保存</span>
             <span>確認後才配對</span>
           </div>
-          <button className="primary-action" type="button" disabled aria-describedby="foundation-note">
-            開始私密對話
-          </button>
-          <p className="foundation-note" id="foundation-note">
-            目前為產品基礎版本；病歷輸入會在安全處理流程完成後開放。
-          </p>
+          <a className="primary-action action-link" href="#private-chat">開始私密對話</a>
         </div>
 
         <aside className="route-card" aria-label="試驗搜尋順序">
@@ -59,6 +55,8 @@ export default function Home() {
           </ol>
         </aside>
       </section>
+
+      <TrialBridgeChat />
 
       <section className="principles" aria-labelledby="principles-title">
         <div>
