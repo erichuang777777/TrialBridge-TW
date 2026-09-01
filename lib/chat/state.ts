@@ -25,6 +25,7 @@ export type ChatEvent =
   | { type: "EXTRACTION_SUCCESS"; draft: ProfileDraft }
   | { type: "EXTRACTION_FAILURE"; message: string }
   | { type: "CONFIRM_SUCCESS"; profile: ConfirmedProfile }
+  | { type: "UPDATE_CONFIRMED_PROFILE"; profile: ConfirmedProfile }
   | { type: "RESET" };
 
 export const initialChatState: ChatState = { stage: "role", language: "zh-Hant", rawText: "" };
@@ -53,6 +54,8 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
       return state.stage === "extracting" ? { ...state, stage: "mask_review", error: event.message } : state;
     case "CONFIRM_SUCCESS":
       return state.stage === "confirmation" ? { ...state, stage: "ready", draft: undefined, maskResult: undefined, confirmedProfile: event.profile } : state;
+    case "UPDATE_CONFIRMED_PROFILE":
+      return state.stage === "ready" ? { ...state, confirmedProfile: event.profile } : state;
     case "RESET":
       return { ...initialChatState, language: state.language };
   }

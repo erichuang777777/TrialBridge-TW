@@ -3,7 +3,9 @@
 import { useMemo, useReducer, useState } from "react";
 import { chatReducer, initialChatState } from "@/lib/chat/state";
 import { maskDirectIdentifiers } from "@/lib/privacy/mask";
-import { confirmProfile, profileDraftSchema } from "@/lib/profile/schema";
+import { confirmProfile, profileDraftSchema, setCloudUseApproval } from "@/lib/profile/schema";
+import { createOutreachDraft } from "@/lib/matching/outreach";
+import type { TrialMatch } from "@/lib/matching/engine";
 
 const copy = {
   "zh-Hant": {
@@ -32,6 +34,11 @@ export function TrialBridgeChat() {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [matches, setMatches] = useState<TrialMatch[]>([]);
+  const [matching, setMatching] = useState(false);
+  const [outreach, setOutreach] = useState<{ subject: string; body: string; sent: false }>();
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
   const t = copy[state.language];
   const allChecked = Boolean(state.draft?.facts.length) && state.draft!.facts.every((fact) => checked[fact.id]);
   const step = useMemo(() => ({ role: 1, privacy: 1, capture: 2, mask_review: 2, extracting: 2, confirmation: 3, ready: 3 }[state.stage]), [state.stage]);
@@ -64,6 +71,32 @@ export function TrialBridgeChat() {
     dispatch({ type: "CONFIRM_SUCCESS", profile });
   }
 
+  async function runMatching() {
+    if (!state.confirmedProfile) return;
+    setMatching(true);
+    setOutreach(undefined);
+    try {
+      const response = await fetch("/api/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profile: state.confirmedProfile }) });
+      const payload = await response.json() as { matches?: TrialMatch[]; error?: string };
+      if (!response.ok || !payload.matches) throw new Error(payload.error ?? "Matching failed.");
+      setMatches(payload.matches);
+    } catch (error) {
+      setMatches([]);
+      setOutreach({ subject: "Error", body: error instanceof Error ? error.message : "Matching failed.", sent: false });
+    } finally { setMatching(false); }
+  }
+
+  async function askCloud() {
+    if (!state.confirmedProfile?.cloudUseApproved || question.trim().length < 2) return;
+    setAnswer("正在透過 localhost proxy 詢問雲端模型…");
+    const trials = matches.slice(0, 5).map((match) => ({ registryId: match.trial.sources[0].registryId, title: match.trial.title, status: match.status, sourceUrl: match.trial.sources[0].url }));
+    try {
+      const response = await fetch("/api/cloud/dialogue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profile: state.confirmedProfile, question, trials, language: state.language }) });
+      const payload = await response.json() as { answer?: string; error?: string };
+      setAnswer(response.ok && payload.answer ? payload.answer : payload.error ?? "Cloud dialogue failed.");
+    } catch { setAnswer("Cloud dialogue failed. Please retry or continue without it."); }
+  }
+
   return (
     <section className="chat-shell" id="private-chat" aria-labelledby="chat-title">
       <div className="chat-heading"><div><p className="eyebrow">Chat-first intake</p><h2 id="chat-title">{t.heading}</h2></div><span>Step {step}/3</span></div>
@@ -73,7 +106,7 @@ export function TrialBridgeChat() {
       {state.stage === "mask_review" && state.maskResult && <div className="chat-turn"><h3>{t.review}</h3><pre className="masked-preview">{state.maskResult.maskedText}</pre><p className="field-helper">Masked items: {state.maskResult.findings.length}. {state.error}</p><div className="action-row"><button onClick={() => dispatch({ type: "BACK_TO_CAPTURE" })}>{t.back}</button><button className="primary-action" onClick={extract}>{t.extract}</button></div></div>}
       {state.stage === "extracting" && <div className="chat-turn" role="status" aria-live="polite"><div className="progress-bar" /><p>{t.working}</p></div>}
       {state.stage === "confirmation" && state.draft && <div className="chat-turn"><h3>{t.confirm}</h3><p>{t.confirmAll}</p><div className="fact-list">{state.draft.facts.map((fact) => <div className="fact-editor" key={fact.id}><label htmlFor={fact.id}>{fact.domain.replaceAll("_", " ")}</label><textarea id={fact.id} rows={2} value={edits[fact.id] ?? fact.value} onChange={(event) => setEdits({ ...edits, [fact.id]: event.target.value })} /><label className="confirm-check"><input type="checkbox" checked={Boolean(checked[fact.id])} onChange={(event) => setChecked({ ...checked, [fact.id]: event.target.checked })} /> {state.language === "en" ? "I confirm this fact" : "我確認這項資料正確"}</label></div>)}</div><button className="primary-action" disabled={!allChecked} onClick={finishConfirmation}>{t.finish}</button></div>}
-      {state.stage === "ready" && state.confirmedProfile && <div className="chat-turn"><h3>{t.ready}</h3><dl className="confirmed-summary">{state.confirmedProfile.facts.map((fact) => <div key={fact.id}><dt>{fact.domain.replaceAll("_", " ")}</dt><dd>{state.language === "en" ? fact.displayEn : fact.displayZhHant}</dd></div>)}</dl><p className="notice">下一階段才會使用這份確認摘要進行試驗配對；原始文字已從流程狀態移除。</p><button onClick={() => { setChecked({}); setEdits({}); dispatch({ type: "RESET" }); }}>{t.clear}</button></div>}
+      {state.stage === "ready" && state.confirmedProfile && <div className="chat-turn"><h3>{t.ready}</h3><dl className="confirmed-summary">{state.confirmedProfile.facts.map((fact) => <div key={fact.id}><dt>{fact.domain.replaceAll("_", " ")}</dt><dd>{state.language === "en" ? fact.displayEn : fact.displayZhHant}</dd></div>)}</dl><p className="notice">只會使用這份確認摘要配對；原始文字已從流程狀態移除。結果不是療效證明或最終資格。</p><div className="action-row"><button className="primary-action" disabled={matching} onClick={runMatching}>{matching ? "正在查詢 TFDA 與 ClinicalTrials.gov…" : "尋找可討論的試驗"}</button><button onClick={() => { setChecked({}); setEdits({}); setMatches([]); setOutreach(undefined); setAnswer(""); dispatch({ type: "RESET" }); }}>{t.clear}</button></div>{matches.length > 0 && <div className="match-list" aria-live="polite"><h3>來源可追溯的結果</h3>{matches.slice(0, 12).map((match) => <article className="match-card" key={match.trial.canonicalId}><p className="match-status">{match.status.replaceAll("_", " ")}</p><h4>{match.trial.title}</h4><p>{match.trial.sources.map((source) => `${source.registry}: ${source.registryId}`).join(" · ")}</p><ul>{match.assessments.map((item) => <li key={item.key}><strong>{item.key}：</strong>{state.language === "en" ? item.explanationEn : item.explanationZhHant} <small>Registry field: {item.registryField}; facts: {item.patientFactIds.join(", ") || "none"}</small></li>)}</ul><div className="action-row"><a href={match.trial.sources[0].url} target="_blank" rel="noreferrer">查看原始登錄</a><button onClick={() => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))}>建立未寄送聯絡草稿</button></div></article>)}<div className="cloud-dialogue"><label className="confirm-check"><input type="checkbox" checked={state.confirmedProfile.cloudUseApproved} onChange={(event) => dispatch({ type: "UPDATE_CONFIRMED_PROFILE", profile: setCloudUseApproval(state.confirmedProfile!, event.target.checked) })} />允許將確認後、去識別的結構化摘要交給雲端模型協助解釋。可隨時取消。</label><label htmlFor="cloud-question">針對結果繼續提問</label><textarea id="cloud-question" rows={3} value={question} onChange={(event) => setQuestion(event.target.value)} /><button disabled={!state.confirmedProfile.cloudUseApproved || question.trim().length < 2} onClick={askCloud}>詢問雲端模型</button>{answer && <div className="notice" role="status">{answer}</div>}</div></div>}{outreach && <div className="outreach-draft"><h3>{outreach.subject}</h3><textarea aria-label="聯絡草稿" rows={12} value={outreach.body} readOnly /><p>狀態：尚未寄出。TrialBridge TW 沒有寄送工具。</p></div>}</div>}
     </section>
   );
 }

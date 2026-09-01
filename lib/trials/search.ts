@@ -2,7 +2,7 @@ import { ClinicalTrialsGovAdapter } from "./adapters/clinicalTrialsGov.ts";
 import { TfdaAdapter } from "./adapters/tfda.ts";
 import { deduplicateTrials } from "./dedupe.ts";
 import { rankTrials } from "./regions.ts";
-import type { NormalizedTrial, TrialRegistryAdapter, TrialSearchInput } from "./types.ts";
+import type { NormalizedTrial, RegistryName, TrialRegistryAdapter, TrialSearchInput } from "./types.ts";
 
 export interface RegistrySearchFailure {
   registry: string;
@@ -29,8 +29,12 @@ function publicError(error: unknown): string {
 export async function searchTrialRegistries(
   input: TrialSearchInput,
   adapters: TrialRegistryAdapter[] = [new TfdaAdapter(), new ClinicalTrialsGovAdapter()],
+  registryConditions: Partial<Record<RegistryName, string>> = {},
 ): Promise<FederatedTrialSearchResult> {
-  const settled = await Promise.allSettled(adapters.map((adapter) => adapter.search(input)));
+  const settled = await Promise.allSettled(adapters.map((adapter) => adapter.search({
+    ...input,
+    condition: registryConditions[adapter.registry] ?? input.condition,
+  })));
   const trials: NormalizedTrial[] = [];
   const sources: FederatedTrialSearchResult["sources"] = [];
   const failures: RegistrySearchFailure[] = [];

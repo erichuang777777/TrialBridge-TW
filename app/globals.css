@@ -146,6 +146,13 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .confirmed-summary div { padding: 12px 0; border-bottom: 1px solid var(--line); }
 .confirmed-summary dt { color: var(--ink-soft); font-size: 0.85rem; font-weight: 800; text-transform: uppercase; }
 .confirmed-summary dd { margin: 2px 0 0; }
+.match-list { margin-top: 32px; }
+.match-card { margin: 18px 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.match-card h4 { margin: 4px 0 8px; font-size: 1.15rem; }
+.match-card li { margin: 10px 0; }
+.match-card small { display: block; color: var(--ink-soft); }
+.match-status { margin: 0; color: var(--primary-strong); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; }
+.outreach-draft { margin-top: 24px; padding: 22px; border: 2px solid var(--focus); border-radius: 12px; background: var(--warning); }
 
 @media (max-width: 780px) {
   .site-header { min-height: 78px; }

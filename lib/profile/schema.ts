@@ -52,6 +52,10 @@ export const confirmedProfileSchema = z.object({
 
 export type ConfirmedProfile = z.infer<typeof confirmedProfileSchema>;
 
+export function setCloudUseApproval(profile: ConfirmedProfile, approved: boolean): ConfirmedProfile {
+  return confirmedProfileSchema.parse({ ...profile, cloudUseApproved: approved });
+}
+
 const forbiddenDomains = [
   "name", "email", "phone", "address", "birth_date", "national_id", "medical_record_number",
 ];

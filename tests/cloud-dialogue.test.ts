@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { answerConfirmedDialogue, cloudDialogueRequestSchema, validatedCloudModel } from "../lib/llm/cloud.ts";
+import { confirmProfile, profileDraftSchema, setCloudUseApproval } from "../lib/profile/schema.ts";
+
+const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "zh-Hant", subjectRole: "patient", facts: [{ id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Draft, not advice." });
+const confirmed = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
+
+test("cloud dialogue requires separate approval and a cloud-suffixed model", () => {
+  assert.equal(cloudDialogueRequestSchema.safeParse({ profile: confirmed, question: "請解釋", trials: [], language: "zh-Hant" }).success, false);
+  assert.equal(validatedCloudModel("qwen3.5:cloud"), "qwen3.5:cloud");
+  assert.throws(() => validatedCloudModel("medgemma-cpu:latest"), /cloud model/);
+});
+
+test("cloud dialogue sends only minimized confirmed facts", async () => {
+  let sent = "";
+  const approved = setCloudUseApproval(confirmed, true);
+  const mockFetch: typeof fetch = async (_input, init) => { sent = String(init?.body); return Response.json({ message: { content: "請向試驗團隊確認完整條件。" } }); };
+  const result = await answerConfirmedDialogue({ profile: approved, question: "這代表什麼？", trials: [], language: "zh-Hant" }, mockFetch);
+  assert.equal(result.persisted, false);
+  assert.equal(sent.includes("gastric cancer"), true);
+  assert.equal(sent.includes('"think":false'), true);
+  assert.equal(sent.includes("displayZhHant"), false);
+  assert.equal(sent.includes("confirmedAt"), false);
+});
