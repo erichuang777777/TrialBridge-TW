@@ -9,8 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const originTrialToken = process.env.NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN;
   return (
     <html lang="zh-Hant-TW">
+      <head>{originTrialToken ? <meta httpEquiv="origin-trial" content={originTrialToken} /> : null}</head>
       <body>
         <a className="skip-link" href="#main-content">跳到主要內容</a>
         {children}
