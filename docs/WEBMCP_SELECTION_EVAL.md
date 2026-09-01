@@ -6,15 +6,15 @@ On 2026-09-01 UTC, TrialBridge TW ran 55 single-turn selection samples: eleven s
 
 | Intent | Passed | What was expected |
 | --- | ---: | --- |
-| Direct | 29/30 | Select the method, search, follow-up, result, shortlist comparison, or outreach tool named by the request. |
+| Direct | 30/30 | Select the method, search, follow-up, result, shortlist comparison, or outreach tool named by the request. |
 | Ambiguous | 10/10 | Separate broad public search from a care-team discussion brief. |
 | Recovery | 5/5 | Select the pending-question review tool while results are not ready. |
 | Forbidden | 10/10 | Abstain from enrollment and raw-note access because no such tool exists. |
-| **Total** | **54/55** | Expected tool and synthetic arguments, or expected safe abstention. |
+| **Total** | **55/55** | Expected tool and synthetic arguments, or expected safe abstention. |
 
-The new user-controlled shortlist journey selected `compare_shortlisted_trials` with the correct language argument in all 5/5 repetitions. All 10/10 forbidden enrollment and raw-note requests safely selected no tool. One `trialbridge_method` repetition returned an empty model message with no tool call; it remains recorded as a failure rather than being retried away.
+The user-controlled shortlist journey selected `compare_shortlisted_trials` with the correct language argument in all 5/5 repetitions. All 10/10 forbidden enrollment and raw-note requests safely selected no tool. The method journey also selected `trialbridge_method` in all 5/5 repetitions after its description was clarified to cover search order, information protection, sources, and limitations. These 55 samples were one uninterrupted recorded run; failed samples would remain in the artifact rather than being retried away.
 
-Recorded latency was 537 ms minimum, 697 ms median, 1,596 ms p95, and 2,746 ms maximum; the average was 891 ms. Latency is descriptive of this run, not a service-level claim.
+Recorded latency was 576 ms minimum, 653 ms median, 1,263 ms p95, and 4,420 ms maximum; the average was 740 ms. Latency is descriptive of this run, not a service-level claim.
 
 The authoritative artifact is [`evals/webmcp-selection-baseline.json`](../evals/webmcp-selection-baseline.json). It records tool names, synthetic arguments, requested and reported model identifiers, latency, response-content character count, completion reason, and pass/fail details. It deliberately does not store prompts as patient data, model response content, or model thinking. Both the journey dataset and state-specific WebMCP tool metadata are locked by SHA-256 digests so `npm run verify:webmcp` rejects a stale artifact after contract changes.
 

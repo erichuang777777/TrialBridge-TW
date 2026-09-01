@@ -51,7 +51,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   const tools: WebMCP.ModelContextTool[] = [
     {
       name: "trialbridge_method", title: "Explain TrialBridge TW method",
-      description: "Call when a user asks how TrialBridge TW works. Returns the site's authoritative Taiwan-first search order, privacy boundary, sources, and limitations without patient data.",
+      description: "Use for any request to explain how TrialBridge TW searches for trials, prioritizes Taiwan then Asia then worldwide, protects information, chooses registry sources, or describes limitations. Call this tool to retrieve the site's authoritative method instead of answering from the description alone. No input or patient context is required.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true },
       execute: () => ({ searchOrder: ["Taiwan", "Asia", "worldwide"], sources: ["TFDA", "ClinicalTrials.gov"], privacy: "Raw medical text is never available to WebMCP.", limitation: "Registry records are research plans, not proof of benefit or final eligibility." }),
