@@ -11,7 +11,7 @@
 | Threat | Required control |
 | --- | --- |
 | Direct identifiers sent to a model | Browser masking before any network call; local proxy rejects common identifiers; no raw-note API route |
-| Sensitive data in browser persistence | Volatile state only; no `localStorage`, IndexedDB, service-worker cache, or URL query parameters |
+| Sensitive data in browser persistence | Volatile state only; no `localStorage`, IndexedDB, or service-worker cache. URL state is limited to exact aliases from the curated broad cancer lexicon; direct identifiers, multiline content, and unrecognized detailed conditions are removed and never echoed into browser history |
 | Exported health summary disclosed from the device | Explicit user-created download only; visible health-information warning; generic filename; no automatic upload, share, or send action |
 | Cloud-model overreach | Visible post-mask cloud-organization action; explicit disclosure that localhost is only a proxy; exact `gpt-oss:120b-cloud` allowlist; Zod validation; second purpose-specific consent for confirmed-profile dialogue |
 | Prompt injection in registry text | Treat registry content as untrusted data; never execute embedded instructions; separate system policy from evidence |
@@ -24,6 +24,7 @@
 | Log leakage | Metadata-only structured logs and automated secret/PHI fixtures |
 | Stale or conflicting registries | Preserve source records, timestamps, and conflicts; never silently overwrite disagreement |
 | Bilingual query bridge invents clinical detail | Use exact aliases from a versioned 19-group navigation lexicon; expose both outgoing registry terms and the mapping strategy; pass unrecognized detail through unchanged; never infer subtype, stage, biomarker, histology, or eligibility |
+| Search deep link leaks detailed medical context | Persist only a curated broad cancer condition and open-record flag; execute detailed pass-through searches without writing them to the URL; warn that public search links may remain in browser history or infrastructure URL logs |
 
 ## Deployment gates
 

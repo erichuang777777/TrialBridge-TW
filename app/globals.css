@@ -521,6 +521,17 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .proof-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 30px; }
 .proof-summary span { display: grid; min-height: 96px; align-content: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink-soft); background: var(--surface); font-size: 0.82rem; font-weight: 800; }
 .proof-summary strong { color: var(--primary-strong); font-size: 1.65rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.judge-runbook { margin-bottom: 28px; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.judge-runbook-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.judge-runbook-heading h2 { max-width: 720px; font-size: clamp(1.4rem, 2.6vw, 2rem); }
+.judge-runbook-heading > span { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.75rem; font-weight: 900; }
+.judge-runbook ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
+.judge-runbook li { min-width: 0; display: flex; flex-direction: column; padding: 16px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
+.judge-runbook li > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--surface); background: var(--primary); font-size: 0.72rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.judge-runbook h3 { margin: 13px 0 0; font-size: 0.98rem; }
+.judge-runbook li p { margin: 7px 0 16px; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.55; }
+.judge-runbook li a { min-height: 44px; display: inline-flex; align-items: center; margin-top: auto; color: var(--primary-strong); font-size: 0.8rem; font-weight: 900; }
+.judge-runbook-boundary { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.8rem; }
 .diagnostic-console { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .diagnostic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .diagnostic-heading h2 { font-size: clamp(1.55rem, 3vw, 2.25rem); }
@@ -640,6 +651,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .search-heading, .results-toolbar { align-items: flex-start; flex-direction: column; }
   .source-stack { justify-items: start; }
   .proof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .diagnostic-heading, .self-test-panel { align-items: stretch; flex-direction: column; }
   .diagnostic-status { max-width: none; align-self: flex-start; text-align: left; }
   .diagnostic-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -699,6 +711,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .receipt-heading button { width: 100%; }
   .webmcp-session-receipt li { grid-template-columns: 1fr; gap: 4px; }
   .proof-summary { grid-template-columns: 1fr; }
+  .judge-runbook { padding: 20px; }
+  .judge-runbook-heading { flex-direction: column; }
+  .judge-runbook ol { grid-template-columns: 1fr; }
   .proof-summary span { min-height: 78px; }
   .diagnostic-console { padding: 20px; }
   .diagnostic-check-grid { grid-template-columns: 1fr; }

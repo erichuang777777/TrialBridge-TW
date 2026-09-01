@@ -94,6 +94,9 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const root = process.cwd();
   const page = await readFile(path.join(root, "app", "webmcp", "page.tsx"), "utf8");
   const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
+  const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
+  const searchUrl = await readFile(path.join(root, "lib", "trials", "searchUrl.ts"), "utf8");
+  const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
   const home = await readFile(path.join(root, "app", "page.tsx"), "utf8");
   assert.match(home, /href="\/webmcp"/);
   assert.match(page, /WebMCP, visible and testable/);
@@ -111,6 +114,17 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /19<\/strong> bilingual cancer groups/);
   assert.match(page, /Capability changes leave a payload-free session receipt/);
   assert.match(page, /latest 20 lifecycle events/);
+  assert.match(page, /Four-step judge path/);
+  assert.match(page, /About 5 minutes/);
+  assert.match(page, /\/trials\?condition=%E8%83%83%E7%99%8C/);
+  assert.match(page, /steps 1–3 are built into TrialBridge TW/);
+  assert.match(database, /parsePublicTrialSearchParams/);
+  assert.match(database, /history\.replaceState/);
+  assert.match(database, /not a curated general cancer condition/);
+  assert.match(database, /without storing it in the URL/);
+  assert.match(searchUrl, /hasDirectIdentifiers/);
+  assert.match(searchUrl, /curated_bilingual_cancer_lexicon/);
+  assert.match(css, /\.judge-runbook ol/);
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /getTools/);
   assert.match(diagnostic, /executeTool/);

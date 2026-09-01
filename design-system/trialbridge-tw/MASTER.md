@@ -34,6 +34,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - Patient/caregiver identity is not an intake step or Agent question. The same workflow serves both, with a neutral internal default used only for schema compatibility.
 - Agent-filled declarative forms are never hidden duplicates: the agent uses the visible human form, the active form receives a strong focus treatment, and activation is announced in a nearby status message.
 - Public registry search displays the bilingual query plan before source receipts. Each registry term has an explicit registry label; mapped versus pass-through state uses text plus color, and the two-column plan stacks without horizontal scrolling on small screens.
+- A submitted exact broad cancer alias is reflected in a shareable `/trials?condition=...` URL. Deep links reject direct identifiers, multiline content, and detailed or unrecognized terms; those searches can still run but are not written to history. The deep link uses the same visible declarative WebMCP form rather than a hidden route.
 - Masked note and extracted facts share one review surface. `Confirmed` is a column heading, `Confirm all` sits beside it, and row checkboxes use accessible names without repeated visible labels.
 - Treatment, timing, subtype, stage, disease extent, and biomarker facts receive visible model-review-priority prompts. These prompts never claim an objective probability of correctness.
 - Trial cards show patient-confirmed disease, subtype, stage, biomarker, and age separately from the registry comparison matrix.
@@ -43,6 +44,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - The WebMCP capability layer has one compact, collapsible live-status surface. Its atomic status sentence reports browser support and verified registration; tool names, permission locks, safety boundaries, and judge prompts appear only on disclosure.
 - The disclosed WebMCP session receipt is a compact metadata timeline, not a second live region. It shows UTC time and plain-text lifecycle changes, retains at most 20 events, stacks on small screens, and gives its explicit local JSON download a clear disabled and completion state.
 - Outside the medical workflow, `/webmcp` may provide a dedicated competition-evidence dashboard. It leads with a single contextual status, uses text plus color for every check, progressively discloses execution output, and never requests medical context.
+- The competition dashboard starts with a four-step judge runbook. Numbered cards remain equal-height on desktop, stack to two then one column, and explicitly label the manual Chrome Inspector boundary.
 - Social preview imagery uses the same calm editorial tokens and verified capability facts. It contains no patient imagery, testimonials, outcome claims, or remotely fetched fonts.
 
 ## Prohibited patterns

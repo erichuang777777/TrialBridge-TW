@@ -19,6 +19,7 @@ TrialBridge TW helps people affected by cancer reduce the work of finding and di
 10. After results, the person may preview and explicitly download a local care-team discussion brief. It separates registry facts, uncertain applicability, potential exclusion signals, and questions for clinicians; it is never uploaded or sent by TrialBridge TW.
 11. WebMCP Live keeps a bounded, tab-local lifecycle receipt so a person or judge can see verified capability additions, removals, and execution states. Its optional JSON download contains no health content, prompts, arguments, outputs, or detailed errors.
 12. Every public page has a canonical identity and share preview. Search-engine discovery stays disabled by default and can be enabled only by an explicit reviewed HTTPS deployment profile.
+13. Public registry searches for exact curated broad cancer aliases can be shared as bounded condition URLs and reopen the same visible declarative form. Direct identifiers, multiline content, and detailed or unrecognized terms are never accepted as deep-link state.
 
 ## Audiences
 

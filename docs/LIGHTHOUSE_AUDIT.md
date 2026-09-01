@@ -43,6 +43,16 @@ After adding the fail-closed public-discovery profile, page-specific canonical/s
 
 That profile was exercised only to prove deploy-time behavior; `trialbridge.example` is a reserved synthetic origin, not a claim of publication. Runtime inspection confirmed `index, follow`, five sitemap URLs, `/api/` exclusion, and matching canonical/Open Graph origins. The build artifact was then rebuilt in the default fail-closed profile before handoff.
 
+After adding the four-step in-product judge runbook and curated public-search deep links, default fail-closed production audits recorded:
+
+| Route / viewport | Performance | Accessibility | Best Practices | SEO | CLS | Console errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/webmcp` desktop | 100 | 100 | 100 | 66 | 0 | 0 |
+| `/webmcp#judge-runbook-title` mobile | 98 | 100 | 100 | 66 | 0 | 0 |
+| `/trials?condition=胃癌` desktop | 100 | 100 | 100 | 66 | 0 | 0 |
+
+Final screenshots were inspected at original output size. The first desktop render exposed a global `<nav>` style collision that compressed the runbook heading; the wrapper was changed to a labelled `<section>`, after which four equal-height desktop cards and one-column mobile cards rendered correctly. The trial screenshot visibly contained `胃癌` in the same declarative search field. One initial deep-link audit emitted `NO_NAVSTART` with no valid trace or screenshot; it was discarded and the same live production URL was re-run successfully. SEO remains intentionally below 100 in this table because the handoff artifact is the default `noindex` profile.
+
 Command shape:
 
 ```powershell

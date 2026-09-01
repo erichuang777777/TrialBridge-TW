@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { NormalizedTrial, RegionTier } from "@/lib/trials/types";
 import type { RegistryQueryPlan } from "@/lib/trials/queryBridge";
+import { createPublicTrialSearchPath, defaultPublicTrialCondition, normalizePublicTrialCondition, normalizeShareablePublicTrialCondition, parsePublicTrialSearchParams } from "@/lib/trials/searchUrl";
 import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput";
 
 type SearchResponse = {
@@ -33,24 +34,39 @@ function regionLabel(region: RegionTier) {
 }
 
 export function TrialDatabase() {
-  const [query, setQuery] = useState("breast cancer");
-  const [submittedQuery, setSubmittedQuery] = useState("breast cancer");
+  const [query, setQuery] = useState(defaultPublicTrialCondition);
+  const [submittedQuery, setSubmittedQuery] = useState(defaultPublicTrialCondition);
   const [includeNotOpen, setIncludeNotOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<"all" | RegionTier>("all");
   const [result, setResult] = useState<SearchResponse>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [urlNotice, setUrlNotice] = useState("");
   const [declarativeNotice, setDeclarativeNotice] = useState("");
   const [declarativeActive, setDeclarativeActive] = useState(false);
   const initialSearchStarted = useRef(false);
 
-  async function search(condition: string, includeClosed = includeNotOpen): Promise<unknown> {
-    const normalized = condition.trim();
-    if (normalized.length < 2) return { error: "Condition must contain at least two characters." };
+  async function search(condition: string, includeClosed = includeNotOpen, syncUrl = true): Promise<unknown> {
+    const normalized = normalizePublicTrialCondition(condition);
+    if (!normalized) {
+      const message = "Use one general cancer condition without names, contact details, record numbers, or line breaks.";
+      setLoading(false);
+      setError(message);
+      return { error: message };
+    }
     setLoading(true);
     setError("");
     setSelectedRegion("all");
     setSubmittedQuery(normalized);
+    if (syncUrl) {
+      if (normalizeShareablePublicTrialCondition(normalized)) {
+        setUrlNotice("");
+        window.history.replaceState(window.history.state, "", createPublicTrialSearchPath(normalized, includeClosed));
+      } else {
+        setUrlNotice("This detailed or unrecognized condition is being searched without storing it in the URL.");
+        window.history.replaceState(window.history.state, "", "/trials");
+      }
+    }
     try {
       const response = await fetch("/api/trials/search", {
         method: "POST",
@@ -86,7 +102,15 @@ export function TrialDatabase() {
   useEffect(() => {
     if (initialSearchStarted.current) return;
     initialSearchStarted.current = true;
-    void search("breast cancer", false);
+    const urlState = parsePublicTrialSearchParams(window.location.search);
+    setQuery(urlState.condition);
+    setIncludeNotOpen(urlState.includeNotOpen);
+    if (urlState.rejectedCondition) setUrlNotice("The shared search condition was removed because it was not a curated general cancer condition. Enter a broad cancer type without identifiers.");
+    if (window.location.search) {
+      const safePath = urlState.hasExplicitCondition && !urlState.rejectedCondition ? createPublicTrialSearchPath(urlState.condition, urlState.includeNotOpen) : "/trials";
+      window.history.replaceState(window.history.state, "", safePath);
+    }
+    void search(urlState.condition, urlState.includeNotOpen, false);
   }, []);
 
   useEffect(() => {
@@ -120,6 +144,7 @@ export function TrialDatabase() {
           <div className="source-stack"><span className="source-pill">TFDA + ClinicalTrials.gov</span><span className="webmcp-form-pill">Declarative WebMCP</span></div>
         </div>
         {declarativeNotice && <p className="agent-form-notice" role="status" aria-atomic="true">{declarativeNotice}</p>}
+        {urlNotice && <p className="agent-form-notice" role="status" aria-atomic="true">{urlNotice}</p>}
         <label htmlFor="trial-condition">Cancer type or condition</label>
         <div className="search-row">
           <input id="trial-condition" name="condition" type="search" value={query} onChange={(event) => setQuery(event.target.value)} minLength={2} maxLength={120} required toolparamdescription="General non-sensitive cancer condition; never paste a medical record or identifier." />
