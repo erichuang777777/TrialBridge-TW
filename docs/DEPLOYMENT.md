@@ -2,7 +2,7 @@
 
 ## Windows local run
 
-1. Install Ollama and pull a validated local model. The current default is `medgemma-cpu:latest`.
+1. Install Ollama and pull a validated local GPU model. The current default is `medgemma:4b`; `medgemma-cpu:latest` is an explicit, slower fallback only.
 2. Run `ollama signin` only if optional cloud dialogue will be tested.
 3. Copy `.env.example` to `.env.local`; do not add patient data or provider API keys.
 4. Run `npm install`, then `npm run dev`.

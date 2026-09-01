@@ -8,7 +8,7 @@ The local extraction endpoint accepts only the strict `{ maskedText, subjectRole
 
 ## Ollama
 
-`/api/local-model/extract` connects only to unauthenticated HTTP loopback addresses (`127.0.0.1`, `localhost`, or `::1`). `OLLAMA_BASE_URL` cannot target a LAN or internet host. `OLLAMA_LOCAL_MODEL` defaults to the CPU-safe `medgemma-cpu:latest`; a validated local GPU model can be selected explicitly. Names ending in `:cloud` are forbidden for extraction.
+`/api/local-model/extract` connects only to unauthenticated HTTP loopback addresses (`127.0.0.1`, `localhost`, or `::1`). `OLLAMA_BASE_URL` cannot target a LAN or internet host. `OLLAMA_LOCAL_MODEL` defaults to the local GPU model `medgemma:4b`. It has a 60-second hard limit and does not silently fall back. After a GPU failure, the person may explicitly choose the slower `OLLAMA_CPU_MODEL` for that attempt. Names ending in `:cloud` are forbidden for extraction.
 
 This architecture is intended for local development and self-hosted use. A public website cannot assume that its server-side route reaches the visitor's computer. A reviewed local companion bridge is required before public deployment of this privacy boundary.
 
@@ -18,7 +18,9 @@ Ollama runs in JSON mode with a compact field contract, and the application then
 
 The model must represent missing information as questions and may not diagnose, recommend treatment, claim benefit, reconstruct identifiers, or decide eligibility.
 
-The default CPU model completed a synthetic five-fact extraction on the development machine, but took about one minute. This proves the local boundary works; it does not meet the desired conversational latency. GPU compatibility or a smaller validated local extraction model remains a performance gate.
+The CPU model completed a synthetic five-fact extraction on the development machine, but took about one minute. GPU attempts currently fail because the installed Ollama CUDA runtime reports an unsupported PTX toolchain on the GTX 1050 Ti. This is now surfaced as a bounded, recoverable error rather than an indefinite loading state. Updating the GPU driver/runtime or validating a compatible Ollama build remains a performance gate.
+
+`gpt-oss:120b-cloud` can be reached through the localhost Ollama proxy, but inference is still remote. It is therefore limited to separately approved dialogue over the confirmed, minimized summary and is never an extraction fallback.
 
 ## Human confirmation
 

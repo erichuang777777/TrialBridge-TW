@@ -22,13 +22,14 @@ export type ChatEvent =
   | { type: "MASK_COMPLETE"; result: MaskResult }
   | { type: "BACK_TO_CAPTURE" }
   | { type: "EXTRACTION_START" }
+  | { type: "EXTRACTION_CANCEL" }
   | { type: "EXTRACTION_SUCCESS"; draft: ProfileDraft }
   | { type: "EXTRACTION_FAILURE"; message: string }
   | { type: "CONFIRM_SUCCESS"; profile: ConfirmedProfile }
   | { type: "UPDATE_CONFIRMED_PROFILE"; profile: ConfirmedProfile }
   | { type: "RESET" };
 
-export const initialChatState: ChatState = { stage: "role", language: "zh-Hant", rawText: "" };
+export const initialChatState: ChatState = { stage: "role", language: "en", rawText: "" };
 
 export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
   switch (event.type) {
@@ -47,6 +48,10 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
     case "EXTRACTION_START":
       return state.stage === "mask_review" && state.maskResult
         ? { ...state, stage: "extracting", rawText: "", error: undefined }
+        : state;
+    case "EXTRACTION_CANCEL":
+      return state.stage === "extracting"
+        ? { ...state, stage: "mask_review", error: undefined }
         : state;
     case "EXTRACTION_SUCCESS":
       return state.stage === "extracting" ? { ...state, stage: "confirmation", draft: event.draft } : state;

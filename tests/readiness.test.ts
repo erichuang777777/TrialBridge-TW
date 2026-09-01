@@ -15,11 +15,14 @@ test("accessibility foundation includes skip link, focus, touch size, and reduce
   const root = process.cwd();
   const layout = await readFile(path.join(root, "app", "layout.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
+  const instrumentation = await readFile(path.join(root, "instrumentation-client.ts"), "utf8");
   assert.match(layout, /skip-link/);
-  assert.match(layout, /lang="zh-Hant-TW"/);
+  assert.match(layout, /lang="en"/);
   assert.match(css, /focus-visible/);
   assert.match(css, /min-height:\s*48px/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(instrumentation, /bis_skin_checked\|bis_register\|__processed_/);
+  assert.doesNotMatch(layout, /suppressHydrationWarning/);
 });
 
 test("no browser persistence API is used in product code", async () => {

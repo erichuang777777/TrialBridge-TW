@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   extractProfileLocally,
+  validatedCpuFallbackModel,
   validatedLocalModel,
   validatedLoopbackBaseUrl,
 } from "../lib/llm/ollama.ts";
@@ -62,7 +63,10 @@ test("Ollama endpoint is loopback-only and cloud extraction models are forbidden
   assert.throws(() => validatedLoopbackBaseUrl("https://example.com"), /loopback/);
   assert.throws(() => validatedLoopbackBaseUrl("http://192.168.1.10:11434"), /loopback/);
   assert.equal(validatedLocalModel("medgemma:4b"), "medgemma:4b");
+  assert.equal(validatedLocalModel(), "medgemma:4b");
+  assert.equal(validatedCpuFallbackModel(), "medgemma-cpu:latest");
   assert.throws(() => validatedLocalModel("qwen3.5:cloud"), /forbidden/);
+  assert.throws(() => validatedLocalModel("gpt-oss:120b-cloud"), /forbidden/);
 });
 
 test("local extraction sends only masked text and validates the returned draft", async () => {
@@ -79,6 +83,7 @@ test("local extraction sends only masked text and validates the returned draft",
   }, mockFetch);
   assert.equal(draft.facts[0].confirmed, false);
   assert.equal(requestBody?.format, "json");
+  assert.equal(requestBody?.model, "medgemma:4b");
   const messages = requestBody?.messages as Array<{ role: string; content: string }>;
   assert.equal(messages.at(-1)?.content.includes("[MASKED_NAME_1]"), true);
   assert.equal(JSON.stringify(requestBody).includes("patient@example.com"), false);

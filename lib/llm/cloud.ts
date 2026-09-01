@@ -10,9 +10,9 @@ export const cloudDialogueRequestSchema = z.object({
   language: z.enum(["zh-Hant", "en"]),
 }).strict();
 
-export function validatedCloudModel(value = process.env.OLLAMA_CLOUD_MODEL ?? "qwen3.5:cloud"): string {
+export function validatedCloudModel(value = process.env.OLLAMA_CLOUD_MODEL ?? "gpt-oss:120b-cloud"): string {
   const model = value.trim();
-  if (!/^[a-z0-9][a-z0-9._/-]*:cloud$/i.test(model)) throw new Error("Dialogue model must be an Ollama cloud model");
+  if (!/^[a-z0-9][a-z0-9._/-]*:(?:[a-z0-9._-]+-)?cloud$/i.test(model)) throw new Error("Dialogue model must be an Ollama cloud model");
   return model;
 }
 

@@ -9,6 +9,7 @@ const confirmed = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z
 test("cloud dialogue requires separate approval and a cloud-suffixed model", () => {
   assert.equal(cloudDialogueRequestSchema.safeParse({ profile: confirmed, question: "請解釋", trials: [], language: "zh-Hant" }).success, false);
   assert.equal(validatedCloudModel("qwen3.5:cloud"), "qwen3.5:cloud");
+  assert.equal(validatedCloudModel(), "gpt-oss:120b-cloud");
   assert.throws(() => validatedCloudModel("medgemma-cpu:latest"), /cloud model/);
 });
 

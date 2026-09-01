@@ -1,4 +1,4 @@
-import { extractProfileLocally, localExtractionRequestSchema } from "@/lib/llm/ollama";
+import { extractProfileLocallyWithMetadata, LocalExtractionError, localExtractionRequestSchema } from "@/lib/llm/ollama";
 import { hasDirectIdentifiers } from "@/lib/privacy/mask";
 
 export const runtime = "nodejs";
@@ -21,14 +21,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const draft = await extractProfileLocally(parsed.data);
-    return Response.json({ draft, processing: "local-ollama", persisted: false }, {
+    const result = await extractProfileLocallyWithMetadata(parsed.data, fetch, request.signal);
+    return Response.json({ ...result, processing: "local-ollama", persisted: false }, {
       headers: { "Cache-Control": "no-store", "X-TrialBridge-Processing": "local-ollama" },
     });
   } catch (error) {
-    const message = error instanceof Error && error.message.startsWith("Local Ollama returned")
-      ? error.message
-      : "Local extraction failed or returned an invalid draft.";
-    return Response.json({ error: message }, { status: 503 });
+    if (error instanceof LocalExtractionError) {
+      return Response.json({ error: error.message, code: error.code, model: error.model }, { status: 503 });
+    }
+    return Response.json({ error: "Local extraction failed or returned an invalid draft.", code: "LOCAL_MODEL_ERROR" }, { status: 503 });
   }
 }

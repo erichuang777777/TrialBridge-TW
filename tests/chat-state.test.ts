@@ -9,6 +9,10 @@ const draft = profileDraftSchema.parse({
   missingQuestions: [], safetyNote: "待本人確認，不是醫療建議或資格判定。",
 });
 
+test("English is the first-display language", () => {
+  assert.equal(initialChatState.language, "en");
+});
+
 test("chat state cannot skip privacy, masking, extraction, or confirmation", () => {
   assert.equal(chatReducer(initialChatState, { type: "ACCEPT_PRIVACY" }).stage, "role");
   const role = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
@@ -32,6 +36,17 @@ test("raw text is discarded when local extraction begins", () => {
   assert.equal(state.stage, "ready");
   assert.equal(state.draft, undefined);
   assert.equal(state.maskResult, undefined);
+});
+
+test("a cancelled extraction returns to the masked review", () => {
+  let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
+  state = chatReducer(state, { type: "ACCEPT_PRIVACY" });
+  state = chatReducer(state, { type: "SET_RAW_TEXT", value: "synthetic medical text long enough" });
+  state = chatReducer(state, { type: "MASK_COMPLETE", result: { maskedText: "synthetic medical text long enough", findings: [] } });
+  state = chatReducer(state, { type: "EXTRACTION_START" });
+  state = chatReducer(state, { type: "EXTRACTION_CANCEL" });
+  assert.equal(state.stage, "mask_review");
+  assert.equal(state.maskResult?.maskedText, "synthetic medical text long enough");
 });
 
 test("reset clears anonymous session data but keeps language preference in memory", () => {

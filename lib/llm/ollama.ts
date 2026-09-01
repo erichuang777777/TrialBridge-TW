@@ -34,9 +34,10 @@ export const localExtractionRequestSchema = z.object({
   maskedText: z.string().trim().min(20).max(30_000),
   subjectRole: z.enum(["patient", "caregiver"]),
   language: z.enum(["zh-Hant", "en", "mixed"]),
+  modelPreference: z.enum(["gpu", "cpu"]).default("gpu"),
 }).strict();
 
-export type LocalExtractionRequest = z.infer<typeof localExtractionRequestSchema>;
+export type LocalExtractionRequest = z.input<typeof localExtractionRequestSchema>;
 
 export function validatedLoopbackBaseUrl(value = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434"): URL {
   const url = new URL(value);
@@ -47,11 +48,35 @@ export function validatedLoopbackBaseUrl(value = process.env.OLLAMA_BASE_URL ?? 
   return url;
 }
 
-export function validatedLocalModel(value = process.env.OLLAMA_LOCAL_MODEL ?? "medgemma-cpu:latest"): string {
+function validatedExtractionModel(value: string): string {
   const model = value.trim();
   if (!/^[a-z0-9][a-z0-9._/-]*(?::[a-z0-9._-]+)?$/i.test(model)) throw new Error("Invalid Ollama model name");
-  if (model.toLocaleLowerCase("en").endsWith(":cloud")) throw new Error("Cloud models are forbidden for raw extraction");
+  if (/:(?:[a-z0-9._-]+-)?cloud$/i.test(model)) throw new Error("Cloud models are forbidden for raw extraction");
   return model;
+}
+
+export function validatedLocalModel(value = process.env.OLLAMA_LOCAL_MODEL ?? "medgemma:4b"): string {
+  return validatedExtractionModel(value);
+}
+
+export function validatedCpuFallbackModel(value = process.env.OLLAMA_CPU_MODEL ?? "medgemma-cpu:latest"): string {
+  return validatedExtractionModel(value);
+}
+
+export class LocalExtractionError extends Error {
+  readonly code: "GPU_UNAVAILABLE" | "MODEL_TIMEOUT" | "LOCAL_MODEL_ERROR";
+  readonly model: string;
+
+  constructor(
+    message: string,
+    code: "GPU_UNAVAILABLE" | "MODEL_TIMEOUT" | "LOCAL_MODEL_ERROR",
+    model: string,
+  ) {
+    super(message);
+    this.name = "LocalExtractionError";
+    this.code = code;
+    this.model = model;
+  }
 }
 
 function extractionSystemPrompt(language: LocalExtractionRequest["language"], role: LocalExtractionRequest["subjectRole"]): string {
@@ -83,28 +108,60 @@ export async function extractProfileLocally(
   input: LocalExtractionRequest,
   fetcher: typeof fetch = fetch,
 ): Promise<ProfileDraft> {
+  const result = await extractProfileLocallyWithMetadata(input, fetcher);
+  return result.draft;
+}
+
+export async function extractProfileLocallyWithMetadata(
+  input: LocalExtractionRequest,
+  fetcher: typeof fetch = fetch,
+  requestSignal?: AbortSignal,
+): Promise<{ draft: ProfileDraft; model: string; accelerator: "gpu" | "cpu" }> {
   const parsedInput = localExtractionRequestSchema.parse(input);
+  const accelerator = parsedInput.modelPreference;
+  const model = accelerator === "gpu" ? validatedLocalModel() : validatedCpuFallbackModel();
   const baseUrl = validatedLoopbackBaseUrl();
   const endpoint = new URL("/api/chat", baseUrl);
-  const response = await fetcher(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: validatedLocalModel(),
-      stream: false,
-      format: "json",
-      options: { temperature: 0.1, num_predict: 1024 },
-      messages: [
-        { role: "system", content: extractionSystemPrompt(parsedInput.language, parsedInput.subjectRole) },
-        { role: "user", content: parsedInput.maskedText },
-      ],
-    }),
-    signal: AbortSignal.timeout(180_000),
-  });
-  if (!response.ok) throw new Error(`Local Ollama returned HTTP ${response.status}`);
+  const timeoutSignal = AbortSignal.timeout(accelerator === "gpu" ? 60_000 : 150_000);
+  const signal = requestSignal ? AbortSignal.any([requestSignal, timeoutSignal]) : timeoutSignal;
+  let response: Response;
+  try {
+    response = await fetcher(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        stream: false,
+        format: "json",
+        keep_alive: "2m",
+        options: { temperature: 0.1, num_predict: 1024 },
+        messages: [
+          { role: "system", content: extractionSystemPrompt(parsedInput.language, parsedInput.subjectRole) },
+          { role: "user", content: parsedInput.maskedText },
+        ],
+      }),
+      signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      throw new LocalExtractionError("The local model did not finish before the time limit.", "MODEL_TIMEOUT", model);
+    }
+    throw new LocalExtractionError("The local Ollama connection failed.", "LOCAL_MODEL_ERROR", model);
+  }
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    const gpuFailure = accelerator === "gpu" && /cuda|ptx|llama-server process no longer running|gpu/i.test(detail);
+    throw new LocalExtractionError(
+      gpuFailure
+        ? "The local GPU model could not start because the Ollama CUDA runtime is incompatible with this device."
+        : `Local Ollama returned HTTP ${response.status}.`,
+      gpuFailure ? "GPU_UNAVAILABLE" : "LOCAL_MODEL_ERROR",
+      model,
+    );
+  }
   const payload = ollamaResponseSchema.parse(await response.json());
   const extracted = modelExtractionSchema.parse(parseJsonContent(payload.message.content));
-  return profileDraftSchema.parse({
+  const draft = profileDraftSchema.parse({
     schemaVersion: "1.0",
     language: parsedInput.language,
     subjectRole: parsedInput.subjectRole,
@@ -122,18 +179,20 @@ export async function extractProfileLocally(
       ? "This is a draft for your correction, not medical advice or a final trial eligibility decision."
       : "這是供您修正的草稿，不是醫療建議，也不是最終臨床試驗資格判定。",
   });
+  return { draft, model, accelerator };
 }
 
-export async function localOllamaStatus(fetcher: typeof fetch = fetch): Promise<{ available: boolean; model: string }> {
+export async function localOllamaStatus(fetcher: typeof fetch = fetch): Promise<{ available: boolean; model: string; cpuModel: string }> {
   const model = validatedLocalModel();
+  const cpuModel = validatedCpuFallbackModel();
   try {
     const response = await fetcher(new URL("/api/tags", validatedLoopbackBaseUrl()), {
       headers: { Accept: "application/json" }, signal: AbortSignal.timeout(3_000),
     });
-    if (!response.ok) return { available: false, model };
+    if (!response.ok) return { available: false, model, cpuModel };
     const payload = z.object({ models: z.array(z.object({ name: z.string() })) }).parse(await response.json());
-    return { available: payload.models.some((candidate) => candidate.name === model), model };
+    return { available: payload.models.some((candidate) => candidate.name === model), model, cpuModel };
   } catch {
-    return { available: false, model };
+    return { available: false, model, cpuModel };
   }
 }
