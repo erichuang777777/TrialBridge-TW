@@ -23,6 +23,8 @@ WebMCP and ordinary HTTP cancellation propagate through `request.signal` to regi
 
 `POST /api/cloud/probe` is the separate opt-in availability check. It accepts no request body, uses only a fixed repository-owned synthetic prompt, calls `gpt-oss:120b-cloud` through the loopback Ollama proxy, and stops after 30 seconds. It returns requested/reported model, transport class, latency, and UTC check time; it never returns or stores model content. The MVP allows three provider calls per process/address per 10 minutes. A successful probe proves only that this server reached a provider response at that moment—it does not establish provider retention terms, legal acceptance, production SLA, clinical accuracy, or Chrome WebMCP Inspector behavior.
 
+`GET /webmcp/evidence.json` is a force-static public competition artifact with a five-minute cache policy. It contains capability metadata, evidence classes, source paths/links, and selection-artifact digests only. It reads no request, browser session, note, profile, results, or chat; the separate user-downloaded browser diagnostic receipt remains the only current-browser evidence artifact.
+
 Before release, resolve every item in `READINESS.md`, host TFDA snapshots outside request-time decompression, replace process-local limits with distributed rate limiting and payload-free monitoring, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
 
 ### Public discovery profile

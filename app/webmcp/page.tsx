@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPageMetadata } from "@/lib/site/metadata";
+import { webMcpCapabilityInventory } from "@/lib/webmcp/capabilityInventory";
 import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
 import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandscape";
+import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBundle";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
@@ -11,17 +13,6 @@ export const metadata: Metadata = createPageMetadata({
   description: "Inspect TrialBridge TW's declarative and imperative WebMCP capabilities, live browser diagnostics, tool-selection evidence, and authority boundaries.",
   path: "/webmcp",
 });
-
-const tools = [
-  { name: "search_public_trial_form", kind: "Declarative", availability: "Visible on /trials", boundary: "Public condition only" },
-  { name: "trialbridge_method", kind: "Imperative", availability: "Always public", boundary: "No patient context" },
-  { name: "search_public_cancer_trials", kind: "Imperative", availability: "Always public", boundary: "Bilingual query plan · untrusted registry output" },
-  { name: "review_trial_followups", kind: "Imperative", availability: "Permission-gated", boundary: "Questions only · never records answers" },
-  { name: "explain_confirmed_matches", kind: "Imperative", availability: "Permission-gated", boundary: "Confirmed, de-identified context only" },
-  { name: "draft_trial_outreach", kind: "Imperative", availability: "Permission-gated", boundary: "Creates an unsent draft" },
-  { name: "draft_trial_discussion_brief", kind: "Imperative", availability: "Permission-gated", boundary: "Local care-team brief · never sent" },
-  { name: "compare_shortlisted_trials", kind: "Imperative", availability: "2–3 visible selections", boundary: "Reads only the user-controlled shortlist" },
-];
 
 const baselineJourneyCount = selectionBaseline.summary.samples / selectionBaseline.repetitions;
 
@@ -99,6 +90,21 @@ export default function WebMcpProofPage() {
       <div className="standards-receipt"><p><strong>Compatibility profile audited <time dateTime="2026-09-02">2026-09-02</time></strong><span><code>webmcp-types@0.1.5</code> · upstream draft and Chromium main checked separately</span></p><div><a href="https://webmachinelearning.github.io/webmcp/" target="_blank" rel="noreferrer">WebMCP draft</a><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Chrome guide</a><a href="https://developer.chrome.com/docs/ai/webmcp/secure-tools" target="_blank" rel="noreferrer">Security guide</a></div></div>
     </section>
 
+    <section className="proof-section conformance-evidence" aria-labelledby="conformance-title">
+      <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, the recorded cloud-model eval, and the remaining manual Inspector gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>
+      <div className="conformance-summary" aria-label="Conformance evidence summary">
+        <article><strong>{webMcpJudgeBundle.summary.repositoryVerified}</strong><span>Repository verified</span></article>
+        <article><strong>{webMcpJudgeBundle.summary.recordedModelEval}</strong><span>Recorded model eval</span></article>
+        <article><strong>{webMcpJudgeBundle.summary.manualGate}</strong><span>Manual Inspector gate</span></article>
+      </div>
+      <div className="conformance-matrix" role="list">{webMcpConformanceMatrix.map((item) => <article key={item.id} role="listitem">
+        <div className={`conformance-state matrix-${item.evidenceClass}`}><span aria-hidden="true" /><strong>{item.evidenceLabel}</strong><small>{item.id}</small></div>
+        <div><h3>{item.requirement}</h3><p>{item.implementation}</p></div>
+        <div className="conformance-source"><span>Evidence</span>{item.evidence.map((entry) => entry.startsWith("https://") ? <a key={entry} href={entry} target="_blank" rel="noreferrer">Chrome documentation</a> : <code key={entry}>{entry}</code>)}</div>
+      </article>)}</div>
+      <div className="judge-bundle-download"><div><strong>Download the static judge bundle</strong><p>Contains this matrix, capability inventory, source links, audit metadata, and recorded artifact digests. It reads no browser session, note, profile, results, or chat.</p></div><a className="secondary-action action-link" href="/webmcp/evidence.json" download={`trialbridge-webmcp-judge-bundle-${webMcpJudgeBundle.auditedAt}.json`}>Download evidence JSON</a></div>
+    </section>
+
     <section className="proof-section implementation-evidence" aria-labelledby="implementation-evidence-title">
       <div className="proof-section-heading"><p className="eyebrow">Implementation landscape</p><h2 id="implementation-evidence-title">The proposed standard is already crossing agent hosts.</h2><p>This is dated ecosystem evidence, not a compatibility claim about the browser currently viewing this page. Each status links to its primary project source.</p></div>
       <div className="implementation-grid" role="list">{webMcpImplementationLandscape.entries.map((entry) => <article key={entry.platform} role="listitem">
@@ -132,7 +138,7 @@ export default function WebMcpProofPage() {
 
     <section className="proof-section" aria-labelledby="tool-inventory-title">
       <div className="proof-section-heading"><p className="eyebrow">Capability inventory</p><h2 id="tool-inventory-title">The site declares exactly what an agent may do.</h2></div>
-      <div className="tool-inventory" role="list">{tools.map((tool) => <article key={tool.name} role="listitem"><div><code>{tool.name}</code><span>{tool.kind}</span></div><strong>{tool.availability}</strong><p>{tool.boundary}</p></article>)}</div>
+      <div className="tool-inventory" role="list">{webMcpCapabilityInventory.map((tool) => <article key={tool.name} role="listitem"><div><code>{tool.name}</code><span>{tool.kind}</span></div><strong>{tool.availability}</strong><p>{tool.boundary}</p></article>)}</div>
     </section>
 
     <section className="proof-section proof-guardrails" aria-labelledby="guardrails-title">

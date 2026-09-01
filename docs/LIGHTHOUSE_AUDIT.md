@@ -100,6 +100,17 @@ After propagating imperative WebMCP cancellation to the registry adapters and ad
 
 All accepted reports used an explicitly managed headless Chrome debugging session. Two desktop trace attempts on one reused Chrome session returned `NO_NAVSTART` and were discarded because they contained no navigation metrics; the successful desktop audit used a fresh managed Chrome session and exited with a complete report. The user development server on port 3001 remained available throughout.
 
+After adding the nine-row judge conformance matrix and static `/webmcp/evidence.json` bundle, production Lighthouse exercised the canonical page and fragment-targeted visual state separately. The canonical 375×812 and 844×390 runs measure ordinary page entry; default-mobile and desktop fragment runs ensure the evidence section is captured. All four accepted reports had Accessibility 100, Best Practices 100, CLS 0, zero console errors, and zero non-composited-animation findings.
+
+| `/webmcp` run | Performance | Accessibility | Best Practices | FCP | LCP | TBT | CLS | Console errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Default mobile, evidence fragment | 96 | 100 | 100 | 1.4 s | 2.5 s | 140 ms | 0 | 0 |
+| Canonical explicit 375×812 | 91 | 100 | 100 | 1.1 s | 2.5 s | 290 ms | 0 | 0 |
+| Canonical 844×390 landscape | 96 | 100 | 100 | 1.2 s | 2.5 s | 130 ms | 0 | 0 |
+| Desktop, evidence fragment | 100 | 100 | 100 | 0.3 s | 0.5 s | 0 ms | 0 | 0 |
+
+Two fragment-targeted visual runs are also retained rather than hidden: explicit 375×812 scored 89 with TBT 350 ms, and 844×390 scored 88 with TBT 380 ms. Main-thread comparison showed lower total style/layout work than the preceding build, so these slower scores reflect long-task distribution while scrolling directly to the deeper fragment rather than an increase in total main-thread work. Their original-size screenshots were visually inspected: status counts stack on mobile, evidence rows become a readable single column, multi-column titles and paths align at 844px and desktop, long paths wrap, and no horizontal clipping is present. The static JSON response was separately verified at 6,629 bytes with `application/json`, nine conformance items, `containsHealthInformation: false`, and `readsMedicalWorkflowState: false`.
+
 Command shape:
 
 ```powershell

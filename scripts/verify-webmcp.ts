@@ -13,6 +13,8 @@ import { webMcpCriticalJourney } from "../lib/webmcp/criticalJourney.ts";
 import { createWebMcpDiagnosticReceipt } from "../lib/webmcp/diagnosticReceipt.ts";
 import { cloudProbeTimeoutMs } from "../lib/llm/cloudProbe.ts";
 import { webMcpImplementationLandscape } from "../lib/webmcp/implementationLandscape.ts";
+import { webMcpCapabilityInventory } from "../lib/webmcp/capabilityInventory.ts";
+import { webMcpConformanceMatrix, webMcpJudgeBundle } from "../lib/webmcp/judgeBundle.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -219,6 +221,13 @@ for (const marker of ["options.signal", "request.signal", "AbortSignal.any", "th
 check(webMcpImplementationLandscape.auditedAt === "2026-09-02" && webMcpImplementationLandscape.upstreamCommit === "41d12f0", "Implementation landscape audit metadata is stale.");
 check(webMcpImplementationLandscape.entries.some((entry) => entry.platform === "ChatGPT Desktop" && entry.status === "supported"), "Implementation landscape must include upstream-reported ChatGPT Desktop support.");
 check(webMcpImplementationLandscape.evidenceBoundary.includes("not treat these entries as local runtime verification"), "Implementation landscape must preserve its source-reported evidence boundary.");
+check(webMcpCapabilityInventory.length === 8 && webMcpCapabilityInventory.filter((tool) => tool.kind === "Declarative").length === 1, "Judge capability inventory must contain one declarative and seven imperative capabilities.");
+check(webMcpCapabilityInventory.filter((tool) => tool.kind === "Imperative").map((tool) => tool.name).sort().join("|") === [...names].sort().join("|"), "Judge capability inventory must match the executable imperative tool set.");
+check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "repository_verified").length === 7, "Judge matrix must expose seven repository-verified conformance items.");
+check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_model_eval").length === 1, "Judge matrix must distinguish the recorded model evaluation.");
+check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length === 1, "Judge matrix must retain the manual Inspector gate.");
+check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
+check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
 
 if (findings.length > 0) {
   console.error(findings.join("\n"));
@@ -245,6 +254,8 @@ if (findings.length > 0) {
     executionCancellation: "agent-to-registry",
     implementationLandscape: webMcpImplementationLandscape.entries.length,
     implementationLandscapeAudit: webMcpImplementationLandscape.auditedAt,
+    judgeConformanceItems: webMcpConformanceMatrix.length,
+    judgeBundle: "static-json-no-health-data",
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

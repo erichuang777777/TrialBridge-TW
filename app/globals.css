@@ -634,6 +634,30 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .standards-receipt p code { color: var(--ink); font-size: 0.9em; }
 .standards-receipt > div { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 6px 16px; }
 .standards-receipt a { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.76rem; font-weight: 900; }
+.conformance-evidence .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
+.conformance-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
+.conformance-summary article { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.conformance-summary strong { color: var(--primary-strong); font-size: 1.25rem; }
+.conformance-summary span { color: var(--ink-soft); font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.conformance-matrix { margin-top: 10px; border: 1px solid var(--line); border-radius: 11px; overflow: hidden; background: var(--surface); }
+.conformance-matrix > article { display: grid; grid-template-columns: minmax(150px, 0.62fr) minmax(210px, 1fr) minmax(260px, 1.2fr); gap: 18px; align-items: center; padding: 15px 17px; }
+.conformance-matrix > article + article { border-top: 1px solid var(--line); }
+.conformance-state { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-width: 0; }
+.conformance-state > span { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 3px var(--mint); }
+.conformance-state strong { font-size: 0.74rem; line-height: 1.3; }
+.conformance-state small { color: var(--ink-soft); font-size: 0.68rem; font-weight: 900; }
+.matrix-recorded_model_eval > span { background: var(--focus); box-shadow: 0 0 0 3px var(--warning); }
+.matrix-manual_gate > span { background: var(--match-missing); box-shadow: 0 0 0 3px var(--paper); }
+.conformance-matrix > article > div:nth-child(2) { min-width: 0; text-align: left; }
+.conformance-matrix h3 { margin: 0; font-size: 0.9rem; }
+.conformance-matrix p { margin: 5px 0 0; color: var(--ink-soft); font-size: 0.78rem; line-height: 1.55; }
+.conformance-source { display: flex; flex-wrap: wrap; gap: 5px 8px; min-width: 0; }
+.conformance-source > span { flex-basis: 100%; color: var(--ink-soft); font-size: 0.64rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+.conformance-source code, .conformance-source a { color: var(--ink); font-size: 0.68rem; overflow-wrap: anywhere; }
+.conformance-source a { min-height: 44px; display: inline-flex; align-items: center; font-weight: 900; }
+.judge-bundle-download { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 10px; padding: 17px; border-left: 3px solid var(--primary); background: var(--mint); }
+.judge-bundle-download p { max-width: 70ch; margin: 5px 0 0; color: var(--ink-soft); font-size: 0.79rem; line-height: 1.6; }
+.judge-bundle-download .action-link { flex: 0 0 auto; margin: 0; background: var(--surface); }
 .implementation-evidence .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
 .implementation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 26px; }
 .implementation-grid article { min-width: 0; display: flex; flex-direction: column; padding: 19px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
@@ -749,6 +773,11 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .self-test-panel .primary-action { width: 100%; }
   .standards-receipt, .selection-evidence-heading, .selection-receipt, .implementation-boundary { align-items: stretch; flex-direction: column; }
   .standards-receipt > div { flex-basis: auto; }
+  .conformance-summary { grid-template-columns: 1fr; }
+  .conformance-matrix > article { grid-template-columns: 1fr; gap: 10px; }
+  .conformance-state { grid-template-columns: 8px minmax(0, 1fr) auto; }
+  .judge-bundle-download { align-items: stretch; flex-direction: column; }
+  .judge-bundle-download .action-link { width: 100%; }
   .implementation-grid { grid-template-columns: 1fr; }
   .implementation-grid article > div { min-height: 0; }
   .implementation-boundary span { text-align: left; }
