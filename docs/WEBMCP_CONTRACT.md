@@ -18,6 +18,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 
 - `explain_confirmed_matches` reads the current confirmed, de-identified comparison state.
 - `draft_trial_outreach` creates an unsent outreach draft from a current match and confirmed summary.
+- `draft_trial_discussion_brief` creates but never sends a bounded care-team brief from confirmed facts and current source-linked comparisons. It labels registry evidence, unknowns, and non-eligibility explicitly.
 
 ## Security invariants
 

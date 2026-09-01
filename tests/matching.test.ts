@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { assessTrial, deriveConditionQuery } from "../lib/matching/engine.ts";
 import { createOutreachDraft } from "../lib/matching/outreach.ts";
+import { createTrialDiscussionBrief } from "../lib/matching/discussionBrief.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
 import { ctgovFixture } from "./fixtures/registry.ts";
@@ -31,6 +32,32 @@ test("outreach is an unsent bilingual draft without direct identifiers", () => {
   assert.match(draftMessage.body, /尚未寄出/);
   assert.match(draftMessage.body, /胃癌/);
   assert.equal(draftMessage.body.includes("patient@example.com"), false);
+});
+
+test("discussion brief separates registry facts, uncertainty, and patient questions without sending", () => {
+  const match = assessTrial(profile, trial);
+  const brief = createTrialDiscussionBrief(profile, [match], "en", "2026-09-02T00:00:00.000Z");
+  assert.equal(brief.sent, false);
+  assert.equal(brief.containsConfirmedHealthInformation, true);
+  assert.equal(brief.trialCount, 1);
+  assert.match(brief.markdown, /Care-team brief/);
+  assert.match(brief.markdown, /Person-facing discussion handout/);
+  assert.match(brief.markdown, /Evidence quality, treatment benefit, harms, and guideline alignment were \*\*not assessed\*\*/);
+  assert.match(brief.markdown, /NCT00000001/);
+  assert.match(brief.markdown, /Gastric cancer/);
+  assert.match(brief.markdown, /What this brief does not prove/);
+  assert.match(brief.markdown, /Questions for your care or study team/);
+  assert.doesNotMatch(brief.markdown, /study@example\.test/);
+});
+
+test("discussion brief is capped at five current comparisons and supports Traditional Chinese", () => {
+  const match = assessTrial(profile, trial);
+  const matches = Array.from({ length: 6 }, (_, index) => ({ ...match, trial: { ...match.trial, canonicalId: `trial-${index}` } }));
+  const brief = createTrialDiscussionBrief(profile, matches, "zh-Hant", "2026-09-02T00:00:00.000Z");
+  assert.equal(brief.trialCount, 5);
+  assert.match(brief.markdown, /照護團隊摘要/);
+  assert.match(brief.markdown, /這份摘要不能證明什麼/);
+  assert.throws(() => createTrialDiscussionBrief(profile, [], "en"), /At least one current trial comparison/);
 });
 
 test("Taiwan and Asia travel preference aligns with an Asia-tier trial", () => {

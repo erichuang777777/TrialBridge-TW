@@ -21,6 +21,8 @@ Re-audited on 2026-09-02 against a local `next start` production build with Ligh
 
 The new `/webmcp` competition-evidence page was audited separately on 2026-09-02: Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.1 s, TBT 80 ms, CLS 0, and no console errors. Its SEO score has the same intentional no-index boundary described below.
 
+After adding the local care-team discussion-brief generator, the home-page regression run remained Performance 96, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.5 s, TBT 130 ms, CLS 0, and no console errors.
+
 Command shape:
 
 ```powershell

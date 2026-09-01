@@ -10,7 +10,7 @@
 - Live TFDA zipped JSON parsing and ClinicalTrials.gov API v2 retrieval.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
-- One visible declarative WebMCP registry-search form plus four read-only imperative tools, output limits, untrusted-content annotations, and consent-driven sensitive tool registration.
+- One visible declarative WebMCP registry-search form plus five read-only imperative tools, output limits, untrusted-content annotations, and consent-driven sensitive tool registration.
 - Deterministic WebMCP conformance verification and GitHub CI gates for tests, types, clean-room boundaries, dependency audit, and production build.
 - A built-in `/webmcp` competition-evidence page that reports current-browser support, public tool discovery, same-origin security headers, safe method execution, and the remaining Inspector boundary.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.

@@ -21,7 +21,7 @@ test("WebMCP exposes public tools without patient context and no write tools", (
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {
   assert.equal(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: false }).length, 2);
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
-  assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["explain_confirmed_matches", "draft_trial_outreach"]);
+  assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]);
   assert.equal(tools.slice(1).every((tool) => tool.annotations?.untrustedContentHint), true);
 });
 

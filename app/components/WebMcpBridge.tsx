@@ -9,16 +9,18 @@ type RegistrationState = "checking" | "unsupported" | "registering" | "ready" | 
 type Language = "zh-Hant" | "en";
 
 const publicToolNames = ["trialbridge_method", "search_public_cancer_trials"];
-const contextualToolNames = ["explain_confirmed_matches", "draft_trial_outreach"];
+const contextualToolNames = ["explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"];
 
 const judgePrompts = {
   en: [
     "Explain TrialBridge TW's Taiwan-first method and privacy boundary.",
     "Search public recruiting cancer trials for gastric cancer.",
+    "Draft a care-team discussion brief from my confirmed results.",
   ],
   "zh-Hant": [
     "說明 TrialBridge TW 的台灣優先搜尋方法與隱私界線。",
     "搜尋胃癌目前公開招募中的臨床試驗。",
+    "依照我已確認的結果建立照護團隊討論摘要。",
   ],
 };
 

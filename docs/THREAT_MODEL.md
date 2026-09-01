@@ -3,7 +3,7 @@
 ## Protected assets
 
 - Cancer and treatment information, identity clues, contact details, and caregiver relationship.
-- Patient confirmation decisions and generated outreach drafts.
+- Patient confirmation decisions, generated outreach drafts, and locally downloaded discussion briefs.
 - Integrity and provenance of trial records and matching explanations.
 
 ## Principal threats and controls
@@ -12,6 +12,7 @@
 | --- | --- |
 | Direct identifiers sent to a model | Browser masking before any network call; local proxy rejects common identifiers; no raw-note API route |
 | Sensitive data in browser persistence | Volatile state only; no `localStorage`, IndexedDB, service-worker cache, or URL query parameters |
+| Exported health summary disclosed from the device | Explicit user-created download only; visible health-information warning; generic filename; no automatic upload, share, or send action |
 | Cloud-model overreach | Visible post-mask cloud-organization action; explicit disclosure that localhost is only a proxy; exact `gpt-oss:120b-cloud` allowlist; Zod validation; second purpose-specific consent for confirmed-profile dialogue |
 | Prompt injection in registry text | Treat registry content as untrusted data; never execute embedded instructions; separate system policy from evidence |
 | WebMCP over-disclosure | Tool schemas accept confirmed profile references or minimized facts only; sensitive tools require active consent and visible user action |

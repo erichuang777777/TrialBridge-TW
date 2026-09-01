@@ -7,6 +7,7 @@ const tools = [
   { name: "search_public_cancer_trials", kind: "Imperative", availability: "Always public", boundary: "Read-only · untrusted registry output" },
   { name: "explain_confirmed_matches", kind: "Imperative", availability: "Permission-gated", boundary: "Confirmed, de-identified context only" },
   { name: "draft_trial_outreach", kind: "Imperative", availability: "Permission-gated", boundary: "Creates an unsent draft" },
+  { name: "draft_trial_discussion_brief", kind: "Imperative", availability: "Permission-gated", boundary: "Local care-team brief · never sent" },
 ];
 
 export default function WebMcpProofPage() {
@@ -15,8 +16,8 @@ export default function WebMcpProofPage() {
       <Link className="back-link" href="/">← Back home</Link>
       <p className="eyebrow">Competition evidence</p>
       <h1>WebMCP, visible and testable.</h1>
-      <p className="lead">TrialBridge TW combines one declarative form tool with four imperative tools. The human interface remains complete when WebMCP is unavailable, while compatible browser agents receive typed, origin-scoped, read-only capabilities.</p>
-      <div className="proof-summary" aria-label="WebMCP implementation summary"><span><strong>1</strong> declarative tool</span><span><strong>4</strong> imperative tools</span><span><strong>1,500</strong> character output cap</span><span><strong>0</strong> send or enrollment tools</span></div>
+      <p className="lead">TrialBridge TW combines one declarative form tool with five imperative tools. The human interface remains complete when WebMCP is unavailable, while compatible browser agents receive typed, origin-scoped, read-only capabilities.</p>
+      <div className="proof-summary" aria-label="WebMCP implementation summary"><span><strong>1</strong> declarative tool</span><span><strong>5</strong> imperative tools</span><span><strong>1,500</strong> character output cap</span><span><strong>0</strong> send or enrollment tools</span></div>
     </header>
 
     <WebMcpDiagnostics />

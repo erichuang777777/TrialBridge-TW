@@ -34,7 +34,7 @@ function check(condition: boolean, message: string) {
 
 check(new Set(names).size === names.length, "Imperative tool names must be unique.");
 check(publicTools.length === 2, "Exactly two public imperative tools must remain available without confirmed context.");
-check(allTools.length === 4, "Exactly four imperative tools must be available after confirmed-context permission.");
+check(allTools.length === 5, "Exactly five imperative tools must be available after confirmed-context permission.");
 
 for (const tool of allTools) {
   check(/^[A-Za-z0-9_.-]+$/.test(tool.name), `${tool.name}: name contains unsupported characters.`);
@@ -52,7 +52,7 @@ for (const tool of allTools) {
   }
 }
 
-for (const toolName of ["search_public_cancer_trials", "explain_confirmed_matches", "draft_trial_outreach"]) {
+for (const toolName of ["search_public_cancer_trials", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]) {
   check(allTools.find((tool) => tool.name === toolName)?.annotations?.untrustedContentHint === true, `${toolName}: registry-derived content must be marked untrusted.`);
 }
 

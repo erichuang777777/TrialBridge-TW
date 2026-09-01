@@ -15,6 +15,7 @@ Registered only while the visible WebMCP consent checkbox is enabled and a confi
 
 - `explain_confirmed_matches`: current confirmed-profile explanations only.
 - `draft_trial_outreach`: creates an unsent draft for a current match.
+- `draft_trial_discussion_brief`: creates an unsent, source-traceable care-team brief with explicit uncertainty and no raw note.
 
 Changing profile, matches, or consent aborts the previous registration before registering the current tool set. Tools are exposed only to the current origin. Tool names are at most 30 characters and output is capped at 1,500 serialized characters, following Chrome's current security guidance. No tool accepts raw or masked medical text and there are no send, submit, enroll, book, consent, or treatment-change tools.
 

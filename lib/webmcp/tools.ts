@@ -1,6 +1,7 @@
 /// <reference types="webmcp-types" />
 
 import { createOutreachDraft } from "../matching/outreach.ts";
+import { createTrialDiscussionBrief } from "../matching/discussionBrief.ts";
 import type { TrialMatch } from "../matching/engine.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
 import { capWebMcpOutput } from "./output.ts";
@@ -53,6 +54,15 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       const match = context.matches.find((candidate) => candidate.trial.canonicalId === input.trialId);
       if (!match || (input.language !== "zh-Hant" && input.language !== "en")) throw new Error("A current match and supported language are required");
       return capWebMcpOutput(createOutreachDraft(context.profile!, match.trial, input.language));
+    },
+  }, {
+    name: "draft_trial_discussion_brief", title: "Draft a care-team trial discussion brief",
+    description: "Create but never send a source-traceable discussion brief from current matches and confirmed, de-identified facts. Includes explicit uncertainty.",
+    inputSchema: { type: "object", properties: { language: { type: "string", description: "Language for the local, unsent discussion brief.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: (input) => {
+      if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("A supported language is required");
+      return capWebMcpOutput(createTrialDiscussionBrief(context.profile!, context.matches, input.language));
     },
   });
   return tools;

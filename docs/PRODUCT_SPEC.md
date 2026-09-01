@@ -15,6 +15,7 @@ TrialBridge TW helps people affected by cancer reduce the work of finding and di
 6. Only the patient-confirmed, de-identified profile enters matching.
 7. Results are retrieved Taiwan first, then Asia, then worldwide and explain source, freshness, possible mismatches, and unknowns.
 8. Agent mode uses chat from intake through missing-field questions and result explanation. Manual mode keeps direct controls available. Outreach is editable but never sent.
+9. After results, the person may preview and explicitly download a local care-team discussion brief. It separates registry facts, uncertain applicability, potential exclusion signals, and questions for clinicians; it is never uploaded or sent by TrialBridge TW.
 
 ## Audiences
 

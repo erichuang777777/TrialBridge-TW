@@ -14,6 +14,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
+- After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.
 
 ## Delivery plan
 

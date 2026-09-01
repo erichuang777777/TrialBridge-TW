@@ -320,6 +320,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .visual-results { margin-top: 28px; }
 .results-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
 .results-title-row h3 { margin: 2px 0 0; font-size: 1.35rem; }
+.results-export-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.results-export-row p { margin: 2px 0 0; color: var(--ink-soft); font-size: 0.84rem; }
+.results-export-row button { flex: 0 0 auto; min-height: 44px; padding: 7px 13px; border: 1px solid var(--primary); border-radius: 8px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.8rem; font-weight: 900; }
 .results-controls { display: grid; justify-items: end; gap: 10px; }
 .view-switcher { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .view-switcher button { min-height: 44px; padding: 6px 12px; border-color: transparent; }
@@ -392,6 +395,19 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .visual-card-actions a, .visual-card-actions button { min-height: 44px; display: inline-flex; align-items: center; padding: 7px 11px; font-size: 0.82rem; font-weight: 800; }
 .visual-card-actions button { border-color: var(--line); }
 .outreach-draft { margin-top: 24px; padding: 22px; border: 2px solid var(--focus); border-radius: 12px; background: var(--warning); }
+.discussion-brief-panel { margin-top: 24px; padding: 22px; border: 2px solid var(--primary); border-radius: 12px; background: var(--surface); }
+.discussion-brief-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.discussion-brief-heading h3 { margin: 2px 0 0; }
+.discussion-brief-heading > span { flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.72rem; font-weight: 900; }
+.discussion-brief-purpose { margin: 10px 0 16px; color: var(--ink-soft); font-size: 0.9rem; }
+.discussion-brief-panel > label { display: block; margin-bottom: 7px; font-weight: 800; }
+.discussion-brief-panel > textarea { width: 100%; min-height: 360px; padding: 14px; border: 1px solid #78999a; border-radius: 9px; color: var(--ink); background: var(--paper); font: 0.8rem/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; resize: vertical; }
+.discussion-brief-warning { margin-top: 14px; padding: 12px 14px; border-left: 4px solid var(--focus); background: var(--warning); }
+.discussion-brief-warning p { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.85rem; }
+.discussion-brief-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.discussion-brief-actions button { min-height: 48px; padding: 8px 16px; border: 1px solid var(--primary); border-radius: 9px; color: var(--primary-strong); background: var(--surface); font: inherit; font-weight: 800; }
+.discussion-brief-actions .primary-action { color: white; background: var(--primary); }
+.download-status { min-height: 1.5em; margin: 8px 0 0; color: var(--primary-strong); font-size: 0.82rem; font-weight: 800; text-align: right; }
 
 .database-hero { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 70px 0 42px; }
 .database-hero h1 { max-width: 900px; }
@@ -510,9 +526,13 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .summary-facts-panel .review-panel-heading { flex-direction: column; }
   .summary-confirm-controls { width: 100%; justify-content: space-between; }
   .results-title-row { align-items: flex-start; flex-direction: column; }
+  .results-export-row, .discussion-brief-heading { align-items: stretch; flex-direction: column; }
+  .results-export-row button { width: 100%; }
   .match-legend { justify-content: flex-start; }
   .action-row button { width: 100%; }
   .post-confirmation-controls { align-items: stretch; flex-direction: column; }
+  .discussion-brief-actions { flex-direction: column-reverse; }
+  .discussion-brief-actions button { width: 100%; }
   .patient-fact-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trial-grid { grid-template-columns: 1fr; }
   .search-heading, .results-toolbar { align-items: flex-start; flex-direction: column; }
