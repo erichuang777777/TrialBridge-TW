@@ -9,7 +9,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - People may paste free-text medical information in Traditional Chinese or English.
 - Direct identifiers are masked in the browser before any model request.
 - The original free text is not persisted by default.
-- After a separate, unchecked consent, the reviewed masked note is sent through the localhost Ollama proxy to `gpt-oss:120b-cloud` for extraction.
+- The reviewed masked note is sent through the localhost Ollama proxy to `gpt-oss:120b-cloud` only when the person selects the visible cloud-organization action; there is no redundant checkbox.
 - All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
@@ -18,6 +18,8 @@ This repository is a clean-room rebuild. Its product language, information archi
 ## Delivery plan
 
 The independently verifiable milestones are defined in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md). Product, security, data-flow, schema, chat-state, and WebMCP contracts live under `docs/`.
+
+For evaluation, see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md) and the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration).
 
 ## Local development
 

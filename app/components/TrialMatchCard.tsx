@@ -1,13 +1,14 @@
 import type { CriterionAssessment, TrialMatch } from "@/lib/matching/engine";
+import type { ConfirmedProfile } from "@/lib/profile/schema";
 
-const criterionOrder: CriterionAssessment["key"][] = ["condition", "recruitment", "age", "sex", "location", "eligibility_details"];
+const criterionOrder: CriterionAssessment["key"][] = ["condition", "recruitment", "age", "sex", "location"];
 const criterionLabels = {
   condition: { en: "Disease", "zh-Hant": "疾病" },
   recruitment: { en: "Recruiting", "zh-Hant": "招募" },
   age: { en: "Age", "zh-Hant": "年齡" },
   sex: { en: "Sex", "zh-Hant": "性別" },
   location: { en: "Location", "zh-Hant": "地點" },
-  eligibility_details: { en: "Other", "zh-Hant": "其他" },
+  eligibility_details: { en: "Eligibility details", "zh-Hant": "資格細節" },
 } as const;
 const outcomeLabels = {
   possibly_met: { en: "Aligned", "zh-Hant": "相同" },
@@ -26,13 +27,26 @@ export function MatchLegend({ language }: { language: "en" | "zh-Hant" }) {
   return <div className="match-legend" aria-label={language === "en" ? "Comparison color legend" : "比較色彩圖例"}>{Object.entries(outcomeLabels).map(([outcome, labels]) => <span key={outcome}><i className={`legend-swatch assessment-${outcome}`} aria-hidden="true" />{labels[language]}</span>)}</div>;
 }
 
-export function TrialMatchCard({ match, language, view, onCreateOutreach }: {
+const patientFactGroups = [
+  { key: "disease", domains: ["cancer_type", "primary_site"], en: "Disease", zh: "疾病" },
+  { key: "subtype", domains: ["histology"], en: "Subtype", zh: "亞型／組織型" },
+  { key: "stage", domains: ["stage", "disease_extent"], en: "Stage", zh: "分期" },
+  { key: "biomarker", domains: ["biomarker"], en: "Biomarker", zh: "生物標記" },
+  { key: "age", domains: ["age_band"], en: "Age", zh: "年齡" },
+] as const;
+
+export function TrialMatchCard({ match, profile, language, view, onCreateOutreach }: {
   match: TrialMatch;
+  profile: ConfirmedProfile;
   language: "en" | "zh-Hant";
   view: "cards" | "list";
   onCreateOutreach: () => void;
 }) {
   const condition = match.assessments.find((assessment) => assessment.key === "condition");
+  const patientFacts = patientFactGroups.map((group) => {
+    const values = profile.facts.filter((fact) => group.domains.some((domain) => domain === fact.domain)).map((fact) => language === "en" ? fact.displayEn : fact.displayZhHant);
+    return { ...group, value: values.join(" · ") };
+  });
   return <article className={`visual-match-card ${view === "list" ? "list-match-card" : "card-match-card"}`}>
     <div className="visual-card-header">
       <span className={`overall-status overall-${match.status}`}>{statusLabels[match.status][language]}</span>
@@ -43,21 +57,23 @@ export function TrialMatchCard({ match, language, view, onCreateOutreach }: {
       {condition && <p className="condition-overlap">{language === "en" ? condition.explanationEn : condition.explanationZhHant}</p>}
       {match.potentialExclusions.length > 0 && <div className="potential-exclusion" role="note"><strong>{language === "en" ? "Potential exclusion signal" : "可能排除訊號"}</strong>{match.potentialExclusions.map((signal) => <p key={signal.patientFactId}>{language === "en" ? "Confirmed treatment" : "已確認治療"}: {signal.confirmedIntervention}. {language === "en" ? signal.explanationEn : signal.explanationZhHant}<small>{language === "en" ? "Public exclusion excerpt" : "公開排除條件節錄"}: {signal.registryExcerpt}</small></p>)}</div>}
     </div>
-    <div className="match-matrix" role="list" aria-label={language === "en" ? "Six public-record comparisons" : "六項公開資料比較"}>
+    <div className="patient-fact-strip" aria-label={language === "en" ? "Confirmed patient facts used in this comparison" : "此比較使用的病人確認資料"}>{patientFacts.map((fact) => <div key={fact.key} className={!fact.value ? "fact-missing" : ""}><span>{language === "en" ? fact.en : fact.zh}</span><strong>{fact.value || (language === "en" ? "Missing" : "缺少資料")}</strong></div>)}</div>
+    <div className="match-matrix" role="list" aria-label={language === "en" ? "Five public-record comparisons; focus a block for details" : "五項公開資料比較；將焦點移至色塊可查看細節"}>
       {criterionOrder.map((key) => {
         const assessment = match.assessments.find((item) => item.key === key);
         const outcome = assessment?.outcome ?? "missing";
         const explanation = assessment ? (language === "en" ? assessment.explanationEn : assessment.explanationZhHant) : outcomeLabels.missing[language];
-        return <div className="criterion-cell" role="listitem" key={key} title={explanation}>
+        const label = criterionLabels[key][language];
+        const outcomeLabel = outcomeLabels[outcome][language];
+        return <div className="criterion-cell" role="listitem" tabIndex={0} key={key} aria-label={`${label}: ${outcomeLabel}. ${explanation}`}>
           <span className={`match-block assessment-${outcome}`} aria-hidden="true" />
-          <strong>{criterionLabels[key][language]}</strong>
-          <small>{outcomeLabels[outcome][language]}</small>
+          <span className="criterion-tooltip" role="tooltip"><strong>{label} · {outcomeLabel}</strong><small>{explanation}</small></span>
         </div>;
       })}
     </div>
     <details className="assessment-details">
       <summary>{language === "en" ? "Review comparison details" : "查看比較細節"}</summary>
-      <ul>{match.assessments.map((assessment) => <li key={assessment.key}><strong>{criterionLabels[assessment.key][language]} — {outcomeLabels[assessment.outcome][language]}:</strong> {language === "en" ? assessment.explanationEn : assessment.explanationZhHant}<small>{language === "en" ? "Registry field" : "登錄欄位"}: {assessment.registryField}</small></li>)}</ul>
+      <ul>{match.assessments.filter((assessment) => assessment.key !== "eligibility_details" || assessment.outcome !== "unknown").map((assessment) => <li key={assessment.key}><strong>{criterionLabels[assessment.key][language]} — {outcomeLabels[assessment.outcome][language]}:</strong> {language === "en" ? assessment.explanationEn : assessment.explanationZhHant}<small>{language === "en" ? "Registry field" : "登錄欄位"}: {assessment.registryField}</small></li>)}</ul>
     </details>
     <div className="visual-card-actions">
       <a href={match.trial.sources[0].url} target="_blank" rel="noreferrer">{language === "en" ? "Open registry" : "查看登錄"}</a>

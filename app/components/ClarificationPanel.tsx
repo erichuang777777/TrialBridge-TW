@@ -3,24 +3,23 @@
 import { useState } from "react";
 import { FOLLOW_UP_UNKNOWN, type FollowUpQuestion } from "@/lib/matching/followUp";
 
-export function ClarificationPanel({ questions, language, onConfirm }: {
+export function ClarificationPanel({ questions, language, answers, onAnswersChange, onConfirm }: {
   questions: FollowUpQuestion[];
   language: "en" | "zh-Hant";
+  answers: Record<string, string>;
+  onAnswersChange: (answers: Record<string, string>) => void;
   onConfirm: (answers: Record<string, string>) => Promise<void>;
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const responded = questions.filter((question) => Boolean(answers[question.id]?.trim())).length;
   const allResponded = responded === questions.length;
 
   function updateAnswer(id: string, value: string) {
-    setAnswers((current) => ({ ...current, [id]: value }));
-    setConfirmed(false);
+    onAnswersChange({ ...answers, [id]: value });
   }
 
   async function submit() {
-    if (!allResponded || !confirmed || submitting) return;
+    if (!allResponded || submitting) return;
     setSubmitting(true);
     try { await onConfirm(answers); } finally { setSubmitting(false); }
   }
@@ -41,7 +40,6 @@ export function ClarificationPanel({ questions, language, onConfirm }: {
       </fieldset>;
     })}</div>
     <p className="field-helper">{language === "en" ? "Do not enter names, contact details, record numbers, or other identifiers. Unknown answers are not added to the profile." : "請勿輸入姓名、聯絡方式、病歷號或其他識別資訊；選擇不知道的項目不會加入摘要。"}</p>
-    <label className="confirm-check clarification-confirm"><input type="checkbox" checked={confirmed} disabled={!allResponded} onChange={(event) => setConfirmed(event.target.checked)} />{language === "en" ? "I confirm these answers, including the items marked unknown." : "我確認以上回答，包括標示為不知道的項目。"}</label>
-    <button className="primary-action" disabled={!allResponded || !confirmed || submitting} onClick={() => void submit()}>{submitting ? (language === "en" ? "Updating comparison…" : "正在更新比較…") : (language === "en" ? "Confirm and show results" : "確認並顯示結果")}</button>
+    <button className="primary-action clarification-submit" disabled={!allResponded || submitting} onClick={() => void submit()}>{submitting ? (language === "en" ? "Updating comparison…" : "正在更新比較…") : (language === "en" ? "Use answers and show results" : "使用回答並顯示結果")}</button>
   </section>;
 }

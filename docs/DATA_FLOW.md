@@ -1,10 +1,11 @@
 # Data flow and trust boundaries
 
 ```text
-raw free text
+Agent-mode chat or manual-mode free text
   -> browser memory only
+  -> one shared intake note
   -> deterministic identifier masking
-  -> explicit cloud-transfer consent
+  -> explicit cloud-organization action
   -> localhost Ollama proxy -> gpt-oss:120b-cloud extraction
   -> draft profile with uncertainty
   -> patient or caregiver reviews masked note and draft facts together
@@ -21,7 +22,8 @@ raw free text
 | Class | Examples | Allowed destinations |
 | --- | --- | --- |
 | Raw sensitive text | pasted note, names, record numbers | browser volatile memory only |
-| Masked text | note with direct identifiers replaced | gpt-oss:120b-cloud through localhost proxy, only after explicit transfer consent |
+| Guided chat message | one patient or caregiver message | browser masking, then gpt-oss:120b-cloud with workflow stage and minimized state |
+| Masked text | note with direct identifiers replaced | gpt-oss:120b-cloud through localhost proxy, only after the visible cloud-organization action |
 | Draft facts | model-extracted diagnosis, stage, biomarker | browser volatile memory only |
 | Confirmed profile | user-approved, de-identified structured facts | registry query builder; optional cloud assistant; gated WebMCP |
 | Public registry facts | study title, sites, criteria, update date | browser; matching engine; WebMCP with untrusted-content marking |

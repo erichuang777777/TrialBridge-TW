@@ -1,18 +1,20 @@
 import type { TrialMatch } from "@/lib/matching/engine";
+import type { ConfirmedProfile } from "@/lib/profile/schema";
 import { TrialMatchCard } from "./TrialMatchCard";
 
-export function TrialResultGroup({ title, description, emptyText, matches, language, view, collapsed = false, onCreateOutreach }: {
+export function TrialResultGroup({ title, description, emptyText, matches, profile, language, view, collapsed = false, onCreateOutreach }: {
   title: string;
   description: string;
   emptyText: string;
   matches: TrialMatch[];
+  profile: ConfirmedProfile;
   language: "en" | "zh-Hant";
   view: "cards" | "list";
   collapsed?: boolean;
   onCreateOutreach: (match: TrialMatch) => void;
 }) {
   const content = matches.length > 0
-    ? <div className={`match-card-grid ${view === "list" ? "list-view" : "card-view"}`}>{matches.map((match) => <TrialMatchCard key={match.trial.canonicalId} match={match} language={language} view={view} onCreateOutreach={() => onCreateOutreach(match)} />)}</div>
+    ? <div className={`match-card-grid ${view === "list" ? "list-view" : "card-view"}`}>{matches.map((match) => <TrialMatchCard key={match.trial.canonicalId} match={match} profile={profile} language={language} view={view} onCreateOutreach={() => onCreateOutreach(match)} />)}</div>
     : <p className="result-group-empty">{emptyText}</p>;
 
   if (collapsed) return <details className="result-group collapsed-result-group">

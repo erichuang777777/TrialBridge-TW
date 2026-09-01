@@ -21,7 +21,7 @@ test("chat state cannot skip privacy, masking, extraction, or confirmation", () 
   assert.equal(chatReducer(capture, { type: "EXTRACTION_SUCCESS", draft }).stage, "capture");
 });
 
-test("raw text is discarded when consented cloud extraction begins", () => {
+test("raw text is discarded when the visible cloud-organization action begins", () => {
   let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
   state = chatReducer(state, { type: "ACCEPT_PRIVACY" });
   state = chatReducer(state, { type: "SET_RAW_TEXT", value: "synthetic medical text long enough" });
@@ -34,8 +34,8 @@ test("raw text is discarded when consented cloud extraction begins", () => {
   const profile = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
   state = chatReducer(state, { type: "CONFIRM_SUCCESS", profile });
   assert.equal(state.stage, "ready");
-  assert.equal(state.draft, undefined);
-  assert.equal(state.maskResult, undefined);
+  assert.equal(state.draft, draft);
+  assert.equal(state.maskResult?.maskedText, "synthetic medical text long enough");
 });
 
 test("a cancelled extraction returns to the masked review", () => {
@@ -58,6 +58,13 @@ test("summary confirmation can return to the masked note on the same review flow
   assert.equal(capture.stage, "capture");
   assert.equal(capture.rawText, "masked synthetic note");
   assert.equal(capture.draft, undefined);
+});
+
+test("agent chat can update caregiver context without a separate role gate", () => {
+  let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
+  state = chatReducer(state, { type: "SET_SUBJECT_ROLE", role: "caregiver" });
+  assert.equal(state.stage, "privacy");
+  assert.equal(state.subjectRole, "caregiver");
 });
 
 test("reset clears anonymous session data but keeps language preference in memory", () => {

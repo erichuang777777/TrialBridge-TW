@@ -54,11 +54,11 @@ test("the public trial database is directly linked from the English-first home p
   assert.match(database, /Search trial registries directly/);
 });
 
-test("trial cards expose a six-cell, four-state comparison without relying on color alone", async () => {
+test("trial cards expose five useful comparison blocks, hover details, and patient facts without relying on color alone", async () => {
   const root = process.cwd();
   const component = await readFile(path.join(root, "app", "components", "TrialMatchCard.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
-  for (const criterion of ["condition", "recruitment", "age", "sex", "location", "eligibility_details"]) {
+  for (const criterion of ["condition", "recruitment", "age", "sex", "location"]) {
     assert.match(component, new RegExp(`\\b${criterion}\\b`));
   }
   for (const state of ["possibly_met", "possibly_not_met", "unknown", "missing"]) {
@@ -69,6 +69,11 @@ test("trial cards expose a six-cell, four-state comparison without relying on co
   assert.match(component, /Different/);
   assert.match(component, /Uncertain/);
   assert.match(component, /Missing/);
+  assert.match(component, /patientFactGroups/);
+  assert.match(component, /Subtype/);
+  assert.match(component, /Stage/);
+  assert.match(component, /criterion-tooltip/);
+  assert.doesNotMatch(component, /en: "Other"/);
 });
 
 test("development shortcuts are explicitly gated and use only a synthetic fixture", async () => {
@@ -84,15 +89,32 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   const clarification = await readFile(path.join(root, "app", "components", "ClarificationPanel.tsx"), "utf8");
   const chat = await readFile(path.join(root, "app", "components", "TrialBridgeChat.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
-  assert.match(review, /Masked note sent to cloud/);
+  assert.match(review, /Masked note/);
   assert.match(review, /Confirm all/);
+  assert.match(review, /fact-domain-label/);
+  assert.match(review, /panel-step/);
+  assert.match(review, /Treatment detail/);
+  assert.match(review, /Clinical detail/);
   assert.match(clarification, /Before showing results/);
   assert.match(clarification, /I don't know/);
+  assert.doesNotMatch(clarification, /I confirm these answers/);
+  assert.doesNotMatch(chat, /You confirmed this summary/);
+  assert.doesNotMatch(chat, /cloudExtractionConsent/);
+  assert.match(chat, /persistent-chat-panel/);
+  assert.match(chat, /TrialBridge assistant/);
+  assert.match(chat, /Agent mode/);
+  assert.match(chat, /Manual mode/);
+  assert.match(chat, /Chat is the main interface/);
+  assert.match(chat, /\/api\/cloud\/intake/);
+  assert.doesNotMatch(chat, /I am the patient/);
+  assert.doesNotMatch(chat, /I am a caregiver/);
   assert.match(chat, /No known public-record difference/);
   assert.match(chat, /More information needed/);
   assert.match(chat, /Public-record differences found/);
-  assert.match(chat, /Chat about the results/);
+  assert.match(chat, /Ask about the results/);
   assert.match(chat, /aria-pressed/);
   assert.match(css, /grid-template-rows:\s*subgrid/);
-  assert.match(css, /result-chat-panel/);
+  assert.match(css, /persistent-chat-panel/);
+  assert.match(css, /criterion-tooltip/);
+  assert.match(css, /patient-fact-strip/);
 });

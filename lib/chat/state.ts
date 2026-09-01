@@ -17,6 +17,7 @@ export interface ChatState {
 export type ChatEvent =
   | { type: "SET_LANGUAGE"; language: ChatState["language"] }
   | { type: "SELECT_ROLE"; role: "patient" | "caregiver" }
+  | { type: "SET_SUBJECT_ROLE"; role: "patient" | "caregiver" }
   | { type: "ACCEPT_PRIVACY" }
   | { type: "SET_RAW_TEXT"; value: string }
   | { type: "MASK_COMPLETE"; result: MaskResult }
@@ -38,6 +39,8 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
       return state.stage === "role" ? { ...state, language: event.language } : state;
     case "SELECT_ROLE":
       return state.stage === "role" ? { ...state, subjectRole: event.role, stage: "privacy" } : state;
+    case "SET_SUBJECT_ROLE":
+      return ["privacy", "capture", "mask_review", "extracting", "confirmation"].includes(state.stage) ? { ...state, subjectRole: event.role } : state;
     case "ACCEPT_PRIVACY":
       return state.stage === "privacy" ? { ...state, stage: "capture" } : state;
     case "SET_RAW_TEXT":
@@ -61,7 +64,7 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
     case "EXTRACTION_FAILURE":
       return state.stage === "extracting" ? { ...state, stage: "mask_review", error: event.message } : state;
     case "CONFIRM_SUCCESS":
-      return state.stage === "confirmation" ? { ...state, stage: "ready", draft: undefined, maskResult: undefined, confirmedProfile: event.profile } : state;
+      return state.stage === "confirmation" ? { ...state, stage: "ready", confirmedProfile: event.profile } : state;
     case "UPDATE_CONFIRMED_PROFILE":
       return state.stage === "ready" ? { ...state, confirmedProfile: event.profile } : state;
     case "DEV_SET_STATE":

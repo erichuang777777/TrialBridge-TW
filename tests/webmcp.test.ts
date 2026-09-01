@@ -12,12 +12,13 @@ test("WebMCP exposes public tools without patient context and no write tools", (
   assert.deepEqual(tools.map((tool) => tool.name), ["trialbridge_method", "search_public_cancer_trials"]);
   assert.equal(tools.every((tool) => tool.annotations?.readOnlyHint), true);
   assert.equal(tools.some((tool) => /send|enroll|submit|book/i.test(tool.name)), false);
+  assert.equal(tools.every((tool) => tool.name.length <= 30), true);
   assert.equal(JSON.stringify(tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLowerCase().includes("rawnote"), false);
 });
 
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {
   assert.equal(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: false }).length, 2);
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
-  assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["explain_confirmed_trial_matches", "draft_trial_outreach"]);
+  assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["explain_confirmed_matches", "draft_trial_outreach"]);
   assert.equal(tools.slice(1).every((tool) => tool.annotations?.untrustedContentHint), true);
 });

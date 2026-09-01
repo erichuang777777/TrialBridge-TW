@@ -4,8 +4,18 @@ import { createOutreachDraft } from "../matching/outreach.ts";
 import type { TrialMatch } from "../matching/engine.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
 
-const MAX_OUTPUT_CHARS = 6_000;
-function capped(value: unknown) { const text = JSON.stringify(value); return text.length <= MAX_OUTPUT_CHARS ? value : { truncated: true, content: text.slice(0, MAX_OUTPUT_CHARS) }; }
+const MAX_OUTPUT_CHARS = 1_500;
+function capped(value: unknown) {
+  const text = JSON.stringify(value);
+  if (text.length <= MAX_OUTPUT_CHARS) return value;
+  let contentLength = MAX_OUTPUT_CHARS - 80;
+  let result = { truncated: true, content: text.slice(0, contentLength) };
+  while (JSON.stringify(result).length > MAX_OUTPUT_CHARS && contentLength > 0) {
+    contentLength = Math.max(0, contentLength - 64);
+    result = { truncated: true, content: text.slice(0, contentLength) };
+  }
+  return result;
+}
 
 export interface WebMcpToolContext {
   profile?: ConfirmedProfile;
@@ -41,7 +51,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   ];
   if (!context.sensitiveConsent || !context.profile) return tools;
   tools.push({
-    name: "explain_confirmed_trial_matches", title: "Explain confirmed-profile trial matches",
+    name: "explain_confirmed_matches", title: "Explain confirmed-profile trial matches",
     description: "Read the current page's patient-confirmed, de-identified match explanations. Requires visible in-page consent; raw notes are unavailable.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },

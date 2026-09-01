@@ -31,7 +31,7 @@ export default function Home() {
           <p className="eyebrow">Cancer clinical-trial navigation</p>
           <h1 id="hero-title">Turn complex trial information into questions you can discuss with your care team.</h1>
           <p className="lead">
-            Describe the situation in English or Chinese. Identifiers are masked before the reviewed content is sent to gpt-oss:120b-cloud with your consent. Searching starts only after you confirm every item.
+            Describe the situation in English or Chinese. Identifiers are masked before you actively send the reviewed content to gpt-oss:120b-cloud for organization. Searching starts only after you confirm every item.
           </p>
           <div className="trust-row" aria-label="Privacy and safety commitments">
             <span>No account required</span>
@@ -67,8 +67,8 @@ export default function Home() {
         <div className="principle-grid">
           <article>
             <span>1</span>
-            <h3>Describe the situation</h3>
-            <p>Patients and caregivers can begin in everyday language without knowing clinical terminology.</p>
+            <h3>Enter the medical note</h3>
+            <p>Chat one answer at a time or paste an existing summary. Both entry methods build the same note.</p>
           </article>
           <article>
             <span>2</span>

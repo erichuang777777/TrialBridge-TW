@@ -6,14 +6,14 @@ TrialBridge TW helps people affected by cancer reduce the work of finding and di
 
 ## MVP journey
 
-1. The person selects patient or caregiver context and language.
-2. They paste or type free text.
+1. The person selects English or Traditional Chinese, then Agent mode or Manual mode. A separate patient/caregiver gate is not shown; patient context is the initial default and Agent mode can update it only after an explicit caregiver statement.
+2. Agent mode collects the situation through persistent chat; Manual mode accepts a pasted or typed note. Both update one shared, volatile intake note.
 3. The browser masks direct identifiers before any model request.
-4. After an unchecked, explicit cloud-transfer consent, `gpt-oss:120b-cloud` proposes structured facts through the localhost Ollama proxy, with provenance, uncertainty, and missing fields.
+4. After the person reviews the masked note and selects the visible cloud-organization action, `gpt-oss:120b-cloud` proposes structured facts through the localhost Ollama proxy, with provenance, uncertainty, and missing fields.
 5. The person edits and confirms each fact.
 6. Only the patient-confirmed, de-identified profile enters matching.
 7. Results are retrieved Taiwan first, then Asia, then worldwide and explain source, freshness, possible mismatches, and unknowns.
-8. Chat supports questions, comparison, and an editable outreach draft. It never sends the draft.
+8. Agent mode uses chat from intake through missing-field questions and result explanation. Manual mode keeps direct controls available. Outreach is editable but never sent.
 
 ## Audiences
 
@@ -35,6 +35,6 @@ The retrieval and schema layers support all cancers in one product. Each disease
 ## Success measures
 
 - Every match is traceable to registry fields and a confirmed profile fact.
-- No unmasked raw note reaches cloud assistance, trial registries, logs, analytics, or WebMCP. Masked notes reach only `gpt-oss:120b-cloud` after explicit transfer consent.
+- No unmasked raw note reaches cloud assistance, trial registries, logs, analytics, or WebMCP. Masked notes reach only `gpt-oss:120b-cloud` after the visible cloud-organization action.
 - The user can correct every extracted fact before matching.
 - Critical flows are keyboard accessible and usable in Traditional Chinese and English.

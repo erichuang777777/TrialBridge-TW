@@ -2,7 +2,7 @@
 
 WebMCP is a primary product interface, not an add-on. The site uses Chrome's `document.modelContext` imperative API and remains useful without an agent.
 
-## Planned tool classes
+## Registered tool classes
 
 ### Public read tools
 

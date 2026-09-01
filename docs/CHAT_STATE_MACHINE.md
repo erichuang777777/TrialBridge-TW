@@ -2,11 +2,10 @@
 
 ```text
 WELCOME
-  -> ROLE_AND_LANGUAGE
+  -> LANGUAGE_AND_MODE (agent or manual; patient context is the default)
   -> PRIVACY_NOTICE
-  -> CAPTURE_FREE_TEXT
-  -> MASKING_REVIEW
-  -> CLOUD_TRANSFER_CONSENT
+  -> ENTER_NOTE (agent chat or manual entry into one shared note)
+  -> CLOUD_ORGANIZATION_ACTION
   -> GPT_OSS_CLOUD_EXTRACTION
   -> MASKED_NOTE_AND_FACT_CONFIRMATION (same review page)
   -> MATCH_CONSENT
@@ -20,14 +19,17 @@ WELCOME
 
 ## Invariants
 
-- Raw text can move only from capture to browser masking. Only the reviewed masked text can enter cloud extraction after explicit consent.
+- Agent mode uses chat as the workflow controller; manual mode exposes direct entry, extraction, and confirmation controls. Switching modes preserves the same volatile intake note.
+- The separate patient-versus-caregiver gate is removed. Patient context is the initial default; a schema-bounded Agent action may update it only when the person clearly states they are a caregiver.
+- Only browser-masked text can enter cloud extraction after the visible cloud-organization action. A separate mask-review screen appears only as an error recovery state.
 - `FACT_CONFIRMATION` cannot be skipped; every used fact has explicit confirmation.
 - The masked note and extracted facts remain visible together during confirmation. One bulk action may mark every visible fact confirmed; editing a fact immediately clears that fact's confirmation.
+- Confirmation does not open a separate summary-complete screen. The same review remains visible while candidate requirements are checked, and follow-up answers do not require a second bulk-confirmation checkbox.
 - Candidate trial requirements are allowed to generate pre-result questions, but unanswered or explicitly unknown responses never become matching facts.
 - Editing a confirmed matching fact invalidates prior results.
 - Cloud dialogue is optional and cannot start before confirmation plus a separate cloud-consent choice.
 - WebMCP discovery may be passive, but sensitive execution requires an active page, an explicit user request, and a visible confirmation gate.
-- The system always offers `unknown` and `skip` choices.
+- The system always offers `unknown` choices where a trial requirement needs information.
 - A caregiver is reminded to verify uncertain facts with the patient or treating team.
 
 ## Recovery
