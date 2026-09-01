@@ -55,3 +55,19 @@ test("reset clears anonymous session data but keeps language preference in memor
   const reset = chatReducer(role, { type: "RESET" });
   assert.deepEqual(reset, { stage: "role", language: "en", rawText: "" });
 });
+
+test("development stage jumps are ignored outside development", () => {
+  const mutableEnv = process.env as Record<string, string | undefined>;
+  const previousNodeEnv = mutableEnv.NODE_ENV;
+  mutableEnv.NODE_ENV = "production";
+  try {
+    const attemptedJump = chatReducer(initialChatState, {
+      type: "DEV_SET_STATE",
+      state: { stage: "capture", language: "en", rawText: "synthetic fixture" },
+    });
+    assert.deepEqual(attemptedJump, initialChatState);
+  } finally {
+    if (previousNodeEnv === undefined) delete mutableEnv.NODE_ENV;
+    else mutableEnv.NODE_ENV = previousNodeEnv;
+  }
+});

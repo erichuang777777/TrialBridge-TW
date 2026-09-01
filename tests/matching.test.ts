@@ -20,6 +20,9 @@ test("matching requires and traces patient-confirmed cancer facts", () => {
   assert.deepEqual(match.assessments[0].patientFactIds, ["fact_cancer_1"]);
   assert.equal(match.assessments[0].registryField, "conditions/title");
   assert.equal(match.assessments.find((item) => item.key === "age")?.outcome, "possibly_met");
+  assert.deepEqual(match.assessments.map((item) => item.key), ["condition", "recruitment", "age", "sex", "location", "eligibility_details"]);
+  assert.equal(match.assessments.find((item) => item.key === "location")?.outcome, "missing");
+  assert.equal(match.assessments.find((item) => item.key === "eligibility_details")?.outcome, "missing");
 });
 
 test("outreach is an unsent bilingual draft without direct identifiers", () => {
@@ -28,4 +31,18 @@ test("outreach is an unsent bilingual draft without direct identifiers", () => {
   assert.match(draftMessage.body, /尚未寄出/);
   assert.match(draftMessage.body, /胃癌/);
   assert.equal(draftMessage.body.includes("patient@example.com"), false);
+});
+
+test("Taiwan and Asia travel preference aligns with an Asia-tier trial", () => {
+  const travelDraft = profileDraftSchema.parse({
+    ...draft,
+    facts: [...draft.facts, {
+      id: "fact_travel_1", domain: "travel_preference", value: "Taiwan and Asia",
+      displayZhHant: "台灣與亞洲", displayEn: "Taiwan and Asia", source: "user_statement",
+      confidence: 1, confirmed: false,
+    }],
+  });
+  const travelProfile = confirmProfile(travelDraft, {}, "patient", "2026-09-01T00:00:00.000Z");
+  const asiaTrial = { ...trial, regionTier: "asia" as const };
+  assert.equal(assessTrial(travelProfile, asiaTrial).assessments.find((item) => item.key === "location")?.outcome, "possibly_met");
 });

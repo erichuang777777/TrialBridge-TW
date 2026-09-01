@@ -53,3 +53,27 @@ test("the public trial database is directly linked from the English-first home p
   assert.match(home, /href="\/trials"/);
   assert.match(database, /Search trial registries directly/);
 });
+
+test("trial cards expose a six-cell, four-state comparison without relying on color alone", async () => {
+  const root = process.cwd();
+  const component = await readFile(path.join(root, "app", "components", "TrialMatchCard.tsx"), "utf8");
+  const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
+  for (const criterion of ["condition", "recruitment", "age", "sex", "location", "eligibility_details"]) {
+    assert.match(component, new RegExp(`\\b${criterion}\\b`));
+  }
+  for (const state of ["possibly_met", "possibly_not_met", "unknown", "missing"]) {
+    assert.match(component, new RegExp(`\\b${state}\\b`));
+    assert.match(css, new RegExp(`assessment-${state}`));
+  }
+  assert.match(component, /Aligned/);
+  assert.match(component, /Different/);
+  assert.match(component, /Uncertain/);
+  assert.match(component, /Missing/);
+});
+
+test("development shortcuts are explicitly gated and use only a synthetic fixture", async () => {
+  const component = await readFile(path.join(process.cwd(), "app", "components", "TrialBridgeChat.tsx"), "utf8");
+  assert.match(component, /process\.env\.NODE_ENV === "development"/);
+  assert.match(component, /Synthetic data only/);
+  assert.match(component, /syntheticDevDraft/);
+});
