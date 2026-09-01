@@ -394,8 +394,12 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .database-search { padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .search-heading, .results-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 .search-heading h2, .results-toolbar h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); }
+.source-stack { display: grid; justify-items: end; gap: 7px; }
 .source-pill, .region-badge, .recruitment-badge { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 900; }
 .source-pill { color: var(--primary-strong); background: var(--mint); white-space: nowrap; }
+.webmcp-form-pill { display: inline-flex; min-height: 28px; align-items: center; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); background: var(--paper); font-size: 0.7rem; font-weight: 900; white-space: nowrap; }
+.agent-form-notice { margin: -8px 0 18px; padding: 10px 12px; border-left: 3px solid var(--primary); color: var(--primary-strong); background: var(--mint); font-size: 0.84rem; font-weight: 800; }
+.database-search.agent-tool-active { outline: 3px dashed var(--focus); outline-offset: 4px; }
 .database-search > label:first-of-type { display: block; margin-bottom: 8px; font-weight: 800; }
 .search-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
 .search-row input { min-width: 0; min-height: 52px; padding: 0 16px; border: 1px solid #78999a; border-radius: 10px; color: var(--ink); background: white; font: inherit; }
@@ -462,6 +466,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .patient-fact-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trial-grid { grid-template-columns: 1fr; }
   .search-heading, .results-toolbar { align-items: flex-start; flex-direction: column; }
+  .source-stack { justify-items: start; }
 }
 
 @media (max-width: 1000px) {

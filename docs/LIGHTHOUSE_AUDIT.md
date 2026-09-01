@@ -2,11 +2,11 @@
 
 ## Final result
 
-Audited on 2026-09-01 against a local `next start` production build with Lighthouse 13.4.1 and headless Chrome.
+Re-audited on 2026-09-02 against a local `next start` production build with Lighthouse 13.4.1 and headless Chrome after the declarative WebMCP form was added. Two runs scored 94 and 96 for Performance; the repeat run below is recorded. The remaining category scores were identical in both runs.
 
 | Category | Score |
 | --- | ---: |
-| Performance | 97 |
+| Performance | 96 |
 | Accessibility | 100 |
 | Best Practices | 100 |
 | SEO | 63 |
@@ -14,8 +14,8 @@ Audited on 2026-09-01 against a local `next start` production build with Lightho
 | Metric | Result |
 | --- | ---: |
 | First Contentful Paint | 1.0 s |
-| Largest Contentful Paint | 2.3 s |
-| Total Blocking Time | 110 ms |
+| Largest Contentful Paint | 2.4 s |
+| Total Blocking Time | 170 ms |
 | Cumulative Layout Shift | 0 |
 | Console errors | 0 |
 

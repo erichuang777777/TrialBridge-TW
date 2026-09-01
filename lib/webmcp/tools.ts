@@ -3,19 +3,7 @@
 import { createOutreachDraft } from "../matching/outreach.ts";
 import type { TrialMatch } from "../matching/engine.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
-
-const MAX_OUTPUT_CHARS = 1_500;
-function capped(value: unknown) {
-  const text = JSON.stringify(value);
-  if (text.length <= MAX_OUTPUT_CHARS) return value;
-  let contentLength = MAX_OUTPUT_CHARS - 80;
-  let result = { truncated: true, content: text.slice(0, contentLength) };
-  while (JSON.stringify(result).length > MAX_OUTPUT_CHARS && contentLength > 0) {
-    contentLength = Math.max(0, contentLength - 64);
-    result = { truncated: true, content: text.slice(0, contentLength) };
-  }
-  return result;
-}
+import { capWebMcpOutput } from "./output.ts";
 
 export interface WebMcpToolContext {
   profile?: ConfirmedProfile;
@@ -37,7 +25,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     {
       name: "search_public_cancer_trials", title: "Search public cancer trials",
       description: "Search public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic. Returns at most five source-linked records.",
-      inputSchema: { type: "object", properties: { condition: { type: "string", minLength: 2, maxLength: 120 } }, required: ["condition"], additionalProperties: false },
+      inputSchema: { type: "object", properties: { condition: { type: "string", description: "General non-sensitive cancer condition; never include a medical record.", minLength: 2, maxLength: 120 } }, required: ["condition"], additionalProperties: false },
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       execute: async (input, options) => {
         const condition = typeof input.condition === "string" ? input.condition.trim() : "";
@@ -45,7 +33,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
         const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: false }), signal: options.signal });
         if (!response.ok) throw new Error("Public registry search is unavailable");
         const payload = await response.json() as { trials?: TrialMatch["trial"][] };
-        return capped((payload.trials ?? []).slice(0, 5).map((trial) => ({ id: trial.canonicalId, title: trial.title, region: trial.regionTier, recruitment: trial.recruitment.raw, sources: trial.sources.map((source) => ({ registry: source.registry, id: source.registryId, url: source.url, retrievedAt: source.retrievedAt })) })));
+        return capWebMcpOutput((payload.trials ?? []).slice(0, 5).map((trial) => ({ id: trial.canonicalId, title: trial.title, region: trial.regionTier, recruitment: trial.recruitment.raw, sources: trial.sources.map((source) => ({ registry: source.registry, id: source.registryId, url: source.url, retrievedAt: source.retrievedAt })) })));
       },
     },
   ];
@@ -55,16 +43,16 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     description: "Read the current page's patient-confirmed, de-identified match explanations. Requires visible in-page consent; raw notes are unavailable.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
-    execute: () => capped(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
+    execute: () => capWebMcpOutput(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
   }, {
     name: "draft_trial_outreach", title: "Draft trial outreach",
     description: "Create but never send an outreach draft for one current match using only confirmed, de-identified facts.",
-    inputSchema: { type: "object", properties: { trialId: { type: "string", minLength: 1, maxLength: 120 }, language: { type: "string", enum: ["zh-Hant", "en"] } }, required: ["trialId", "language"], additionalProperties: false },
+    inputSchema: { type: "object", properties: { trialId: { type: "string", description: "Canonical ID of one currently displayed trial match.", minLength: 1, maxLength: 120 }, language: { type: "string", description: "Language for the editable, unsent draft.", enum: ["zh-Hant", "en"] } }, required: ["trialId", "language"], additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) => {
       const match = context.matches.find((candidate) => candidate.trial.canonicalId === input.trialId);
       if (!match || (input.language !== "zh-Hant" && input.language !== "en")) throw new Error("A current match and supported language are required");
-      return capped(createOutreachDraft(context.profile!, match.trial, input.language));
+      return capWebMcpOutput(createOutreachDraft(context.profile!, match.trial, input.language));
     },
   });
   return tools;

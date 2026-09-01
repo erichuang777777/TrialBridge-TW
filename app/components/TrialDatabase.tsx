@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { NormalizedTrial, RegionTier } from "@/lib/trials/types";
+import { capWebMcpOutput } from "@/lib/webmcp/output";
 
 type SearchResponse = {
   trials?: NormalizedTrial[];
@@ -12,6 +13,7 @@ type SearchResponse = {
 };
 
 const suggestions = ["breast cancer", "lung cancer", "gastric cancer", "colorectal cancer"];
+const declarativeToolName = "search_public_trial_form";
 const regions: Array<{ value: "all" | RegionTier; label: string }> = [
   { value: "all", label: "All regions" },
   { value: "taiwan", label: "Taiwan" },
@@ -31,11 +33,13 @@ export function TrialDatabase() {
   const [result, setResult] = useState<SearchResponse>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [declarativeNotice, setDeclarativeNotice] = useState("");
+  const [declarativeActive, setDeclarativeActive] = useState(false);
   const initialSearchStarted = useRef(false);
 
-  async function search(condition: string, includeClosed = includeNotOpen) {
+  async function search(condition: string, includeClosed = includeNotOpen): Promise<unknown> {
     const normalized = condition.trim();
-    if (normalized.length < 2) return;
+    if (normalized.length < 2) return { error: "Condition must contain at least two characters." };
     setLoading(true);
     setError("");
     setSelectedRegion("all");
@@ -49,12 +53,39 @@ export function TrialDatabase() {
       const payload = await response.json() as SearchResponse;
       if (!response.ok && !payload.trials) throw new Error(payload.error ?? "Trial registries are temporarily unavailable.");
       setResult(payload);
+      return capWebMcpOutput({
+        query: normalized,
+        recordCount: payload.trials?.length ?? 0,
+        records: (payload.trials ?? []).slice(0, 5).map((trial) => ({
+          id: trial.canonicalId,
+          title: trial.title,
+          region: trial.regionTier,
+          recruitment: trial.recruitment.raw,
+          sources: trial.sources.map((source) => ({ registry: source.registry, id: source.registryId, url: source.url })),
+        })),
+        untrustedExternalRegistryContent: true,
+        limitation: payload.disclaimer,
+      });
     } catch (searchError) {
       setResult({});
-      setError(searchError instanceof Error ? searchError.message : "Search failed. Please try again.");
+      const message = searchError instanceof Error ? searchError.message : "Search failed. Please try again.";
+      setError(message);
+      return { error: message, retryable: true };
     } finally {
       setLoading(false);
     }
+  }
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const submittedCondition = String(formData.get("condition") ?? "");
+    const includeClosed = formData.has("includeNotOpen");
+    setQuery(submittedCondition);
+    setIncludeNotOpen(includeClosed);
+    const searchPromise = search(submittedCondition, includeClosed);
+    const declarativeEvent = event.nativeEvent as SubmitEvent;
+    if (declarativeEvent.agentInvoked && declarativeEvent.respondWith) declarativeEvent.respondWith(searchPromise);
   }
 
   useEffect(() => {
@@ -63,24 +94,46 @@ export function TrialDatabase() {
     void search("breast cancer", false);
   }, []);
 
+  useEffect(() => {
+    const activated = (event: ToolActivationEvent) => {
+      if (event.toolName === declarativeToolName) {
+        setDeclarativeActive(true);
+        setDeclarativeNotice("An agent filled this public search. Review the visible condition and results.");
+      }
+    };
+    const cancelled = (event: ToolActivationEvent) => {
+      if (event.toolName === declarativeToolName) {
+        setDeclarativeActive(false);
+        setDeclarativeNotice("");
+      }
+    };
+    window.addEventListener("toolactivated", activated);
+    window.addEventListener("toolcancel", cancelled);
+    return () => {
+      window.removeEventListener("toolactivated", activated);
+      window.removeEventListener("toolcancel", cancelled);
+    };
+  }, []);
+
   const visibleTrials = useMemo(() => (result.trials ?? []).filter((trial) => selectedRegion === "all" || trial.regionTier === selectedRegion), [result.trials, selectedRegion]);
 
   return (
     <section className="database-shell" aria-labelledby="database-search-title">
-      <form className="database-search" onSubmit={(event) => { event.preventDefault(); void search(query); }}>
+      <form className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription="Search public TFDA and ClinicalTrials.gov cancer trial records by a general non-sensitive condition. Keeps the search and results visible." toolautosubmit="" onSubmit={submitSearch}>
         <div className="search-heading">
           <div><p className="eyebrow">Direct registry search</p><h2 id="database-search-title">What condition are you looking for?</h2></div>
-          <span className="source-pill">TFDA + ClinicalTrials.gov</span>
+          <div className="source-stack"><span className="source-pill">TFDA + ClinicalTrials.gov</span><span className="webmcp-form-pill">Declarative WebMCP</span></div>
         </div>
+        {declarativeNotice && <p className="agent-form-notice" role="status" aria-atomic="true">{declarativeNotice}</p>}
         <label htmlFor="trial-condition">Cancer type or condition</label>
         <div className="search-row">
-          <input id="trial-condition" type="search" value={query} onChange={(event) => setQuery(event.target.value)} minLength={2} maxLength={120} required />
+          <input id="trial-condition" name="condition" type="search" value={query} onChange={(event) => setQuery(event.target.value)} minLength={2} maxLength={120} required toolparamdescription="General non-sensitive cancer condition; never paste a medical record or identifier." />
           <button className="primary-action" disabled={loading || query.trim().length < 2}>{loading ? "Searching…" : "Search trials"}</button>
         </div>
         <div className="suggestion-row" aria-label="Suggested searches">
           {suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => { setQuery(suggestion); void search(suggestion); }}>{suggestion}</button>)}
         </div>
-        <label className="confirm-check"><input type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} />Include records that are not currently open</label>
+        <label className="confirm-check"><input name="includeNotOpen" type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} toolparamdescription="Include public records that are not currently accepting participants." />Include records that are not currently open</label>
         <p className="field-helper">Use only a general condition here. Do not paste medical records or identifying information.</p>
       </form>
 

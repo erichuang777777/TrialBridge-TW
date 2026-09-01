@@ -35,6 +35,7 @@ Open `http://localhost:3000`. Guided matching is on the home page; `/trials` pro
 ```bash
 npm test
 npm run typecheck
+npm run verify:webmcp
 npm run build
 npm run verify:http
 ```

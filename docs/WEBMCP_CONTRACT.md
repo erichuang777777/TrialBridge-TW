@@ -1,20 +1,23 @@
 # WebMCP contract
 
-WebMCP is a primary product interface, not an add-on. The site uses Chrome's `document.modelContext` imperative API and remains useful without an agent.
+WebMCP is a primary product interface, not an add-on. The site uses both Chrome's declarative form API and the `document.modelContext` imperative API, while remaining fully useful without an agent.
 
 ## Registered tool classes
 
-### Public read tools
+### Visible declarative tool
 
-- Search public recruiting trials by non-sensitive topic and region.
-- Read one normalized public trial record by registry ID.
-- Explain the product's method, privacy boundaries, and registry coverage.
+- `search_public_trial_form` makes the existing `/trials` search form agent-discoverable. The agent fills the same visible condition and open-record controls a person uses; no duplicate or hidden form exists.
+- Agent activation is announced visibly, submit uses the same search function, and `SubmitEvent.respondWith()` returns bounded, structured source-linked results.
+
+### Public imperative tools
+
+- `trialbridge_method` explains the Taiwan-first method, privacy boundaries, sources, and limitations.
+- `search_public_cancer_trials` searches public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic.
 
 ### Sensitive contextual tools
 
-- Compare public trials to the current patient-confirmed summary.
-- Explain an existing match and list unresolved questions.
-- Create an outreach draft from a selected trial and confirmed summary.
+- `explain_confirmed_matches` reads the current confirmed, de-identified comparison state.
+- `draft_trial_outreach` creates an unsent outreach draft from a current match and confirmed summary.
 
 ## Security invariants
 
@@ -23,8 +26,9 @@ WebMCP is a primary product interface, not an add-on. The site uses Chrome's `do
 - Registry output is tagged as untrusted external content and length-bounded.
 - Tools never send messages, submit forms, enroll, schedule, consent, change treatment, or perform background surveillance.
 - Tool results include source registry, retrieval time, limitations, and a patient-facing safety statement.
-- Registration and cleanup are deterministic across client navigation and hot reload.
+- Imperative registration and cleanup are deterministic across client navigation and hot reload.
+- Declarative agent activity remains visible, focused, cancellable, and announced to assistive technology.
 
 ## Verification target
 
-Chrome Model Context Tool Inspector must confirm discovery, JSON Schema validity, manual calls, natural-language selection, sensitive consent behavior, untrusted-content flags, output caps, and tool cleanup.
+`npm run verify:webmcp` statically checks both API styles, schemas, annotations, output caps, same-origin exposure, security headers, and deprecated API absence. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.

@@ -2,6 +2,10 @@
 
 ## Registered tools
 
+Visible on `/trials` through declarative WebMCP:
+
+- `search_public_trial_form`: the existing public search form, with visible agent activation and same-path submission.
+
 Always available on supporting browsers:
 
 - `trialbridge_method`: product method and boundaries; read-only.
@@ -22,4 +26,4 @@ Set `NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN` to emit the Chrome origin-trial meta
 
 Before public release, use Chrome Model Context Tool Inspector to verify discovery, schemas, manual invocation, natural-language selection, untrusted-content annotations, consent-driven tool addition/removal, cancellation, output limits, and absence of sensitive tools after reset.
 
-This repository has unit, type, build, and HTTP validation. Inspector validation is currently not claimed because the installed browser-control plugin is missing its required runtime file.
+This repository has unit, type, build, HTTP, and `npm run verify:webmcp` validation. Inspector validation is currently not claimed because the installed browser-control plugin is missing its required runtime file.

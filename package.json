@@ -10,6 +10,7 @@
     "start": "next start",
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
+    "verify:webmcp": "node scripts/verify-webmcp.ts",
     "verify:registries": "node scripts/verify-registries.ts",
     "verify:http": "node scripts/verify-http.ts",
     "audit:clean-room": "node scripts/audit-clean-room.ts"

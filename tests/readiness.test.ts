@@ -54,6 +54,17 @@ test("the public trial database is directly linked from the English-first home p
   assert.match(database, /Search trial registries directly/);
 });
 
+test("the visible public database form is also a declarative WebMCP tool", async () => {
+  const database = await readFile(path.join(process.cwd(), "app", "components", "TrialDatabase.tsx"), "utf8");
+  assert.match(database, /const declarativeToolName = "search_public_trial_form"/);
+  assert.match(database, /toolname=\{declarativeToolName\}/);
+  assert.match(database, /tooldescription=/);
+  assert.match(database, /toolautosubmit=/);
+  assert.match(database, /toolparamdescription=/);
+  assert.match(database, /agentInvoked/);
+  assert.match(database, /respondWith\(searchPromise\)/);
+});
+
 test("trial cards expose five useful comparison blocks, hover details, and patient facts without relying on color alone", async () => {
   const root = process.cwd();
   const component = await readFile(path.join(root, "app", "components", "TrialMatchCard.tsx"), "utf8");

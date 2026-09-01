@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
+import { capWebMcpOutput, maxWebMcpOutputChars } from "../lib/webmcp/output.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [{ id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Draft only." });
@@ -13,6 +14,7 @@ test("WebMCP exposes public tools without patient context and no write tools", (
   assert.equal(tools.every((tool) => tool.annotations?.readOnlyHint), true);
   assert.equal(tools.some((tool) => /send|enroll|submit|book/i.test(tool.name)), false);
   assert.equal(tools.every((tool) => tool.name.length <= 30), true);
+  assert.equal(tools.flatMap((tool) => Object.values((tool.inputSchema as { properties?: Record<string, { description?: string }> }).properties ?? {})).every((parameter) => Boolean(parameter.description) && parameter.description!.length <= 150), true);
   assert.equal(JSON.stringify(tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLowerCase().includes("rawnote"), false);
 });
 
@@ -21,4 +23,11 @@ test("sensitive WebMCP tools register only with confirmed-profile consent", () =
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
   assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["explain_confirmed_matches", "draft_trial_outreach"]);
   assert.equal(tools.slice(1).every((tool) => tool.annotations?.untrustedContentHint), true);
+});
+
+test("WebMCP output is bounded before it returns to an agent", () => {
+  const output = capWebMcpOutput({ content: "x".repeat(maxWebMcpOutputChars * 2) });
+  assert.equal(typeof output, "object");
+  assert.equal(JSON.stringify(output).length <= maxWebMcpOutputChars + 32, true);
+  assert.equal((output as { truncated?: boolean }).truncated, true);
 });
