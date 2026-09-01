@@ -7,6 +7,7 @@ import { validatedLoopbackBaseUrl } from "../llm/ollama.ts";
 import { buildTrialBridgeTools } from "./tools.ts";
 
 const syntheticTrialId = "synthetic:trial-001";
+const syntheticShortlistIds = [syntheticTrialId, "synthetic:trial-002"];
 const toolCallSchema = z.object({ function: z.object({ name: z.string().min(1), arguments: z.record(z.string(), z.unknown()).default({}) }) });
 const ollamaSelectionResponseSchema = z.object({
   model: z.string().min(1),
@@ -72,7 +73,7 @@ const syntheticProfile = confirmedProfileSchema.parse({
 function toolsForState(state: WebMcpJourneyState) {
   return buildTrialBridgeTools(state === "public"
     ? { matches: [], sensitiveConsent: false }
-    : { profile: syntheticProfile, matches: [], sensitiveConsent: true });
+    : { profile: syntheticProfile, matches: [], sensitiveConsent: true, shortlistedTrialIds: state === "results_with_shortlist" ? syntheticShortlistIds : [] });
 }
 
 export function webMcpSelectionDatasetDigest(cases: WebMcpJourneyCase[] = webMcpJourneyCases): string {
@@ -80,7 +81,7 @@ export function webMcpSelectionDatasetDigest(cases: WebMcpJourneyCase[] = webMcp
 }
 
 export function webMcpSelectionToolContractDigest(): string {
-  const states: WebMcpJourneyState[] = ["public", "confirmed_with_questions", "results_ready"];
+  const states: WebMcpJourneyState[] = ["public", "confirmed_with_questions", "results_ready", "results_with_shortlist"];
   const contract = states.map((state) => ({
     state,
     tools: toolsForState(state).map(({ name, description, inputSchema, annotations }) => ({ name, description, inputSchema, annotations })),
@@ -91,6 +92,7 @@ export function webMcpSelectionToolContractDigest(): string {
 function stateContext(state: WebMcpJourneyState): string {
   if (state === "public") return "Only public tools are available. No confirmed profile, private note, or current results are available.";
   if (state === "confirmed_with_questions") return "A synthetic confirmed profile and visible WebMCP permission exist. Registry-derived questions are pending; no result cards exist yet.";
+  if (state === "results_with_shortlist") return `A synthetic confirmed profile, visible WebMCP permission, and result cards exist. The person visibly selected exactly ${syntheticShortlistIds.join(" and ")} for their shortlist.`;
   return `A synthetic confirmed profile, visible WebMCP permission, and result cards exist. The only current trial ID is ${syntheticTrialId}.`;
 }
 

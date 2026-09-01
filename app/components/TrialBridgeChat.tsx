@@ -7,6 +7,7 @@ import { confirmProfile, profileDraftSchema, setCloudUseApproval, type Confirmed
 import { createOutreachDraft } from "@/lib/matching/outreach";
 import { createTrialDiscussionBrief, type TrialDiscussionBrief } from "@/lib/matching/discussionBrief";
 import type { TrialMatch } from "@/lib/matching/engine";
+import { resolveShortlistedMatches, toggleShortlistTrial } from "@/lib/matching/shortlist";
 import { appendConfirmedFollowUpAnswers, derivePreMatchQuestions, type FollowUpQuestion } from "@/lib/matching/followUp";
 import { WebMcpBridge } from "./WebMcpBridge";
 import { MatchLegend } from "./TrialMatchCard";
@@ -14,6 +15,7 @@ import { ClarificationPanel } from "./ClarificationPanel";
 import { SummaryConfirmation } from "./SummaryConfirmation";
 import { TrialResultGroup } from "./TrialResultGroup";
 import { DiscussionBriefPanel } from "./DiscussionBriefPanel";
+import { TrialShortlistPanel } from "./TrialShortlistPanel";
 
 type AssistantMessage = { id: string; role: "user" | "assistant"; content: string };
 
@@ -70,6 +72,7 @@ export function TrialBridgeChat() {
   const [matches, setMatches] = useState<TrialMatch[]>([]);
   const [clarificationQuestions, setClarificationQuestions] = useState<FollowUpQuestion[]>([]);
   const [resultView, setResultView] = useState<"cards" | "list">("cards");
+  const [shortlistedTrialIds, setShortlistedTrialIds] = useState<string[]>([]);
   const [matching, setMatching] = useState(false);
   const [outreach, setOutreach] = useState<{ subject: string; body: string; sent: false }>();
   const [discussionBrief, setDiscussionBrief] = useState<TrialDiscussionBrief>();
@@ -142,6 +145,7 @@ export function TrialBridgeChat() {
 
   async function loadMatches(profile: ConfirmedProfile, askBeforeResults = true) {
     setMatching(true);
+    setShortlistedTrialIds([]);
     setOutreach(undefined);
     setDiscussionBrief(undefined);
     setClarificationQuestions([]);
@@ -174,6 +178,7 @@ export function TrialBridgeChat() {
     if (process.env.NODE_ENV !== "development") return;
     extractionController.current?.abort();
     setMatches([]);
+    setShortlistedTrialIds([]);
     setClarificationQuestions([]);
     setClarificationAnswers({});
     setOutreach(undefined);
@@ -198,9 +203,13 @@ export function TrialBridgeChat() {
     setChatMessages((current) => [...current, { id: `${Date.now()}-${current.length}`, role, content }]);
   }
 
+  function toggleShortlist(trialId: string) {
+    setShortlistedTrialIds((current) => toggleShortlistTrial(current, trialId));
+  }
+
   async function askCloud(message: string) {
     if (!state.confirmedProfile?.cloudUseApproved || message.trim().length < 2) return;
-    const trials = matches.slice(0, 5).map((match) => ({ registryId: match.trial.sources[0].registryId, title: match.trial.title, status: match.status, sourceUrl: match.trial.sources[0].url }));
+    const trials = matches.slice(0, 5).map((match) => ({ registryId: match.trial.sources[0].registryId, title: match.trial.title, status: match.status, sourceUrl: match.trial.sources[0].url, shortlisted: shortlistedTrialIds.includes(match.trial.canonicalId) }));
     try {
       const response = await fetch("/api/cloud/dialogue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profile: state.confirmedProfile, question: message, trials, language: state.language }) });
       const payload = await response.json() as { answer?: string; error?: string };
@@ -285,7 +294,7 @@ export function TrialBridgeChat() {
     <section className="chat-shell" id="private-chat" aria-labelledby="chat-title">
       <div className="chat-heading"><div><p className="eyebrow">Agentic TrialBridge</p><h2 id="chat-title">{t.heading}</h2></div><div className="header-controls">{intakeMode && <div className="mode-toggle" role="group" aria-label={state.language === "en" ? "Workflow mode" : "工作模式"}><button aria-pressed={intakeMode === "agent"} onClick={() => setIntakeMode("agent")}>{state.language === "en" ? "Agent mode" : "代理模式"}</button><button aria-pressed={intakeMode === "manual"} onClick={() => setIntakeMode("manual")}>{state.language === "en" ? "Manual mode" : "手動模式"}</button></div>}<span>Step {step}/3</span></div></div>
       {process.env.NODE_ENV === "development" && <div className="dev-stage-switcher" role="group" aria-label="Development stage shortcuts"><strong>Development shortcuts</strong><span>Synthetic data only</span><div>{(["start", "capture", "mask", "confirmation", "results"] as const).map((target) => <button key={target} onClick={() => void jumpToDevelopmentStage(target)}>{target === "start" ? "Start" : target === "capture" ? "Enter note" : target === "mask" ? "Mask review" : target === "confirmation" ? "Confirm summary" : "Trial cards"}</button>)}</div></div>}
-      <WebMcpBridge profile={state.confirmedProfile} matches={matches} pendingQuestions={clarificationQuestions} matching={matching} sensitiveConsent={webMcpConsent} language={state.language} />
+      <WebMcpBridge profile={state.confirmedProfile} matches={matches} shortlistedTrialIds={shortlistedTrialIds} pendingQuestions={clarificationQuestions} matching={matching} sensitiveConsent={webMcpConsent} language={state.language} />
       <div className="chat-workspace">
       <aside className="flow-rail" aria-label={state.language === "en" ? "Matching progress" : "配對進度"}><ol>{[
         { number: 1, en: "Enter note", zh: "建立病況" },
@@ -301,16 +310,17 @@ export function TrialBridgeChat() {
       {state.stage === "extracting" && <div className="chat-turn extraction-progress" role="status" aria-live="polite" aria-atomic="true"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>{t.cloudWorking}</strong><span className="elapsed-time">{t.elapsed}: {elapsedSeconds}s</span></div><p>{elapsedSeconds < 30 ? t.waiting : t.timeoutHint}</p><p className="eta-copy">{t.expected}</p><p className="deadline-copy">{t.remaining} <strong>{Math.max(0, 120 - elapsedSeconds)}s</strong></p><p className="field-helper">gpt-oss:120b-cloud · Remote cloud via localhost proxy · 120s hard limit</p><button onClick={cancelExtraction}>{t.cancel}</button></div>}
       {(state.stage === "confirmation" || state.stage === "ready") && state.draft && state.maskResult && <SummaryConfirmation completed={state.stage === "ready"} draft={state.draft} maskResult={state.maskResult} language={state.language} model={extractionRuntime?.model} edits={edits} checked={checked} onEdit={(id, value) => { setEdits((current) => ({ ...current, [id]: value })); setChecked((current) => ({ ...current, [id]: false })); }} onCheck={(id, value) => setChecked((current) => ({ ...current, [id]: value }))} onCheckAll={() => setChecked(Object.fromEntries(state.draft!.facts.map((fact) => [fact.id, true])))} onBack={() => dispatch({ type: "BACK_TO_CAPTURE" })} onFinish={() => void finishConfirmation()} />}
       {state.stage === "ready" && state.confirmedProfile && <div className="chat-turn ready-stage">
-        <div className="post-confirmation-controls"><label className="confirm-check webmcp-consent"><input type="checkbox" checked={webMcpConsent} onChange={(event) => setWebMcpConsent(event.target.checked)} />{state.language === "en" ? "Allow WebMCP to use the confirmed summary and current results." : "允許 WebMCP 使用確認摘要與目前結果。"}</label><button onClick={() => { setChecked({}); setEdits({}); setMatches([]); setClarificationQuestions([]); setClarificationAnswers({}); setOutreach(undefined); setDiscussionBrief(undefined); setChatInput(""); setChatMessages([]); setIntakeMode(null); setWebMcpConsent(false); dispatch({ type: "RESET" }); }}>{t.clear}</button></div>
+        <div className="post-confirmation-controls"><label className="confirm-check webmcp-consent"><input type="checkbox" checked={webMcpConsent} onChange={(event) => setWebMcpConsent(event.target.checked)} />{state.language === "en" ? "Allow WebMCP to use the confirmed summary and current results." : "允許 WebMCP 使用確認摘要與目前結果。"}</label><button onClick={() => { setChecked({}); setEdits({}); setMatches([]); setShortlistedTrialIds([]); setClarificationQuestions([]); setClarificationAnswers({}); setOutreach(undefined); setDiscussionBrief(undefined); setChatInput(""); setChatMessages([]); setIntakeMode(null); setWebMcpConsent(false); dispatch({ type: "RESET" }); }}>{t.clear}</button></div>
         {matching && <div className="matching-progress" role="status">{state.language === "en" ? "Checking public trial requirements…" : "正在檢查公開試驗條件…"}</div>}
         {clarificationQuestions.length > 0 && <ClarificationPanel questions={clarificationQuestions} language={state.language} answers={clarificationAnswers} onAnswersChange={setClarificationAnswers} onConfirm={confirmClarifications} />}
         {matches.length > 0 && <div className="visual-results" aria-live="polite">
           <div className="results-title-row"><div><p className="eyebrow">Visual comparison</p><h3>{state.language === "en" ? "Source-traceable trial results" : "來源可追溯的試驗結果"}</h3></div><div className="results-controls"><MatchLegend language={state.language} /><div className="view-switcher" role="group" aria-label={state.language === "en" ? "Result view" : "結果顯示方式"}><button aria-pressed={resultView === "cards"} onClick={() => setResultView("cards")}>{state.language === "en" ? "Cards" : "卡片"}</button><button aria-pressed={resultView === "list"} onClick={() => setResultView("list")}>{state.language === "en" ? "List" : "條列"}</button></div></div></div>
           <div className="results-export-row"><div><strong>{state.language === "en" ? "Take the comparison to your care team" : "將比較結果帶給照護團隊"}</strong><p>{state.language === "en" ? "Create a local brief in the current language from confirmed facts and up to five source-linked trials." : "使用已確認資料與最多五項可追溯試驗，以目前語言建立本機討論摘要。"}</p></div><button type="button" onClick={() => setDiscussionBrief(createTrialDiscussionBrief(state.confirmedProfile!, matches, state.language))}>{state.language === "en" ? "Create discussion brief" : "建立討論摘要"}</button></div>
+          <TrialShortlistPanel matches={resolveShortlistedMatches(matches, shortlistedTrialIds)} language={state.language} onRemove={toggleShortlist} onClear={() => setShortlistedTrialIds([])} />
           <div className="result-groups">
-              <TrialResultGroup title={state.language === "en" ? "No known public-record difference" : "目前無已知公開條件差異"} description={state.language === "en" ? "Shown first. Yellow items still require criterion-by-criterion review; this is not a final eligibility decision." : "優先顯示；黃色項目仍需逐條確認，且不是最終資格判定。"} emptyText={state.language === "en" ? "No trial is currently in this group." : "目前沒有試驗在此群組。"} matches={matches.slice(0, 12).filter((match) => match.status === "discuss" || match.status === "needs_review")} profile={state.confirmedProfile} language={state.language} view={resultView} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
-              <TrialResultGroup title={state.language === "en" ? "More information needed" : "仍需更多資訊"} description={state.language === "en" ? "You were asked about the most common missing fields before these results were shown." : "顯示結果前已先詢問常見缺漏欄位。"} emptyText={state.language === "en" ? "No trial remains in this group." : "目前沒有試驗留在此群組。"} matches={matches.slice(0, 12).filter((match) => match.status === "needs_information")} profile={state.confirmedProfile} language={state.language} view={resultView} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
-              <TrialResultGroup collapsed title={state.language === "en" ? "Public-record differences found" : "發現公開條件差異"} description={state.language === "en" ? "Collapsed by default. Includes potential exclusion signals; only the study team can decide eligibility." : "預設收合。包含可能排除訊號；只有試驗團隊能判定最終資格。"} emptyText={state.language === "en" ? "No public-record mismatch was found." : "未發現公開資料差異。"} matches={matches.slice(0, 12).filter((match) => match.status === "unlikely_based_on_public_record")} profile={state.confirmedProfile} language={state.language} view={resultView} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup title={state.language === "en" ? "No known public-record difference" : "目前無已知公開條件差異"} description={state.language === "en" ? "Shown first. Yellow items still require criterion-by-criterion review; this is not a final eligibility decision." : "優先顯示；黃色項目仍需逐條確認，且不是最終資格判定。"} emptyText={state.language === "en" ? "No trial is currently in this group." : "目前沒有試驗在此群組。"} matches={matches.slice(0, 12).filter((match) => match.status === "discuss" || match.status === "needs_review")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup title={state.language === "en" ? "More information needed" : "仍需更多資訊"} description={state.language === "en" ? "You were asked about the most common missing fields before these results were shown." : "顯示結果前已先詢問常見缺漏欄位。"} emptyText={state.language === "en" ? "No trial remains in this group." : "目前沒有試驗留在此群組。"} matches={matches.slice(0, 12).filter((match) => match.status === "needs_information")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup collapsed title={state.language === "en" ? "Public-record differences found" : "發現公開條件差異"} description={state.language === "en" ? "Collapsed by default. Includes potential exclusion signals; only the study team can decide eligibility." : "預設收合。包含可能排除訊號；只有試驗團隊能判定最終資格。"} emptyText={state.language === "en" ? "No public-record mismatch was found." : "未發現公開資料差異。"} matches={matches.slice(0, 12).filter((match) => match.status === "unlikely_based_on_public_record")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
           </div>
         </div>}
         {discussionBrief && <DiscussionBriefPanel brief={discussionBrief} language={state.language} onClose={() => setDiscussionBrief(undefined)} />}

@@ -5,9 +5,25 @@ import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { capWebMcpOutput, maxWebMcpOutputChars } from "../lib/webmcp/output.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import type { WebMcpActivity } from "../lib/webmcp/tools.ts";
+import type { CriterionAssessment, TrialMatch } from "../lib/matching/engine.ts";
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [{ id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Draft only." });
 const profile = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
+
+const assessmentKeys: CriterionAssessment["key"][] = ["condition", "recruitment", "age", "sex", "location", "eligibility_details"];
+function syntheticMatch(id: string, title: string): TrialMatch {
+  return {
+    trial: {
+      canonicalId: id, identifiers: [id], title, language: "en", conditions: ["Synthetic gastric cancer"], phases: ["Phase 2"], interventions: ["Synthetic study medicine"], studyType: "INTERVENTIONAL",
+      recruitment: { raw: "Recruiting", category: "open", acceptingNewParticipants: true }, eligibility: { combined: "Synthetic criteria", minimumAge: "18 Years", maximumAge: "80 Years", sex: "ALL" },
+      locations: [{ country: "Taiwan", city: "Taipei" }], contacts: [], regionTier: "taiwan",
+      sources: [{ registry: "ClinicalTrials.gov", registryId: id, url: `https://clinicaltrials.gov/study/${id}`, retrievedAt: "2026-09-01T00:00:00.000Z" }],
+    },
+    status: "needs_review",
+    assessments: assessmentKeys.map((key) => ({ key, outcome: key === "eligibility_details" ? "unknown" : "possibly_met", patientFactIds: [], registryField: key, explanationEn: `Synthetic ${key} comparison.`, explanationZhHant: `虛構 ${key} 比較。` })),
+    potentialExclusions: [],
+  };
+}
 
 test("WebMCP exposes public tools without patient context and no write tools", () => {
   const tools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false });
@@ -24,6 +40,22 @@ test("sensitive WebMCP tools register only with confirmed-profile consent", () =
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
   assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]);
   assert.equal(tools.slice(1).every((tool) => tool.annotations?.untrustedContentHint), true);
+});
+
+test("shortlist comparison tool appears only after two visible selections and cannot choose trials", async () => {
+  const matches = [syntheticMatch("NCT00000001", "Synthetic trial one"), syntheticMatch("NCT00000002", "Synthetic trial two")];
+  assert.equal(buildTrialBridgeTools({ profile, matches, sensitiveConsent: true, shortlistedTrialIds: [matches[0].trial.canonicalId] }).some((tool) => tool.name === "compare_shortlisted_trials"), false);
+  const tool = buildTrialBridgeTools({ profile, matches, sensitiveConsent: true, shortlistedTrialIds: matches.map((match) => match.trial.canonicalId) }).find((candidate) => candidate.name === "compare_shortlisted_trials");
+  assert.ok(tool);
+  assert.deepEqual((tool.inputSchema as { properties: Record<string, unknown> }).properties, { language: { type: "string", description: "Output language only; trial IDs come from the visible user-controlled shortlist.", enum: ["zh-Hant", "en"] } });
+  const output = await tool.execute({ language: "en" }, { signal: new AbortController().signal });
+  const serialized = JSON.stringify(output);
+  assert.match(serialized, /shortlist_ready/);
+  assert.match(serialized, /selectedByUser/);
+  assert.match(serialized, /NCT00000001/);
+  assert.match(serialized, /NCT00000002/);
+  assert.doesNotMatch(serialized, /fact_cancer_1|gastric cancer/i);
+  assert.equal(serialized.length <= maxWebMcpOutputChars, true);
 });
 
 test("follow-up tool guides the agent without recording answers or exposing notes", async () => {

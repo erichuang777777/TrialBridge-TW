@@ -27,6 +27,8 @@ After adding the state-aware WebMCP follow-up tool, payload-free execution statu
 
 After adding the version-locked 50-sample cloud-model selection baseline and its responsive evidence cards, the sequential production regression recorded: home Performance 96, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.5 s, TBT 130 ms, CLS 0, and zero console-error audit items; `/webmcp` recorded Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.3 s, TBT 80 ms, CLS 0, and zero console-error audit items.
 
+After adding the user-controlled shortlist, responsive comparison, seventh conditional imperative tool, and 55-sample selection artifact, the home production audit recorded Performance 97, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.5 s, TBT 120 ms, CLS 0, and zero console-error audit items. Two sequential `/webmcp` runs recorded Performance 93 then 98, with identical Accessibility 100, Best Practices 100, SEO 63, CLS 0, and zero console-error audit items; TBT varied from 260 ms to 70 ms. Both results are retained as run-to-run variance rather than reporting only the higher score.
+
 Command shape:
 
 ```powershell

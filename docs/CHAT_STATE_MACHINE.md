@@ -13,6 +13,7 @@ WELCOME
   -> SOURCE_DERIVED_CLARIFICATION
   -> CONFIRMED_PROFILE_UPDATE
   -> MATCHING_AND_GROUPING
+  -> OPTIONAL_VISIBLE_SHORTLIST (2-3 current result cards)
   -> RESULTS_DIALOGUE
   -> OUTREACH_DRAFT
 ```
@@ -29,6 +30,7 @@ WELCOME
 - Editing a confirmed matching fact invalidates prior results.
 - Cloud dialogue is optional and cannot start before confirmation plus a separate cloud-consent choice.
 - WebMCP discovery may be passive, but sensitive execution requires an active page, an explicit user request, and a visible confirmation gate.
+- The shortlist is volatile, capped at three current results, and changed only by visible human controls. Its comparison tool is absent until two selections exist and accepts no trial identifiers.
 - The system always offers `unknown` choices where a trial requirement needs information.
 - A caregiver is reminded to verify uncertain facts with the patient or treating team.
 

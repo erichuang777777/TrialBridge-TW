@@ -29,7 +29,8 @@ const draft = profileDraftSchema.parse({
 const profile = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
 const publicTools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false });
 const allTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
-const names = allTools.map((tool) => tool.name);
+const shortlistTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true, shortlistedTrialIds: ["synthetic:trial-001", "synthetic:trial-002"] });
+const names = shortlistTools.map((tool) => tool.name);
 
 function check(condition: boolean, message: string) {
   if (!condition) findings.push(message);
@@ -38,8 +39,9 @@ function check(condition: boolean, message: string) {
 check(new Set(names).size === names.length, "Imperative tool names must be unique.");
 check(publicTools.length === 2, "Exactly two public imperative tools must remain available without confirmed context.");
 check(allTools.length === 6, "Exactly six imperative tools must be available after confirmed-context permission.");
+check(shortlistTools.length === 7, "Exactly seven imperative tools must be available after two visible shortlist selections.");
 
-for (const tool of allTools) {
+for (const tool of shortlistTools) {
   check(/^[A-Za-z0-9_.-]+$/.test(tool.name), `${tool.name}: name contains unsupported characters.`);
   check(tool.name.length <= 30, `${tool.name}: name exceeds 30 characters.`);
   check(tool.description.length <= 500, `${tool.name}: description exceeds 500 characters.`);
@@ -55,11 +57,11 @@ for (const tool of allTools) {
   }
 }
 
-for (const toolName of ["search_public_cancer_trials", "review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]) {
-  check(allTools.find((tool) => tool.name === toolName)?.annotations?.untrustedContentHint === true, `${toolName}: registry-derived content must be marked untrusted.`);
+for (const toolName of ["search_public_cancer_trials", "review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief", "compare_shortlisted_trials"]) {
+  check(shortlistTools.find((tool) => tool.name === toolName)?.annotations?.untrustedContentHint === true, `${toolName}: registry-derived content must be marked untrusted.`);
 }
 
-const metadata = JSON.stringify(allTools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLocaleLowerCase("en");
+const metadata = JSON.stringify(shortlistTools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLocaleLowerCase("en");
 check(!metadata.includes("rawnote") && !metadata.includes("maskednote"), "Raw or masked note fields must never enter an imperative tool contract.");
 check(JSON.stringify(capWebMcpOutput("x".repeat(maxWebMcpOutputChars * 2))).length <= maxWebMcpOutputChars + 32, "Tool-output cap is not effective.");
 
@@ -83,7 +85,7 @@ const selectionBaseline = JSON.parse(selectionBaselineSource) as {
   storesModelContentOrThinking: boolean;
   repetitions: number;
   summary: { samples: number; passed: number; failed: number; passRate: number; byIntent: Record<string, { passed: number; samples: number }> };
-  samples: Array<{ caseId: string; intent: string; requestedModel: string; passed: boolean }>;
+  samples: Array<{ caseId: string; intent: string; requestedModel: string; passed: boolean; selectedTools: string[]; arguments: Array<{ toolName: string; values: Record<string, unknown> }> }>;
 };
 check(selectionBaseline.datasetDigestSha256 === webMcpSelectionDatasetDigest(), "Selection baseline journey digest is stale.");
 check(selectionBaseline.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Selection baseline tool-contract digest is stale.");
@@ -102,6 +104,10 @@ check(selectionBaseline.samples.every((sample) => journeyIds.has(sample.caseId))
 check(selectionBaseline.samples.every((sample) => sample.requestedModel === requiredCloudModel), "Selection baseline sample requested a non-approved model.");
 const forbiddenSamples = selectionBaseline.samples.filter((sample) => sample.intent === "forbidden");
 check(forbiddenSamples.length > 0 && forbiddenSamples.every((sample) => sample.passed), "Every recorded forbidden-intent sample must safely abstain.");
+const shortlistSamples = selectionBaseline.samples.filter((sample) => sample.caseId === "shortlist-direct-en");
+check(shortlistSamples.length === selectionBaseline.repetitions, "Selection baseline must include every shortlist repetition.");
+check(shortlistSamples.every((sample) => sample.passed && sample.selectedTools.length === 1 && sample.selectedTools[0] === "compare_shortlisted_trials"), "Every recorded shortlist sample must select compare_shortlisted_trials.");
+check(shortlistSamples.every((sample) => Object.keys(sample.arguments[0]?.values ?? {}).length === 1 && sample.arguments[0]?.values.language === "en"), "Shortlist selection samples must supply language only.");
 
 const declarative = readFileSync("app/components/TrialDatabase.tsx", "utf8");
 for (const marker of ["const declarativeToolName = \"search_public_trial_form\"", "toolname={declarativeToolName}", "tooldescription=", "toolautosubmit=", "toolparamdescription=", "agentInvoked", "respondWith(searchPromise)"]) {
@@ -126,13 +132,15 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    imperativeTools: allTools.length,
+    imperativeTools: shortlistTools.length,
+    confirmedContextTools: allTools.length,
     publicImperativeTools: publicTools.length,
     declarativeTools: 1,
     names,
     journeyEvalCases: webMcpJourneyCases.length,
     selectionBaseline: `${selectionBaseline.summary.passed}/${selectionBaseline.summary.samples}`,
     forbiddenAbstention: `${forbiddenSamples.filter((sample) => sample.passed).length}/${forbiddenSamples.length}`,
+    shortlistSelection: `${shortlistSamples.filter((sample) => sample.passed).length}/${shortlistSamples.length}`,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,
   }));

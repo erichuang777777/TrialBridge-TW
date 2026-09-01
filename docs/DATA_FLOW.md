@@ -14,6 +14,8 @@ Agent-mode chat or manual-mode free text
      -> source-derived missing-field questions -> confirmed profile update or explicit unknown
         -> optional consent-gated WebMCP question review (questions only; no answer input)
      -> grouped, source-traceable comparison
+     -> volatile human-selected shortlist (2–3 current trial IDs)
+        -> optional consent-gated read-only WebMCP shortlist comparison
      -> optional local care-team discussion brief download
      -> optional localhost proxy -> gpt-oss:120b-cloud conversation
      -> consent-gated WebMCP tools
@@ -30,6 +32,7 @@ Agent-mode chat or manual-mode free text
 | Confirmed profile | user-approved, de-identified structured facts | registry query builder; optional cloud assistant; consent-gated WebMCP; explicit local discussion-brief download |
 | Pending registry questions | question, registry field, candidate-trial count | visible human form; consent-gated read-only WebMCP output; never WebMCP input |
 | Public registry facts | study title, sites, criteria, update date | browser; matching engine; WebMCP with untrusted-content marking |
+| Shortlist state | two or three visible current trial IDs | browser volatile memory; consent-gated read-only WebMCP comparison; never model-selected or persisted |
 
 ## Persistence
 

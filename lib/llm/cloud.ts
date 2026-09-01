@@ -2,7 +2,7 @@ import { z } from "zod";
 import { confirmedProfileSchema } from "../profile/schema.ts";
 import { validatedLoopbackBaseUrl } from "./ollama.ts";
 
-const trialContextSchema = z.object({ registryId: z.string().max(80), title: z.string().max(500), status: z.string().max(80), sourceUrl: z.string().url() }).strict();
+const trialContextSchema = z.object({ registryId: z.string().max(80), title: z.string().max(500), status: z.string().max(80), sourceUrl: z.string().url(), shortlisted: z.boolean().default(false) }).strict();
 export const cloudDialogueRequestSchema = z.object({
   profile: confirmedProfileSchema.refine((profile) => profile.cloudUseApproved, "Cloud use requires explicit approval"),
   question: z.string().trim().min(2).max(1_000),
@@ -24,7 +24,7 @@ export async function answerConfirmedDialogue(input: z.infer<typeof cloudDialogu
   const response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
     method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(120_000),
     body: JSON.stringify({ model: validatedCloudModel(), stream: false, think: false, options: { temperature: 0.2, num_predict: 4096 }, messages: [
-      { role: "system", content: `You help a patient or caregiver understand public clinical-trial information in ${parsed.language}. Use only the confirmed summary and registry context. Distinguish registry facts, interpretation, and unknowns. Never diagnose, recommend treatment, claim benefit, or determine eligibility. End with questions for the care or study team.` },
+      { role: "system", content: `You help a patient or caregiver understand public clinical-trial information in ${parsed.language}. Use only the confirmed summary and registry context. When the question refers to the shortlist or selected trials, compare only publicTrials marked shortlisted=true; if fewer than two are marked, ask the person to select more instead of guessing. Distinguish registry facts, interpretation, and unknowns. Never diagnose, recommend treatment, claim benefit, or determine eligibility. End with questions for the care or study team.` },
       { role: "user", content: JSON.stringify({ confirmedSummary: minimizedProfile, publicTrials: parsed.trials, question: parsed.question }) },
     ] }),
   });

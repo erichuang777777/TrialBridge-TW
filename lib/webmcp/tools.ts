@@ -4,6 +4,7 @@ import { createOutreachDraft } from "../matching/outreach.ts";
 import { createTrialDiscussionBrief } from "../matching/discussionBrief.ts";
 import type { FollowUpQuestion } from "../matching/followUp.ts";
 import type { TrialMatch } from "../matching/engine.ts";
+import { maxShortlistTrials, resolveShortlistedMatches } from "../matching/shortlist.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
 import { capWebMcpOutput } from "./output.ts";
 
@@ -19,6 +20,7 @@ export interface WebMcpToolContext {
   matches: TrialMatch[];
   pendingQuestions?: FollowUpQuestion[];
   matching?: boolean;
+  shortlistedTrialIds?: string[];
   sensitiveConsent: boolean;
   fetcher?: typeof fetch;
   onActivity?: (activity: WebMcpActivity) => void;
@@ -114,6 +116,32 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     execute: (input) => {
       if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
       return capWebMcpOutput(createTrialDiscussionBrief(context.profile!, context.matches, input.language));
+    },
+  });
+  const shortlistedTrialIds = [...new Set(context.shortlistedTrialIds ?? [])].slice(0, maxShortlistTrials);
+  if (shortlistedTrialIds.length >= 2) tools.push({
+    name: "compare_shortlisted_trials", title: "Compare the visible trial shortlist",
+    description: "Call only when a user asks to compare trials they already added to the visible shortlist. Reads two or three user-selected trials; never chooses or changes the shortlist.",
+    inputSchema: { type: "object", properties: { language: { type: "string", description: "Output language only; trial IDs come from the visible user-controlled shortlist.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: (input) => {
+      if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
+      const selected = resolveShortlistedMatches(context.matches, shortlistedTrialIds);
+      if (selected.length < 2) throw new Error("The visible shortlist no longer has two current trials; ask the user to select two result cards, then call again");
+      return capWebMcpOutput({
+        state: "shortlist_ready",
+        selectedByUser: true,
+        boundary: input.language === "en" ? "Public-record comparison only; the study team decides eligibility." : "僅比較公開登錄資料；資格由試驗團隊判定。",
+        trials: selected.map((match) => ({
+          id: match.trial.canonicalId,
+          title: match.trial.title.slice(0, 120),
+          status: match.status,
+          region: match.trial.regionTier,
+          criteria: Object.fromEntries(match.assessments.map((assessment) => [assessment.key, assessment.outcome])),
+          potentialExclusionSignal: match.potentialExclusions.length > 0,
+          source: { registry: match.trial.sources[0].registry, id: match.trial.sources[0].registryId, url: match.trial.sources[0].url },
+        })),
+      });
     },
   });
   return tools.map((tool) => withVisibleActivity(tool, context.onActivity));

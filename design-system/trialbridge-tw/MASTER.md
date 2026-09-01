@@ -36,6 +36,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - Masked note and extracted facts share one review surface. `Confirmed` is a column heading, `Confirm all` sits beside it, and row checkboxes use accessible names without repeated visible labels.
 - Treatment, timing, subtype, stage, disease extent, and biomarker facts receive visible model-review-priority prompts. These prompts never claim an objective probability of correctness.
 - Trial cards show patient-confirmed disease, subtype, stage, biomarker, and age separately from the registry comparison matrix.
+- Shortlisting is an explicit human action, capped at three cards. Two selections open an aligned desktop table; smaller screens receive equivalent stacked cards instead of page-wide horizontal overflow. Selection state is always announced as text, never color alone.
 - A care-team discussion brief is a secondary result action, not a competing primary workflow step. Preview precedes download; the file warning names confirmed health information and local storage risk, while completion uses one atomic status message.
 - Repeated comparison cells are color blocks with criterion, state, and rationale disclosed on pointer hover and keyboard focus. A visible legend and expanded text preserve non-color access.
 - The WebMCP capability layer has one compact, collapsible live-status surface. Its atomic status sentence reports browser support and verified registration; tool names, permission locks, safety boundaries, and judge prompts appear only on disclosure.

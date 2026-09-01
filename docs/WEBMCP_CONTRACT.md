@@ -20,6 +20,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 - `explain_confirmed_matches` reads the current confirmed, de-identified comparison state.
 - `draft_trial_outreach` creates an unsent outreach draft from a current match and confirmed summary.
 - `draft_trial_discussion_brief` creates but never sends a bounded care-team brief from confirmed facts and current source-linked comparisons. It labels registry evidence, unknowns, and non-eligibility explicitly.
+- `compare_shortlisted_trials` appears only after the person visibly selects two or three current result cards. It reads that shortlist and returns a compact public-record comparison; it accepts no trial IDs and cannot add, remove, reorder, or otherwise choose trials.
 
 ## Security invariants
 
@@ -28,7 +29,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 - Registry output is tagged as untrusted external content and length-bounded.
 - Tools never send messages, submit forms, enroll, schedule, consent, change treatment, or perform background surveillance.
 - Tool results include source registry, retrieval time, limitations, and a patient-facing safety statement.
-- Imperative registration and cleanup are deterministic across client navigation and hot reload.
+- Imperative registration and cleanup are deterministic across client navigation, confirmed-summary permission, shortlist changes, and hot reload.
 - Declarative agent activity remains visible, focused, cancellable, and announced to assistive technology.
 - Imperative executions publish a payload-free visible status (`running`, `completed`, `failed`, or `cancelled`) so an agent call never becomes an invisible page action.
 

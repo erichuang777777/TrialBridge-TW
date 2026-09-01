@@ -35,11 +35,14 @@ const patientFactGroups = [
   { key: "age", domains: ["age_band"], en: "Age", zh: "年齡" },
 ] as const;
 
-export function TrialMatchCard({ match, profile, language, view, onCreateOutreach }: {
+export function TrialMatchCard({ match, profile, language, view, shortlisted, shortlistDisabled, onToggleShortlist, onCreateOutreach }: {
   match: TrialMatch;
   profile: ConfirmedProfile;
   language: "en" | "zh-Hant";
   view: "cards" | "list";
+  shortlisted: boolean;
+  shortlistDisabled: boolean;
+  onToggleShortlist: () => void;
   onCreateOutreach: () => void;
 }) {
   const condition = match.assessments.find((assessment) => assessment.key === "condition");
@@ -47,7 +50,7 @@ export function TrialMatchCard({ match, profile, language, view, onCreateOutreac
     const values = profile.facts.filter((fact) => group.domains.some((domain) => domain === fact.domain)).map((fact) => language === "en" ? fact.displayEn : fact.displayZhHant);
     return { ...group, value: values.join(" · ") };
   });
-  return <article className={`visual-match-card ${view === "list" ? "list-match-card" : "card-match-card"}`}>
+  return <article className={`visual-match-card ${view === "list" ? "list-match-card" : "card-match-card"} ${shortlisted ? "shortlisted-match-card" : ""}`}>
     <div className="visual-card-header">
       <span className={`overall-status overall-${match.status}`}>{statusLabels[match.status][language]}</span>
       <span className="registry-id">{match.trial.sources[0].registryId}</span>
@@ -77,6 +80,7 @@ export function TrialMatchCard({ match, profile, language, view, onCreateOutreac
     </details>
     <div className="visual-card-actions">
       <a href={match.trial.sources[0].url} target="_blank" rel="noreferrer">{language === "en" ? "Open registry" : "查看登錄"}</a>
+      <button className="shortlist-toggle" type="button" aria-pressed={shortlisted} disabled={shortlistDisabled} onClick={onToggleShortlist}>{shortlisted ? (language === "en" ? "Added to compare" : "已加入比較") : shortlistDisabled ? (language === "en" ? "Comparison full" : "比較已滿") : (language === "en" ? "Add to compare" : "加入比較")}</button>
       <button onClick={onCreateOutreach}>{language === "en" ? "Contact draft" : "聯絡草稿"}</button>
     </div>
   </article>;

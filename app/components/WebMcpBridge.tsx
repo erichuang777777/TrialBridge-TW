@@ -11,7 +11,7 @@ type RegistrationState = "checking" | "unsupported" | "registering" | "ready" | 
 type Language = "zh-Hant" | "en";
 
 const publicToolNames = ["trialbridge_method", "search_public_cancer_trials"];
-const contextualToolNames = ["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"];
+const contextualToolNames = ["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief", "compare_shortlisted_trials"];
 
 const judgePrompts = {
   en: [
@@ -19,22 +19,24 @@ const judgePrompts = {
     "Search public recruiting cancer trials for gastric cancer.",
     "Which trial requirements still need my answer before results can be compared?",
     "Draft a care-team discussion brief from my confirmed results.",
+    "Compare the trials I added to my shortlist.",
   ],
   "zh-Hant": [
     "說明 TrialBridge TW 的台灣優先搜尋方法與隱私界線。",
     "搜尋胃癌目前公開招募中的臨床試驗。",
     "顯示比較結果前，還有哪些試驗條件需要我回答？",
     "依照我已確認的結果建立照護團隊討論摘要。",
+    "比較我加入 shortlist 的試驗。",
   ],
 };
 
-export function WebMcpBridge({ profile, matches, pendingQuestions, matching, sensitiveConsent, language }: { profile?: ConfirmedProfile; matches: TrialMatch[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; language: Language }) {
+export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language }: { profile?: ConfirmedProfile; matches: TrialMatch[]; shortlistedTrialIds: string[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; language: Language }) {
   const [registrationState, setRegistrationState] = useState<RegistrationState>("checking");
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [copiedPrompt, setCopiedPrompt] = useState<number>();
   const [lastActivity, setLastActivity] = useState<WebMcpActivity>();
-  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, pendingQuestions, matching, sensitiveConsent, onActivity: setLastActivity }), [profile, matches, pendingQuestions, matching, sensitiveConsent]);
+  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, onActivity: setLastActivity }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent]);
   const contextualUnlocked = Boolean(profile && sensitiveConsent);
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export function WebMcpBridge({ profile, matches, pendingQuestions, matching, sen
     contextualTitle: "Confirmed-context tools",
     active: "Active",
     locked: "Locked until confirmed summary permission",
+    shortlistLocked: "Select 2 trials to activate",
     unavailable: "Requires a WebMCP-enabled browser",
     safety: "All tools are read-only. Raw and masked notes are never exposed. Public registry content is marked untrusted.",
     tryTitle: "Judge prompts",
@@ -122,6 +125,7 @@ export function WebMcpBridge({ profile, matches, pendingQuestions, matching, sen
     contextualTitle: "確認摘要工具",
     active: "已啟用",
     locked: "確認摘要並授權後啟用",
+    shortlistLocked: "選擇 2 項試驗後啟用",
     unavailable: "需要支援 WebMCP 的瀏覽器",
     safety: "全部工具均為唯讀；原始與遮蔽病歷不會公開，公開登錄內容會標示為不受信任資料。",
     tryTitle: "評審測試語句",
@@ -151,6 +155,7 @@ export function WebMcpBridge({ profile, matches, pendingQuestions, matching, sen
     if (registrationState === "unsupported") return { label: copy.unavailable, className: "tool-unavailable" };
     if (registrationState === "ready" && registeredNames.includes(name)) return { label: copy.active, className: "tool-active" };
     if (contextual && !contextualUnlocked) return { label: copy.locked, className: "tool-locked" };
+    if (name === "compare_shortlisted_trials" && shortlistedTrialIds.length < 2) return { label: copy.shortlistLocked, className: "tool-locked" };
     return { label: copy.state[registrationState], className: "tool-pending" };
   }
 

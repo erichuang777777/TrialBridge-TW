@@ -23,3 +23,21 @@ test("cloud dialogue sends only minimized confirmed facts", async () => {
   assert.equal(sent.includes("displayZhHant"), false);
   assert.equal(sent.includes("confirmedAt"), false);
 });
+
+test("cloud dialogue receives only visible shortlist flags and is told not to infer selections", async () => {
+  let sent = "";
+  const approved = setCloudUseApproval(confirmed, true);
+  const trials = [
+    { registryId: "NCT00000001", title: "Synthetic trial one", status: "needs_review", sourceUrl: "https://clinicaltrials.gov/study/NCT00000001", shortlisted: true },
+    { registryId: "NCT00000002", title: "Synthetic trial two", status: "needs_information", sourceUrl: "https://clinicaltrials.gov/study/NCT00000002", shortlisted: false },
+  ];
+  const mockFetch: typeof fetch = async (_input, init) => { sent = String(init?.body); return Response.json({ message: { content: "Select one more trial before comparing the shortlist." } }); };
+  await answerConfirmedDialogue({ profile: approved, question: "Compare my shortlist", trials, language: "en" }, mockFetch);
+  const request = JSON.parse(sent) as { messages: Array<{ role: string; content: string }> };
+  const system = request.messages.find((message) => message.role === "system")?.content ?? "";
+  const context = JSON.parse(request.messages.find((message) => message.role === "user")?.content ?? "{}") as { publicTrials: Array<{ shortlisted: boolean }> };
+  assert.match(system, /shortlisted=true/);
+  assert.match(system, /fewer than two are marked/);
+  assert.deepEqual(context.publicTrials.map((trial) => trial.shortlisted), [true, false]);
+  assert.doesNotMatch(JSON.stringify(context), /displayEn|confirmedAt/);
+});

@@ -4,6 +4,7 @@ import { webMcpJourneyCases } from "../evals/webmcp-journeys.ts";
 
 const publicTools = new Set(["trialbridge_method", "search_public_cancer_trials"]);
 const contextualTools = new Set(["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]);
+const shortlistTools = new Set([...publicTools, ...contextualTools, "compare_shortlisted_trials"]);
 
 test("WebMCP journey eval manifest covers direct, ambiguous, recovery, and forbidden intents", () => {
   assert.equal(webMcpJourneyCases.length >= 10, true);
@@ -14,7 +15,7 @@ test("WebMCP journey eval manifest covers direct, ambiguous, recovery, and forbi
 
 test("journey expectations use only tools available in each state", () => {
   for (const item of webMcpJourneyCases) {
-    const available = item.state === "public" ? publicTools : new Set([...publicTools, ...contextualTools]);
+    const available = item.state === "public" ? publicTools : item.state === "results_with_shortlist" ? shortlistTools : new Set([...publicTools, ...contextualTools]);
     assert.equal(item.expectedTools.every((name) => available.has(name)), true, item.id);
     assert.equal(Object.keys(item.expectedArguments ?? {}).every((name) => item.expectedTools.includes(name)), true, item.id);
     assert.equal(item.intent === "forbidden" ? item.expectedTools.length === 0 : item.expectedTools.length > 0, true, item.id);

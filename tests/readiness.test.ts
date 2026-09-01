@@ -74,7 +74,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /WebMCP, visible and testable/);
   assert.match(page, /Model Context Tool Inspector/);
   assert.match(page, /search_public_trial_form/);
-  assert.match(page, /10<\/strong> journey eval cases/);
+  assert.match(page, /baselineJourneyCount/);
   assert.match(page, /Recorded cloud-model baseline/);
   assert.match(page, /selectionBaseline\.summary\.passed/);
   assert.match(page, /What remains separate/);
@@ -82,6 +82,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /webmcp-selection-baseline\.json/);
   assert.match(page, /review_trial_followups/);
   assert.match(page, /draft_trial_discussion_brief/);
+  assert.match(page, /compare_shortlisted_trials/);
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /getTools/);
   assert.match(diagnostic, /executeTool/);
@@ -126,6 +127,7 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   const chat = await readFile(path.join(root, "app", "components", "TrialBridgeChat.tsx"), "utf8");
   const webmcp = await readFile(path.join(root, "app", "components", "WebMcpBridge.tsx"), "utf8");
   const brief = await readFile(path.join(root, "app", "components", "DiscussionBriefPanel.tsx"), "utf8");
+  const shortlist = await readFile(path.join(root, "app", "components", "TrialShortlistPanel.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
   assert.match(review, /Masked note/);
   assert.match(review, /Confirm all/);
@@ -156,6 +158,8 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(chat, /Ask about the results/);
   assert.match(chat, /Create discussion brief/);
   assert.match(chat, /DiscussionBriefPanel/);
+  assert.match(chat, /TrialShortlistPanel/);
+  assert.match(chat, /shortlistedTrialIds/);
   assert.match(chat, /aria-pressed/);
   assert.match(webmcp, /WebMCP Live/);
   assert.match(webmcp, /getTools/);
@@ -165,6 +169,13 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(webmcp, /review_trial_followups/);
   assert.match(webmcp, /webmcp-agent-activity/);
   assert.match(webmcp, /draft_trial_discussion_brief/);
+  assert.match(webmcp, /compare_shortlisted_trials/);
+  assert.match(webmcp, /Select 2 trials to activate/);
+  assert.match(shortlist, /Human-controlled shortlist/);
+  assert.match(shortlist, /Compare up to three trials/);
+  assert.match(shortlist, /Public-record comparison only/);
+  assert.match(shortlist, /<table>/);
+  assert.match(shortlist, /shortlist-mobile-cards/);
   assert.match(brief, /new Blob/);
   assert.match(brief, /URL\.createObjectURL/);
   assert.match(brief, /link\.download/);
