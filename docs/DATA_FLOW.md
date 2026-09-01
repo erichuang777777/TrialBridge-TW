@@ -12,6 +12,7 @@ Agent-mode chat or manual-mode free text
   -> patient-confirmed de-identified profile
      -> registry query minimizer -> TFDA and ClinicalTrials.gov candidate discovery
      -> source-derived missing-field questions -> confirmed profile update or explicit unknown
+        -> optional consent-gated WebMCP question review (questions only; no answer input)
      -> grouped, source-traceable comparison
      -> optional local care-team discussion brief download
      -> optional localhost proxy -> gpt-oss:120b-cloud conversation
@@ -26,7 +27,8 @@ Agent-mode chat or manual-mode free text
 | Guided chat message | one patient or caregiver message | browser masking, then gpt-oss:120b-cloud with workflow stage and minimized state |
 | Masked text | note with direct identifiers replaced | gpt-oss:120b-cloud through localhost proxy, only after the visible cloud-organization action |
 | Draft facts | model-extracted diagnosis, stage, biomarker | browser volatile memory only |
-| Confirmed profile | user-approved, de-identified structured facts | registry query builder; optional cloud assistant; gated WebMCP; explicit local discussion-brief download |
+| Confirmed profile | user-approved, de-identified structured facts | registry query builder; optional cloud assistant; consent-gated WebMCP; explicit local discussion-brief download |
+| Pending registry questions | question, registry field, candidate-trial count | visible human form; consent-gated read-only WebMCP output; never WebMCP input |
 | Public registry facts | study title, sites, criteria, update date | browser; matching engine; WebMCP with untrusted-content marking |
 
 ## Persistence

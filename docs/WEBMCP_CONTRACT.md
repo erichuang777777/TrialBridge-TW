@@ -16,6 +16,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 
 ### Sensitive contextual tools
 
+- `review_trial_followups` reads the current registry-derived missing-question list and returns an actionable workflow state. It cannot record, infer, or confirm an answer.
 - `explain_confirmed_matches` reads the current confirmed, de-identified comparison state.
 - `draft_trial_outreach` creates an unsent outreach draft from a current match and confirmed summary.
 - `draft_trial_discussion_brief` creates but never sends a bounded care-team brief from confirmed facts and current source-linked comparisons. It labels registry evidence, unknowns, and non-eligibility explicitly.
@@ -29,7 +30,8 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 - Tool results include source registry, retrieval time, limitations, and a patient-facing safety statement.
 - Imperative registration and cleanup are deterministic across client navigation and hot reload.
 - Declarative agent activity remains visible, focused, cancellable, and announced to assistive technology.
+- Imperative executions publish a payload-free visible status (`running`, `completed`, `failed`, or `cancelled`) so an agent call never becomes an invisible page action.
 
 ## Verification target
 
-`npm run verify:webmcp` statically checks both API styles, schemas, annotations, output caps, same-origin exposure, security headers, and deprecated API absence. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.
+`npm run verify:webmcp` statically checks both API styles, schemas, annotations, output caps, same-origin exposure, security headers, deprecated API absence, and the ten-case journey-eval manifest. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.

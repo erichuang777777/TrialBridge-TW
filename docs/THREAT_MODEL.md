@@ -15,7 +15,7 @@
 | Exported health summary disclosed from the device | Explicit user-created download only; visible health-information warning; generic filename; no automatic upload, share, or send action |
 | Cloud-model overreach | Visible post-mask cloud-organization action; explicit disclosure that localhost is only a proxy; exact `gpt-oss:120b-cloud` allowlist; Zod validation; second purpose-specific consent for confirmed-profile dialogue |
 | Prompt injection in registry text | Treat registry content as untrusted data; never execute embedded instructions; separate system policy from evidence |
-| WebMCP over-disclosure | Tool schemas accept confirmed profile references or minimized facts only; sensitive tools require active consent and visible user action |
+| WebMCP over-disclosure | Tool schemas accept confirmed profile references, minimized facts, or registry-derived pending questions only; sensitive tools require active consent and visible user action; lifecycle status contains only tool name and state |
 | Agent sends or enrolls | No send, submit, enroll, book, consent, or treatment-change tools |
 | False certainty | Unknown is first-class; source and update date shown; final eligibility reserved for study team |
 | Cross-user exposure | Anonymous in-memory sessions; no shared server conversation store |

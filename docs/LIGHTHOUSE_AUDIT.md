@@ -23,6 +23,8 @@ The new `/webmcp` competition-evidence page was audited separately on 2026-09-02
 
 After adding the local care-team discussion-brief generator, the home-page regression run remained Performance 96, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.5 s, TBT 130 ms, CLS 0, and no console errors.
 
+After adding the state-aware WebMCP follow-up tool, payload-free execution status, and journey-eval evidence, a sequential production regression recorded: home Performance 93, Accessibility 100, Best Practices 100, SEO 63, FCP 1.1 s, LCP 2.5 s, TBT 240 ms, CLS 0, and no console errors; `/webmcp` recorded Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 0.9 s, LCP 2.3 s, TBT 70 ms, CLS 0, and no console errors. Two earlier parallel development-server runs were discarded because they contended for CPU and were not comparable production evidence.
+
 Command shape:
 
 ```powershell

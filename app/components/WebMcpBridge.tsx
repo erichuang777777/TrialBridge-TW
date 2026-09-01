@@ -2,35 +2,44 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
+import type { WebMcpActivity } from "@/lib/webmcp/tools";
 import type { TrialMatch } from "@/lib/matching/engine";
+import type { FollowUpQuestion } from "@/lib/matching/followUp";
 import type { ConfirmedProfile } from "@/lib/profile/schema";
 
 type RegistrationState = "checking" | "unsupported" | "registering" | "ready" | "error";
 type Language = "zh-Hant" | "en";
 
 const publicToolNames = ["trialbridge_method", "search_public_cancer_trials"];
-const contextualToolNames = ["explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"];
+const contextualToolNames = ["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"];
 
 const judgePrompts = {
   en: [
     "Explain TrialBridge TW's Taiwan-first method and privacy boundary.",
     "Search public recruiting cancer trials for gastric cancer.",
+    "Which trial requirements still need my answer before results can be compared?",
     "Draft a care-team discussion brief from my confirmed results.",
   ],
   "zh-Hant": [
     "說明 TrialBridge TW 的台灣優先搜尋方法與隱私界線。",
     "搜尋胃癌目前公開招募中的臨床試驗。",
+    "顯示比較結果前，還有哪些試驗條件需要我回答？",
     "依照我已確認的結果建立照護團隊討論摘要。",
   ],
 };
 
-export function WebMcpBridge({ profile, matches, sensitiveConsent, language }: { profile?: ConfirmedProfile; matches: TrialMatch[]; sensitiveConsent: boolean; language: Language }) {
+export function WebMcpBridge({ profile, matches, pendingQuestions, matching, sensitiveConsent, language }: { profile?: ConfirmedProfile; matches: TrialMatch[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; language: Language }) {
   const [registrationState, setRegistrationState] = useState<RegistrationState>("checking");
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [copiedPrompt, setCopiedPrompt] = useState<number>();
-  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, sensitiveConsent }), [profile, matches, sensitiveConsent]);
+  const [lastActivity, setLastActivity] = useState<WebMcpActivity>();
+  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, pendingQuestions, matching, sensitiveConsent, onActivity: setLastActivity }), [profile, matches, pendingQuestions, matching, sensitiveConsent]);
   const contextualUnlocked = Boolean(profile && sensitiveConsent);
+
+  useEffect(() => {
+    if (!contextualUnlocked) setLastActivity(undefined);
+  }, [contextualUnlocked]);
 
   useEffect(() => {
     let active = true;
@@ -93,6 +102,12 @@ export function WebMcpBridge({ profile, matches, sensitiveConsent, language }: {
     copied: "Copied",
     setup: "Enable local WebMCP in Chrome",
     method: "Why WebMCP matters",
+    activity: {
+      running: "Agent tool is running",
+      completed: "Agent tool completed · continue in the visible workflow",
+      failed: "Agent tool failed · retry or continue in the visible workflow",
+      cancelled: "Agent tool cancelled · no page data was changed",
+    },
   } : {
     state: {
       checking: "正在檢查瀏覽器支援",
@@ -114,6 +129,12 @@ export function WebMcpBridge({ profile, matches, sensitiveConsent, language }: {
     copied: "已複製",
     setup: "在 Chrome 啟用本機 WebMCP",
     method: "為什麼 WebMCP 很重要",
+    activity: {
+      running: "Agent 工具執行中",
+      completed: "Agent 工具已完成 · 請在可見流程中繼續",
+      failed: "Agent 工具失敗 · 可重試或在可見流程中繼續",
+      cancelled: "Agent 工具已取消 · 頁面資料未變更",
+    },
   };
 
   async function copyJudgePrompt(prompt: string, index: number) {
@@ -133,7 +154,7 @@ export function WebMcpBridge({ profile, matches, sensitiveConsent, language }: {
     return { label: copy.state[registrationState], className: "tool-pending" };
   }
 
-  return <details className={`webmcp-live-panel webmcp-${registrationState}`}>
+  return <><details className={`webmcp-live-panel webmcp-${registrationState}`}>
     <summary>
       <span className="webmcp-live-mark" aria-hidden="true" />
       <span className="webmcp-live-heading"><strong>{copy.title}</strong><small>{copy.summary}</small></span>
@@ -152,7 +173,7 @@ export function WebMcpBridge({ profile, matches, sensitiveConsent, language }: {
       </div>
       <div className="webmcp-live-links"><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">{copy.setup}</a><a href="/method">{copy.method}</a></div>
     </div>
-  </details>;
+  </details>{lastActivity && <p className={`webmcp-agent-activity activity-${lastActivity.state}`} role="status" aria-atomic="true"><strong>{lastActivity.toolName}</strong><span>{copy.activity[lastActivity.state]}</span></p>}</>;
 }
 
 function ToolGroup({ title, names, getState }: { title: string; names: string[]; getState: (name: string) => { label: string; className: string } }) {

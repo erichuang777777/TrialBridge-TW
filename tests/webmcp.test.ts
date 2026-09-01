@@ -4,6 +4,7 @@ import test from "node:test";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { capWebMcpOutput, maxWebMcpOutputChars } from "../lib/webmcp/output.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
+import type { WebMcpActivity } from "../lib/webmcp/tools.ts";
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [{ id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Draft only." });
 const profile = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
@@ -21,8 +22,60 @@ test("WebMCP exposes public tools without patient context and no write tools", (
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {
   assert.equal(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: false }).length, 2);
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
-  assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]);
+  assert.deepEqual(tools.slice(2).map((tool) => tool.name), ["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]);
   assert.equal(tools.slice(1).every((tool) => tool.annotations?.untrustedContentHint), true);
+});
+
+test("follow-up tool guides the agent without recording answers or exposing notes", async () => {
+  const activities: WebMcpActivity[] = [];
+  const pendingQuestions = [{
+    id: "question_followup_stage", domain: "stage" as const, registryField: "eligibility criteria",
+    questionEn: "What cancer stage is documented?", questionZhHant: "病歷記載的癌症分期為何？",
+    reasonEn: "The public criteria mention stage.", reasonZhHant: "公開條件提到分期。", trialCount: 3,
+  }];
+  const tool = buildTrialBridgeTools({ profile, matches: [], pendingQuestions, sensitiveConsent: true, onActivity: (activity) => activities.push(activity) }).find((candidate) => candidate.name === "review_trial_followups");
+  assert.ok(tool);
+  const output = await tool.execute({ language: "en" }, { signal: new AbortController().signal });
+  assert.deepEqual(activities, [
+    { toolName: "review_trial_followups", state: "running" },
+    { toolName: "review_trial_followups", state: "completed" },
+  ]);
+  assert.match(JSON.stringify(output), /needs_user_input/);
+  assert.match(JSON.stringify(output), /visible form/);
+  assert.doesNotMatch(JSON.stringify(output), /gastric cancer|rawText|maskedText|answer\s*:/i);
+});
+
+test("follow-up tool returns an actionable recovery state when matching is still running", async () => {
+  const tool = buildTrialBridgeTools({ profile, matches: [], matching: true, sensitiveConsent: true }).find((candidate) => candidate.name === "review_trial_followups");
+  assert.ok(tool);
+  const output = await tool.execute({ language: "en" }, { signal: new AbortController().signal });
+  assert.deepEqual(output, { state: "matching_in_progress", nextAction: "Wait for the current registry comparison, then call this tool again." });
+});
+
+test("six localized follow-up questions remain structured within the WebMCP output budget", async () => {
+  const pendingQuestions = Array.from({ length: 6 }, (_, index) => ({
+    id: `question_followup_${index}`, domain: "organ_function" as const, registryField: "eligibility criteria",
+    questionEn: "Are recent blood counts, kidney, liver, or heart-function results available?",
+    questionZhHant: "是否有近期血球、腎臟、肝臟或心臟功能結果？",
+    reasonEn: "The public criteria mention laboratory or organ-function requirements.",
+    reasonZhHant: "公開條件提到檢驗或器官功能要求。", trialCount: 12 - index,
+  }));
+  const tool = buildTrialBridgeTools({ profile, matches: [], pendingQuestions, sensitiveConsent: true }).find((candidate) => candidate.name === "review_trial_followups");
+  assert.ok(tool);
+  const output = await tool.execute({ language: "en" }, { signal: new AbortController().signal });
+  assert.equal(JSON.stringify(output).length <= maxWebMcpOutputChars, true);
+  assert.equal(Object.hasOwn(output as object, "truncated"), false);
+  assert.equal((output as { questions: unknown[] }).questions.length, 6);
+});
+
+test("invalid contextual tool calls return recovery guidance instead of raw errors", () => {
+  const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
+  const outreachTool = tools.find((candidate) => candidate.name === "draft_trial_outreach");
+  const followUpTool = tools.find((candidate) => candidate.name === "review_trial_followups");
+  assert.ok(outreachTool);
+  assert.ok(followUpTool);
+  assert.throws(() => outreachTool.execute({ trialId: "missing", language: "en" }, { signal: new AbortController().signal }), /use explain_confirmed_matches.*then call again/i);
+  assert.throws(() => followUpTool.execute({ language: "fr" }, { signal: new AbortController().signal }), /zh-Hant or en.*call this tool again/i);
 });
 
 test("WebMCP output is bounded before it returns to an agent", () => {

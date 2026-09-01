@@ -74,6 +74,8 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /WebMCP, visible and testable/);
   assert.match(page, /Model Context Tool Inspector/);
   assert.match(page, /search_public_trial_form/);
+  assert.match(page, /10<\/strong> journey eval cases/);
+  assert.match(page, /review_trial_followups/);
   assert.match(page, /draft_trial_discussion_brief/);
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /getTools/);
@@ -155,6 +157,8 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(webmcp, /role="status"/);
   assert.match(webmcp, /Judge prompts/);
   assert.match(webmcp, /explain_confirmed_matches/);
+  assert.match(webmcp, /review_trial_followups/);
+  assert.match(webmcp, /webmcp-agent-activity/);
   assert.match(webmcp, /draft_trial_discussion_brief/);
   assert.match(brief, /new Blob/);
   assert.match(brief, /URL\.createObjectURL/);

@@ -2,15 +2,44 @@
 
 import { createOutreachDraft } from "../matching/outreach.ts";
 import { createTrialDiscussionBrief } from "../matching/discussionBrief.ts";
+import type { FollowUpQuestion } from "../matching/followUp.ts";
 import type { TrialMatch } from "../matching/engine.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
 import { capWebMcpOutput } from "./output.ts";
 
+export type WebMcpActivityState = "running" | "completed" | "failed" | "cancelled";
+
+export interface WebMcpActivity {
+  toolName: string;
+  state: WebMcpActivityState;
+}
+
 export interface WebMcpToolContext {
   profile?: ConfirmedProfile;
   matches: TrialMatch[];
+  pendingQuestions?: FollowUpQuestion[];
+  matching?: boolean;
   sensitiveConsent: boolean;
   fetcher?: typeof fetch;
+  onActivity?: (activity: WebMcpActivity) => void;
+}
+
+function withVisibleActivity(tool: WebMCP.ModelContextTool, onActivity?: WebMcpToolContext["onActivity"]): WebMCP.ModelContextTool {
+  if (!onActivity) return tool;
+  return {
+    ...tool,
+    execute: async (input, options) => {
+      onActivity({ toolName: tool.name, state: "running" });
+      try {
+        const output = await tool.execute(input, options);
+        onActivity({ toolName: tool.name, state: "completed" });
+        return output;
+      } catch (error) {
+        onActivity({ toolName: tool.name, state: options.signal.aborted ? "cancelled" : "failed" });
+        throw error;
+      }
+    },
+  };
 }
 
 export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelContextTool[] {
@@ -30,16 +59,37 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       execute: async (input, options) => {
         const condition = typeof input.condition === "string" ? input.condition.trim() : "";
-        if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters");
+        if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
         const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: false }), signal: options.signal });
-        if (!response.ok) throw new Error("Public registry search is unavailable");
+        if (!response.ok) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
         const payload = await response.json() as { trials?: TrialMatch["trial"][] };
         return capWebMcpOutput((payload.trials ?? []).slice(0, 5).map((trial) => ({ id: trial.canonicalId, title: trial.title, region: trial.regionTier, recruitment: trial.recruitment.raw, sources: trial.sources.map((source) => ({ registry: source.registry, id: source.registryId, url: source.url, retrievedAt: source.retrievedAt })) })));
       },
     },
   ];
-  if (!context.sensitiveConsent || !context.profile) return tools;
+  if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => withVisibleActivity(tool, context.onActivity));
   tools.push({
+    name: "review_trial_followups", title: "Review pending trial questions",
+    description: "List current registry-derived questions that need a person's answer before comparison. Read-only: never records or confirms answers.",
+    inputSchema: { type: "object", properties: { language: { type: "string", description: "Language for the pending questions and recovery guidance.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: (input) => {
+      if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
+      const questions = (context.pendingQuestions ?? []).slice(0, 6);
+      if (context.matching) return { state: "matching_in_progress", nextAction: "Wait for the current registry comparison, then call this tool again." };
+      if (questions.length === 0 && context.matches.length > 0) return { state: "results_ready", nextAction: "Use explain_confirmed_matches to review the current comparison." };
+      if (questions.length === 0) return { state: "no_pending_questions", nextAction: "Continue in the visible TrialBridge workflow; no answer can be recorded through this tool." };
+      return capWebMcpOutput({
+        state: "needs_user_input",
+        nextAction: "Ask these questions; answers or unknown must be entered in the visible form.",
+        questions: questions.map((question) => ({
+          question: input.language === "en" ? question.questionEn : question.questionZhHant,
+          registryField: question.registryField,
+          trialCount: question.trialCount ?? 1,
+        })),
+      });
+    },
+  }, {
     name: "explain_confirmed_matches", title: "Explain confirmed-profile trial matches",
     description: "Read the current page's patient-confirmed, de-identified match explanations. Requires visible in-page consent; raw notes are unavailable.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -52,7 +102,8 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) => {
       const match = context.matches.find((candidate) => candidate.trial.canonicalId === input.trialId);
-      if (!match || (input.language !== "zh-Hant" && input.language !== "en")) throw new Error("A current match and supported language are required");
+      if (!match) throw new Error("trialId is not in the current results; use explain_confirmed_matches to review current trial IDs, then call again");
+      if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
       return capWebMcpOutput(createOutreachDraft(context.profile!, match.trial, input.language));
     },
   }, {
@@ -61,9 +112,9 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     inputSchema: { type: "object", properties: { language: { type: "string", description: "Language for the local, unsent discussion brief.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) => {
-      if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("A supported language is required");
+      if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
       return capWebMcpOutput(createTrialDiscussionBrief(context.profile!, context.matches, input.language));
     },
   });
-  return tools;
+  return tools.map((tool) => withVisibleActivity(tool, context.onActivity));
 }

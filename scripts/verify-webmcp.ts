@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { capWebMcpOutput, maxWebMcpOutputChars } from "../lib/webmcp/output.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
+import { webMcpJourneyCases } from "../evals/webmcp-journeys.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -34,7 +35,7 @@ function check(condition: boolean, message: string) {
 
 check(new Set(names).size === names.length, "Imperative tool names must be unique.");
 check(publicTools.length === 2, "Exactly two public imperative tools must remain available without confirmed context.");
-check(allTools.length === 5, "Exactly five imperative tools must be available after confirmed-context permission.");
+check(allTools.length === 6, "Exactly six imperative tools must be available after confirmed-context permission.");
 
 for (const tool of allTools) {
   check(/^[A-Za-z0-9_.-]+$/.test(tool.name), `${tool.name}: name contains unsupported characters.`);
@@ -52,13 +53,23 @@ for (const tool of allTools) {
   }
 }
 
-for (const toolName of ["search_public_cancer_trials", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]) {
+for (const toolName of ["search_public_cancer_trials", "review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief"]) {
   check(allTools.find((tool) => tool.name === toolName)?.annotations?.untrustedContentHint === true, `${toolName}: registry-derived content must be marked untrusted.`);
 }
 
 const metadata = JSON.stringify(allTools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLocaleLowerCase("en");
 check(!metadata.includes("rawnote") && !metadata.includes("maskednote"), "Raw or masked note fields must never enter an imperative tool contract.");
 check(JSON.stringify(capWebMcpOutput("x".repeat(maxWebMcpOutputChars * 2))).length <= maxWebMcpOutputChars + 32, "Tool-output cap is not effective.");
+
+const knownToolNames = new Set(["search_public_trial_form", ...names]);
+check(webMcpJourneyCases.length >= 10, "At least ten WebMCP journey eval cases are required.");
+check(webMcpJourneyCases.some((item) => item.intent === "ambiguous"), "Journey evals must include ambiguous prompts.");
+check(webMcpJourneyCases.some((item) => item.intent === "recovery"), "Journey evals must include recovery prompts.");
+check(webMcpJourneyCases.some((item) => item.intent === "forbidden"), "Journey evals must include forbidden requests.");
+for (const item of webMcpJourneyCases) {
+  check(item.expectedTools.every((name) => knownToolNames.has(name)), `${item.id}: expected tool is not registered.`);
+  check(item.intent === "forbidden" ? item.expectedTools.length === 0 : item.expectedTools.length > 0, `${item.id}: tool expectation does not match intent.`);
+}
 
 const declarative = readFileSync("app/components/TrialDatabase.tsx", "utf8");
 for (const marker of ["const declarativeToolName = \"search_public_trial_form\"", "toolname={declarativeToolName}", "tooldescription=", "toolautosubmit=", "toolparamdescription=", "agentInvoked", "respondWith(searchPromise)"]) {
@@ -87,6 +98,7 @@ if (findings.length > 0) {
     publicImperativeTools: publicTools.length,
     declarativeTools: 1,
     names,
+    journeyEvalCases: webMcpJourneyCases.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,
   }));
