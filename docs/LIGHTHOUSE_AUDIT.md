@@ -25,6 +25,8 @@ After adding the local care-team discussion-brief generator, the home-page regre
 
 After adding the state-aware WebMCP follow-up tool, payload-free execution status, and journey-eval evidence, a sequential production regression recorded: home Performance 93, Accessibility 100, Best Practices 100, SEO 63, FCP 1.1 s, LCP 2.5 s, TBT 240 ms, CLS 0, and no console errors; `/webmcp` recorded Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 0.9 s, LCP 2.3 s, TBT 70 ms, CLS 0, and no console errors. Two earlier parallel development-server runs were discarded because they contended for CPU and were not comparable production evidence.
 
+After adding the version-locked 50-sample cloud-model selection baseline and its responsive evidence cards, the sequential production regression recorded: home Performance 96, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.5 s, TBT 130 ms, CLS 0, and zero console-error audit items; `/webmcp` recorded Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.3 s, TBT 80 ms, CLS 0, and zero console-error audit items.
+
 Command shape:
 
 ```powershell
@@ -39,4 +41,4 @@ The only SEO failure is crawlability. `app/layout.tsx` and `public/robots.txt` i
 
 ## Verification boundary
 
-Lighthouse exercised a real local Chrome renderer and network lifecycle. It does not replace keyboard-only, screen-reader, large-text, landscape, or Chrome Model Context Tool Inspector acceptance. The browser-control package could not initialize because its packaged documentation was missing, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.
+Lighthouse exercised a real local Chrome renderer and network lifecycle. It does not replace keyboard-only, screen-reader, large-text, landscape, or Chrome Model Context Tool Inspector acceptance. The installed browser-control plugin is missing its required `scripts/browser-client.mjs` runtime, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.

@@ -34,4 +34,4 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 
 ## Verification target
 
-`npm run verify:webmcp` statically checks both API styles, schemas, annotations, output caps, same-origin exposure, security headers, deprecated API absence, and the ten-case journey-eval manifest. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.
+`npm run verify:webmcp` statically checks both API styles, schemas, annotations, output caps, same-origin exposure, security headers, deprecated API absence, the ten-case journey manifest, and freshness/privacy invariants for the recorded cloud-model selection artifact. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection in Chrome, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.

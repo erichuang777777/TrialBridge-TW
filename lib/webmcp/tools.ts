@@ -47,7 +47,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   const tools: WebMCP.ModelContextTool[] = [
     {
       name: "trialbridge_method", title: "Explain TrialBridge TW method",
-      description: "Explain the Taiwan-first search order, privacy boundary, sources, and limitations. Does not use patient data.",
+      description: "Call when a user asks how TrialBridge TW works. Returns the site's authoritative Taiwan-first search order, privacy boundary, sources, and limitations without patient data.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true },
       execute: () => ({ searchOrder: ["Taiwan", "Asia", "worldwide"], sources: ["TFDA", "ClinicalTrials.gov"], privacy: "Raw medical text is never available to WebMCP.", limitation: "Registry records are research plans, not proof of benefit or final eligibility." }),
@@ -70,7 +70,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => withVisibleActivity(tool, context.onActivity));
   tools.push({
     name: "review_trial_followups", title: "Review pending trial questions",
-    description: "List current registry-derived questions that need a person's answer before comparison. Read-only: never records or confirms answers.",
+    description: "Call when results are waiting for more information. Lists current registry-derived questions for the visible form; never records or confirms answers.",
     inputSchema: { type: "object", properties: { language: { type: "string", description: "Language for the pending questions and recovery guidance.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) => {
@@ -91,13 +91,13 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     },
   }, {
     name: "explain_confirmed_matches", title: "Explain confirmed-profile trial matches",
-    description: "Read the current page's patient-confirmed, de-identified match explanations. Requires visible in-page consent; raw notes are unavailable.",
+    description: "Call when a user asks why current trials are grouped or how current results compare. Returns confirmed, de-identified match explanations; raw notes are unavailable.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: () => capWebMcpOutput(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
   }, {
     name: "draft_trial_outreach", title: "Draft trial outreach",
-    description: "Create but never send an outreach draft for one current match using only confirmed, de-identified facts.",
+    description: "Call only to draft a message to a study team about one specific current trial. Never use for a doctor or care-team summary; creates but never sends.",
     inputSchema: { type: "object", properties: { trialId: { type: "string", description: "Canonical ID of one currently displayed trial match.", minLength: 1, maxLength: 120 }, language: { type: "string", description: "Language for the editable, unsent draft.", enum: ["zh-Hant", "en"] } }, required: ["trialId", "language"], additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) => {
@@ -108,8 +108,8 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     },
   }, {
     name: "draft_trial_discussion_brief", title: "Draft a care-team trial discussion brief",
-    description: "Create but never send a source-traceable discussion brief from current matches and confirmed, de-identified facts. Includes explicit uncertainty.",
-    inputSchema: { type: "object", properties: { language: { type: "string", description: "Language for the local, unsent discussion brief.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
+    description: "Call when a user wants to organize current results for their doctor or care team. Uses all current matches; input is language only, never trialId. Not a study-team message.",
+    inputSchema: { type: "object", properties: { language: { type: "string", description: "Output language only; the brief already uses all current matches.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) => {
       if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");

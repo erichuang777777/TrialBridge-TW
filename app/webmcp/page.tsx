@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
+import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 const tools = [
   { name: "search_public_trial_form", kind: "Declarative", availability: "Visible on /trials", boundary: "Public condition only" },
@@ -10,6 +11,13 @@ const tools = [
   { name: "draft_trial_outreach", kind: "Imperative", availability: "Permission-gated", boundary: "Creates an unsent draft" },
   { name: "draft_trial_discussion_brief", kind: "Imperative", availability: "Permission-gated", boundary: "Local care-team brief · never sent" },
 ];
+
+const baselineIntentCopy = [
+  { key: "direct", label: "Direct", description: "Clear requests selected the expected read-only capability." },
+  { key: "ambiguous", label: "Ambiguous", description: "Natural phrasing still separated search, outreach, and care-team briefs." },
+  { key: "recovery", label: "Recovery", description: "Pending-information state selected the question-review tool." },
+  { key: "forbidden", label: "Forbidden", description: "Enrollment and raw-note requests safely selected no tool." },
+] as const;
 
 export default function WebMcpProofPage() {
   return <main className="webmcp-proof-page" id="main-content" tabIndex={-1}>
@@ -22,6 +30,28 @@ export default function WebMcpProofPage() {
     </header>
 
     <WebMcpDiagnostics />
+
+    <section className="proof-section selection-evidence" aria-labelledby="selection-evidence-title">
+      <div className="selection-evidence-heading">
+        <div className="proof-section-heading"><p className="eyebrow">Recorded cloud-model baseline</p><h2 id="selection-evidence-title">Tool selection tested beyond static schemas.</h2><p>Five repetitions of ten synthetic journeys were sent through the localhost Ollama proxy to <code>{selectionBaseline.requestedModel}</code>. The artifact stores tool calls, arguments, latency, and pass/fail only—not response content or model thinking.</p></div>
+        <div className="selection-score" aria-label={`${selectionBaseline.summary.passed} of ${selectionBaseline.summary.samples} recorded samples passed`}><strong>{selectionBaseline.summary.passed}/{selectionBaseline.summary.samples}</strong><span>recorded pass</span></div>
+      </div>
+      <div className="selection-intent-grid" role="list" aria-label="Selection baseline by intent">
+        {baselineIntentCopy.map((intent) => {
+          const result = selectionBaseline.summary.byIntent[intent.key];
+          return <article key={intent.key} role="listitem" className={`selection-intent selection-${intent.key}`}>
+            <div><h3>{intent.label}</h3><strong>{result.passed}/{result.samples}</strong></div>
+            <div className="selection-meter" role="img" aria-label={`${intent.label}: ${result.passed} of ${result.samples} passed`}><span style={{ width: `${(result.passed / result.samples) * 100}%` }} /></div>
+            <p>{intent.description}</p>
+          </article>;
+        })}
+      </div>
+      <div className="selection-boundaries">
+        <article><span>What this records</span><strong>Single-turn model-to-tool selection</strong><p>Expected tool name, synthetic arguments, safe abstention, model identity, and latency across 50 calls.</p></article>
+        <article><span>What remains separate</span><strong>Chrome Inspector and clinical validation</strong><p>This does not execute tools or prove browser registration, permissions, multi-turn recovery, clinical safety, fairness, or eligibility accuracy.</p></article>
+      </div>
+      <div className="selection-receipt"><p><strong>Recorded {selectionBaseline.evaluatedAt.slice(0, 10)} UTC</strong><span>Dataset <code>{selectionBaseline.datasetDigestSha256.slice(0, 12)}…</code> · Tool contract <code>{selectionBaseline.toolContractDigestSha256.slice(0, 12)}…</code></span></p><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-selection-baseline.json" target="_blank" rel="noreferrer">Inspect the full JSON artifact</a></div>
+    </section>
 
     <section className="proof-section" aria-labelledby="tool-inventory-title">
       <div className="proof-section-heading"><p className="eyebrow">Capability inventory</p><h2 id="tool-inventory-title">The site declares exactly what an agent may do.</h2></div>

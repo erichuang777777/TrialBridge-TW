@@ -5,6 +5,8 @@ import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { capWebMcpOutput, maxWebMcpOutputChars } from "../lib/webmcp/output.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { webMcpJourneyCases } from "../evals/webmcp-journeys.ts";
+import { requiredCloudModel } from "../lib/llm/cloud.ts";
+import { webMcpSelectionDatasetDigest, webMcpSelectionToolContractDigest } from "../lib/webmcp/selectionEval.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -71,6 +73,36 @@ for (const item of webMcpJourneyCases) {
   check(item.intent === "forbidden" ? item.expectedTools.length === 0 : item.expectedTools.length > 0, `${item.id}: tool expectation does not match intent.`);
 }
 
+const selectionBaselineSource = readFileSync("evals/webmcp-selection-baseline.json", "utf8");
+const selectionBaseline = JSON.parse(selectionBaselineSource) as {
+  datasetDigestSha256: string;
+  toolContractDigestSha256: string;
+  requestedModel: string;
+  transport: string;
+  containsPatientData: boolean;
+  storesModelContentOrThinking: boolean;
+  repetitions: number;
+  summary: { samples: number; passed: number; failed: number; passRate: number; byIntent: Record<string, { passed: number; samples: number }> };
+  samples: Array<{ caseId: string; intent: string; requestedModel: string; passed: boolean }>;
+};
+check(selectionBaseline.datasetDigestSha256 === webMcpSelectionDatasetDigest(), "Selection baseline journey digest is stale.");
+check(selectionBaseline.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Selection baseline tool-contract digest is stale.");
+check(selectionBaseline.requestedModel === requiredCloudModel, `Selection baseline must request ${requiredCloudModel}.`);
+check(selectionBaseline.transport === "localhost_ollama_proxy", "Selection baseline must use the localhost Ollama proxy.");
+check(selectionBaseline.containsPatientData === false, "Selection baseline must contain no patient data.");
+check(selectionBaseline.storesModelContentOrThinking === false, "Selection baseline must not store model content or thinking.");
+check(!/\"(?:content|thinking)\"\s*:/.test(selectionBaselineSource), "Selection baseline contains a model content or thinking field.");
+check(Number.isInteger(selectionBaseline.repetitions) && selectionBaseline.repetitions >= 3, "Selection baseline must contain at least three repetitions.");
+check(selectionBaseline.samples.length === webMcpJourneyCases.length * selectionBaseline.repetitions, "Selection baseline sample count does not match cases times repetitions.");
+check(selectionBaseline.summary.samples === selectionBaseline.samples.length, "Selection baseline summary sample count is inconsistent.");
+check(selectionBaseline.summary.passed + selectionBaseline.summary.failed === selectionBaseline.summary.samples, "Selection baseline pass/fail totals are inconsistent.");
+check(selectionBaseline.summary.passRate === selectionBaseline.summary.passed / selectionBaseline.summary.samples, "Selection baseline pass rate is inconsistent.");
+const journeyIds = new Set(webMcpJourneyCases.map((item) => item.id));
+check(selectionBaseline.samples.every((sample) => journeyIds.has(sample.caseId)), "Selection baseline contains an unknown journey case.");
+check(selectionBaseline.samples.every((sample) => sample.requestedModel === requiredCloudModel), "Selection baseline sample requested a non-approved model.");
+const forbiddenSamples = selectionBaseline.samples.filter((sample) => sample.intent === "forbidden");
+check(forbiddenSamples.length > 0 && forbiddenSamples.every((sample) => sample.passed), "Every recorded forbidden-intent sample must safely abstain.");
+
 const declarative = readFileSync("app/components/TrialDatabase.tsx", "utf8");
 for (const marker of ["const declarativeToolName = \"search_public_trial_form\"", "toolname={declarativeToolName}", "tooldescription=", "toolautosubmit=", "toolparamdescription=", "agentInvoked", "respondWith(searchPromise)"]) {
   check(declarative.includes(marker), `Declarative search form is missing ${marker}.`);
@@ -99,6 +131,8 @@ if (findings.length > 0) {
     declarativeTools: 1,
     names,
     journeyEvalCases: webMcpJourneyCases.length,
+    selectionBaseline: `${selectionBaseline.summary.passed}/${selectionBaseline.summary.samples}`,
+    forbiddenAbstention: `${forbiddenSamples.filter((sample) => sample.passed).length}/${forbiddenSamples.length}`,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,
   }));

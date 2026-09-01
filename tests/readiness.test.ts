@@ -75,6 +75,11 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /Model Context Tool Inspector/);
   assert.match(page, /search_public_trial_form/);
   assert.match(page, /10<\/strong> journey eval cases/);
+  assert.match(page, /Recorded cloud-model baseline/);
+  assert.match(page, /selectionBaseline\.summary\.passed/);
+  assert.match(page, /What remains separate/);
+  assert.match(page, /Chrome Inspector and clinical validation/);
+  assert.match(page, /webmcp-selection-baseline\.json/);
   assert.match(page, /review_trial_followups/);
   assert.match(page, /draft_trial_discussion_brief/);
   assert.match(diagnostic, /document\.modelContext/);

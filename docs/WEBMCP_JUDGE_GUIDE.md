@@ -34,7 +34,7 @@ The collapsed **WebMCP Live** bar is always visible below the workflow heading. 
 
 Expand it to inspect public and confirmed-context tool names, permission-locked states, the read-only and untrusted-content boundary, and copyable Model Context Tool Inspector prompts. An unsupported browser receives setup guidance while the human workflow remains available as progressive enhancement.
 
-The dedicated `/webmcp` competition-evidence page adds a current-browser diagnostic without entering medical data. It registers and discovers the two public imperative tools, verifies the three response-header controls, inventories all seven WebMCP capabilities, and can execute only the non-sensitive `trialbridge_method` tool when `executeTool()` is available. It explicitly preserves the Inspector validation boundary.
+The dedicated `/webmcp` competition-evidence page adds a current-browser diagnostic without entering medical data. It registers and discovers the two public imperative tools, verifies the three response-header controls, inventories all seven WebMCP capabilities, and can execute only the non-sensitive `trialbridge_method` tool when `executeTool()` is available. It also shows a version-locked 50/50 cloud-model tool-selection baseline across direct, ambiguous, recovery, and forbidden intents. It explicitly preserves the Inspector validation boundary.
 
 Every imperative execution updates a payload-free status strip with the tool name and `running`, `completed`, `failed`, or `cancelled` recovery text. This makes agent activity visible without copying health content into telemetry or the DOM status message.
 
@@ -50,7 +50,7 @@ Every imperative execution updates a payload-free status strip with the tool nam
 
 ## Five-minute judge demonstration
 
-1. Open `/webmcp`. Show the live browser-support state, two public tool discovery count, same-origin security headers, exact capability inventory, and zero write-authority summary. Run the safe method check when `executeTool()` is available.
+1. Open `/webmcp`. Show the live browser-support state, two public tool discovery count, same-origin security headers, exact capability inventory, 50-sample recorded selection baseline, and zero write-authority summary. Point out that the baseline is single-turn Ollama tool calling—not Inspector evidence. Run the safe method check when `executeTool()` is available.
 2. Open `/trials`. Invoke `search_public_trial_form`; show the agent-filled condition, visible activation notice, normal results UI, and structured response from the same form submission.
 3. Open the guided workflow. Expand **WebMCP Live** and show that the two public imperative tools are verified while the four confirmed-context tools are locked. Invoke `search_public_cancer_trials` and show source-linked bounded output plus the visible execution status.
 4. Select **Try a synthetic case**. The fictional note still passes through the visible privacy notice, real browser masking, `gpt-oss:120b-cloud` extraction, human fact confirmation, pre-match questions, and public-registry matching. Show that confirmed-context tools remain locked while WebMCP permission is off.
@@ -62,4 +62,4 @@ Every imperative execution updates a payload-free status strip with the tool nam
 
 ## Evaluation boundary
 
-Automated tests and `npm run verify:webmcp` validate declarative markup, imperative definitions, schemas, context gating, output caps, clean-room constraints, builds, HTTP behavior, and ten deterministic journey expectations. These cases do not claim model-selection accuracy. Final origin-trial evaluation must also use Chrome Model Context Tool Inspector to verify both API styles, natural-language selection, manual execution, registration cleanup, and permission transitions in a supported browser.
+Automated tests and `npm run verify:webmcp` validate declarative markup, imperative definitions, schemas, context gating, output caps, clean-room constraints, builds, HTTP behavior, and ten deterministic journey expectations. A recorded `gpt-oss:120b-cloud` baseline adds 50 finite, synthetic single-turn selection samples; it is not a general model-accuracy or clinical claim. Final origin-trial evaluation must also use Chrome Model Context Tool Inspector to verify both API styles, natural-language selection, manual execution, registration cleanup, and permission transitions in a supported browser.

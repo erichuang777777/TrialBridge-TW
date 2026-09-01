@@ -16,6 +16,7 @@ test("journey expectations use only tools available in each state", () => {
   for (const item of webMcpJourneyCases) {
     const available = item.state === "public" ? publicTools : new Set([...publicTools, ...contextualTools]);
     assert.equal(item.expectedTools.every((name) => available.has(name)), true, item.id);
+    assert.equal(Object.keys(item.expectedArguments ?? {}).every((name) => item.expectedTools.includes(name)), true, item.id);
     assert.equal(item.intent === "forbidden" ? item.expectedTools.length === 0 : item.expectedTools.length > 0, true, item.id);
   }
 });

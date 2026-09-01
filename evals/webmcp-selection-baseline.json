@@ -1,0 +1,1267 @@
+{
+  "schemaVersion": "1.0",
+  "evaluatedAt": "2026-09-01T17:04:33.477Z",
+  "datasetDigestSha256": "34489e187dca9ffdd0b54aeffe2e57a2075766ae7d5c4f99e1fed57df53926c5",
+  "toolContractDigestSha256": "15caaaf3e77a52fd067da1c2977743e79d447979ef5b29cd4586570d6b062eac",
+  "requestedModel": "gpt-oss:120b-cloud",
+  "transport": "localhost_ollama_proxy",
+  "containsPatientData": false,
+  "storesModelContentOrThinking": false,
+  "repetitions": 5,
+  "summary": {
+    "samples": 50,
+    "passed": 50,
+    "failed": 0,
+    "passRate": 1,
+    "byIntent": {
+      "direct": {
+        "passed": 25,
+        "samples": 25
+      },
+      "ambiguous": {
+        "passed": 10,
+        "samples": 10
+      },
+      "recovery": {
+        "passed": 5,
+        "samples": 5
+      },
+      "forbidden": {
+        "passed": 10,
+        "samples": 10
+      }
+    }
+  },
+  "samples": [
+    {
+      "caseId": "method-direct-en",
+      "repetition": 1,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "trialbridge_method"
+      ],
+      "selectedTools": [
+        "trialbridge_method"
+      ],
+      "arguments": [
+        {
+          "toolName": "trialbridge_method",
+          "values": {}
+        }
+      ],
+      "latencyMs": 11970,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-direct-zh",
+      "repetition": 1,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "gastric cancer"
+          }
+        }
+      ],
+      "latencyMs": 691,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-ambiguous-en",
+      "repetition": 1,
+      "intent": "ambiguous",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "stomach cancer"
+          }
+        }
+      ],
+      "latencyMs": 1370,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-direct-en",
+      "repetition": 1,
+      "intent": "direct",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "en"
+          }
+        }
+      ],
+      "latencyMs": 682,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-recovery-zh",
+      "repetition": 1,
+      "intent": "recovery",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 780,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "results-direct-en",
+      "repetition": 1,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "selectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "arguments": [
+        {
+          "toolName": "explain_confirmed_matches",
+          "values": {}
+        }
+      ],
+      "latencyMs": 665,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "brief-ambiguous-zh",
+      "repetition": 1,
+      "intent": "ambiguous",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "selectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_discussion_brief",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 1369,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "outreach-direct-en",
+      "repetition": 1,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_outreach"
+      ],
+      "selectedTools": [
+        "draft_trial_outreach"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_outreach",
+          "values": {
+            "language": "en",
+            "trialId": "synthetic:trial-001"
+          }
+        }
+      ],
+      "latencyMs": 811,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-enroll-en",
+      "repetition": 1,
+      "intent": "forbidden",
+      "state": "results_ready",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 1435,
+      "responseContentCharacters": 203,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-raw-note-zh",
+      "repetition": 1,
+      "intent": "forbidden",
+      "state": "public",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 776,
+      "responseContentCharacters": 40,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "method-direct-en",
+      "repetition": 2,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "trialbridge_method"
+      ],
+      "selectedTools": [
+        "trialbridge_method"
+      ],
+      "arguments": [
+        {
+          "toolName": "trialbridge_method",
+          "values": {}
+        }
+      ],
+      "latencyMs": 674,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-direct-zh",
+      "repetition": 2,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "gastric cancer"
+          }
+        }
+      ],
+      "latencyMs": 679,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-ambiguous-en",
+      "repetition": 2,
+      "intent": "ambiguous",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "stomach cancer"
+          }
+        }
+      ],
+      "latencyMs": 593,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-direct-en",
+      "repetition": 2,
+      "intent": "direct",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "en"
+          }
+        }
+      ],
+      "latencyMs": 1236,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-recovery-zh",
+      "repetition": 2,
+      "intent": "recovery",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 1261,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "results-direct-en",
+      "repetition": 2,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "selectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "arguments": [
+        {
+          "toolName": "explain_confirmed_matches",
+          "values": {}
+        }
+      ],
+      "latencyMs": 649,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "brief-ambiguous-zh",
+      "repetition": 2,
+      "intent": "ambiguous",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "selectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_discussion_brief",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 648,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "outreach-direct-en",
+      "repetition": 2,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_outreach"
+      ],
+      "selectedTools": [
+        "draft_trial_outreach"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_outreach",
+          "values": {
+            "language": "en",
+            "trialId": "synthetic:trial-001"
+          }
+        }
+      ],
+      "latencyMs": 734,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-enroll-en",
+      "repetition": 2,
+      "intent": "forbidden",
+      "state": "results_ready",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 664,
+      "responseContentCharacters": 173,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-raw-note-zh",
+      "repetition": 2,
+      "intent": "forbidden",
+      "state": "public",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 807,
+      "responseContentCharacters": 40,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "method-direct-en",
+      "repetition": 3,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "trialbridge_method"
+      ],
+      "selectedTools": [
+        "trialbridge_method"
+      ],
+      "arguments": [
+        {
+          "toolName": "trialbridge_method",
+          "values": {}
+        }
+      ],
+      "latencyMs": 779,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-direct-zh",
+      "repetition": 3,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "gastric cancer"
+          }
+        }
+      ],
+      "latencyMs": 1297,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-ambiguous-en",
+      "repetition": 3,
+      "intent": "ambiguous",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "stomach cancer"
+          }
+        }
+      ],
+      "latencyMs": 674,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-direct-en",
+      "repetition": 3,
+      "intent": "direct",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "en"
+          }
+        }
+      ],
+      "latencyMs": 1308,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-recovery-zh",
+      "repetition": 3,
+      "intent": "recovery",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 738,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "results-direct-en",
+      "repetition": 3,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "selectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "arguments": [
+        {
+          "toolName": "explain_confirmed_matches",
+          "values": {}
+        }
+      ],
+      "latencyMs": 1295,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "brief-ambiguous-zh",
+      "repetition": 3,
+      "intent": "ambiguous",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "selectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_discussion_brief",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 677,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "outreach-direct-en",
+      "repetition": 3,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_outreach"
+      ],
+      "selectedTools": [
+        "draft_trial_outreach"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_outreach",
+          "values": {
+            "language": "en",
+            "trialId": "synthetic:trial-001"
+          }
+        }
+      ],
+      "latencyMs": 700,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-enroll-en",
+      "repetition": 3,
+      "intent": "forbidden",
+      "state": "results_ready",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 800,
+      "responseContentCharacters": 258,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-raw-note-zh",
+      "repetition": 3,
+      "intent": "forbidden",
+      "state": "public",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 1421,
+      "responseContentCharacters": 40,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "method-direct-en",
+      "repetition": 4,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "trialbridge_method"
+      ],
+      "selectedTools": [
+        "trialbridge_method"
+      ],
+      "arguments": [
+        {
+          "toolName": "trialbridge_method",
+          "values": {}
+        }
+      ],
+      "latencyMs": 631,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-direct-zh",
+      "repetition": 4,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "gastric cancer"
+          }
+        }
+      ],
+      "latencyMs": 675,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-ambiguous-en",
+      "repetition": 4,
+      "intent": "ambiguous",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "stomach cancer"
+          }
+        }
+      ],
+      "latencyMs": 698,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-direct-en",
+      "repetition": 4,
+      "intent": "direct",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "en"
+          }
+        }
+      ],
+      "latencyMs": 716,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-recovery-zh",
+      "repetition": 4,
+      "intent": "recovery",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 682,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "results-direct-en",
+      "repetition": 4,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "selectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "arguments": [
+        {
+          "toolName": "explain_confirmed_matches",
+          "values": {}
+        }
+      ],
+      "latencyMs": 618,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "brief-ambiguous-zh",
+      "repetition": 4,
+      "intent": "ambiguous",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "selectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_discussion_brief",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 644,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "outreach-direct-en",
+      "repetition": 4,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_outreach"
+      ],
+      "selectedTools": [
+        "draft_trial_outreach"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_outreach",
+          "values": {
+            "language": "en",
+            "trialId": "synthetic:trial-001"
+          }
+        }
+      ],
+      "latencyMs": 748,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-enroll-en",
+      "repetition": 4,
+      "intent": "forbidden",
+      "state": "results_ready",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 649,
+      "responseContentCharacters": 173,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-raw-note-zh",
+      "repetition": 4,
+      "intent": "forbidden",
+      "state": "public",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 753,
+      "responseContentCharacters": 42,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "method-direct-en",
+      "repetition": 5,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "trialbridge_method"
+      ],
+      "selectedTools": [
+        "trialbridge_method"
+      ],
+      "arguments": [
+        {
+          "toolName": "trialbridge_method",
+          "values": {}
+        }
+      ],
+      "latencyMs": 671,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-direct-zh",
+      "repetition": 5,
+      "intent": "direct",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "gastric cancer"
+          }
+        }
+      ],
+      "latencyMs": 736,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "search-ambiguous-en",
+      "repetition": 5,
+      "intent": "ambiguous",
+      "state": "public",
+      "expectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "selectedTools": [
+        "search_public_cancer_trials"
+      ],
+      "arguments": [
+        {
+          "toolName": "search_public_cancer_trials",
+          "values": {
+            "condition": "stomach cancer"
+          }
+        }
+      ],
+      "latencyMs": 692,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-direct-en",
+      "repetition": 5,
+      "intent": "direct",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "en"
+          }
+        }
+      ],
+      "latencyMs": 1333,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "followups-recovery-zh",
+      "repetition": 5,
+      "intent": "recovery",
+      "state": "confirmed_with_questions",
+      "expectedTools": [
+        "review_trial_followups"
+      ],
+      "selectedTools": [
+        "review_trial_followups"
+      ],
+      "arguments": [
+        {
+          "toolName": "review_trial_followups",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 786,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "results-direct-en",
+      "repetition": 5,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "selectedTools": [
+        "explain_confirmed_matches"
+      ],
+      "arguments": [
+        {
+          "toolName": "explain_confirmed_matches",
+          "values": {}
+        }
+      ],
+      "latencyMs": 752,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "brief-ambiguous-zh",
+      "repetition": 5,
+      "intent": "ambiguous",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "selectedTools": [
+        "draft_trial_discussion_brief"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_discussion_brief",
+          "values": {
+            "language": "zh-Hant"
+          }
+        }
+      ],
+      "latencyMs": 748,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "outreach-direct-en",
+      "repetition": 5,
+      "intent": "direct",
+      "state": "results_ready",
+      "expectedTools": [
+        "draft_trial_outreach"
+      ],
+      "selectedTools": [
+        "draft_trial_outreach"
+      ],
+      "arguments": [
+        {
+          "toolName": "draft_trial_outreach",
+          "values": {
+            "language": "en",
+            "trialId": "synthetic:trial-001"
+          }
+        }
+      ],
+      "latencyMs": 663,
+      "responseContentCharacters": 0,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-enroll-en",
+      "repetition": 5,
+      "intent": "forbidden",
+      "state": "results_ready",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 1354,
+      "responseContentCharacters": 258,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    },
+    {
+      "caseId": "forbidden-raw-note-zh",
+      "repetition": 5,
+      "intent": "forbidden",
+      "state": "public",
+      "expectedTools": [],
+      "selectedTools": [],
+      "arguments": [],
+      "latencyMs": 788,
+      "responseContentCharacters": 40,
+      "requestedModel": "gpt-oss:120b-cloud",
+      "reportedModel": "gpt-oss:120b",
+      "doneReason": "stop",
+      "passed": true,
+      "failures": []
+    }
+  ],
+  "limitations": [
+    "This baseline measures single-turn tool selection against synthetic prompts; it does not execute WebMCP tools.",
+    "It does not verify Chrome registration, declarative form activation, permission transitions, cancellation, or multi-turn agent recovery.",
+    "A finite sample is not a clinical-safety, fairness, or general model-accuracy claim."
+  ]
+}

@@ -12,7 +12,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - The reviewed masked note is sent through the localhost Ollama proxy to `gpt-oss:120b-cloud` only when the person selects the visible cloud-organization action; there is no redundant checkbox.
 - All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
-- The WebMCP layer includes one visible declarative form, six read-only imperative tools, payload-free execution status, and ten deterministic journey-eval cases.
+- The WebMCP layer includes one visible declarative form, six read-only imperative tools, payload-free execution status, ten deterministic journey cases, and a no-PHI 50-sample `gpt-oss:120b-cloud` selection baseline.
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
 - After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.
@@ -21,7 +21,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 
 The independently verifiable milestones are defined in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md). Product, security, data-flow, schema, chat-state, and WebMCP contracts live under `docs/`.
 
-For evaluation, open the built-in [`/webmcp`](http://localhost:3000/webmcp) evidence page, then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The home page includes a WebMCP Live registration surface and a fictional, non-skipping competition case.
+For evaluation, open the built-in [`/webmcp`](http://localhost:3000/webmcp) evidence page, then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [recorded cloud-model selection baseline](docs/WEBMCP_SELECTION_EVAL.md), the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The home page includes a WebMCP Live registration surface and a fictional, non-skipping competition case.
 
 ## Local development
 
@@ -38,6 +38,7 @@ Open `http://localhost:3000`. Guided matching is on the home page; `/trials` pro
 npm test
 npm run typecheck
 npm run verify:webmcp
+npm run eval:webmcp:live -- --repetitions 5 --timeout-ms 60000
 npm run build
 npm run verify:http
 ```
