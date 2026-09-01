@@ -13,6 +13,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
 - The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, a downloadable tab-local capability receipt, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (55/55 recorded pass; all forbidden and shortlist cases passed).
+- The `/webmcp` evidence page adds a five-stage critical-user-journey map aligned with Chrome's current goal/state/role-play/recovery framework and a one-click, locally created browser diagnostic JSON receipt containing no health information.
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
 - After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.

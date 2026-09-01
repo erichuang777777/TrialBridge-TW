@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPageMetadata } from "@/lib/site/metadata";
+import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
@@ -79,6 +80,17 @@ export default function WebMcpProofPage() {
     </section>
 
     <WebMcpDiagnostics />
+
+    <section className="proof-section journey-evidence" aria-labelledby="critical-journey-title">
+      <div className="proof-section-heading"><p className="eyebrow">Critical user journey</p><h2 id="critical-journey-title">The conversation changes tools and the visible page together.</h2><p>Mapped to Chrome&apos;s current WebMCP user-journey framework: define the user goal, establish the initial state, role-play each tool and UI reaction, then make every invalid state recoverable.</p></div>
+      <div className="journey-contract"><article><span>User goal</span><strong>{webMcpCriticalJourney.userGoal}</strong></article><article><span>Initial state</span><strong>{webMcpCriticalJourney.initialState}</strong></article><article><span>Authority boundary</span><strong>{webMcpCriticalJourney.boundary}</strong></article></div>
+      <ol className="critical-journey-steps">{webMcpCriticalJourney.steps.map((step) => <li key={step.id}>
+        <div className="journey-step-heading"><span>{step.number}</span><div><small>{step.state}</small><h3>{step.title}</h3></div></div>
+        <p>{step.goal}</p>
+        <dl><div><dt>WebMCP capability</dt><dd>{step.tools.length > 0 ? step.tools.map((tool) => <code key={tool}>{tool}</code>) : <strong>None by design</strong>}</dd></div><div><dt>Visible site reaction</dt><dd>{step.siteReaction}</dd></div><div><dt>Recovery</dt><dd>{step.recovery}</dd></div></dl>
+      </li>)}</ol>
+      <div className="journey-guidance-link"><p><strong>Why this matters:</strong> the agent receives only the capability that fits the person&apos;s current visible state; the UI never becomes a hidden duplicate.</p><a href="https://developer.chrome.com/docs/ai/webmcp/build-tools" target="_blank" rel="noreferrer">Open Chrome&apos;s user-journey guidance</a></div>
+    </section>
 
     <section className="proof-section standards-evidence" aria-labelledby="standards-evidence-title">
       <div className="proof-section-heading"><p className="eyebrow">Standards alignment</p><h2 id="standards-evidence-title">One product surface, both WebMCP API styles.</h2><p>TrialBridge TW follows the upstream WebMCP draft while retaining the small compatibility boundary required by Chrome&apos;s current Origin Trial implementation. The human workflow remains the source of truth in both cases.</p></div>

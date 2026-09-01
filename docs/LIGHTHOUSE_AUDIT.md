@@ -67,6 +67,16 @@ After adding explicit `live`, `fresh cache`, and bounded `stale cache` registry 
 
 After adding the dated standards-alignment profile and upstream-draft/current-Chrome execution compatibility, a production audit of `/webmcp` at an explicit 375×812 CSS viewport recorded Performance 98, Accessibility 100, Best Practices 100, FCP 1.1 s, LCP 2.3 s, TBT 110 ms, CLS 0, and zero console errors. The report and final Lighthouse screenshot were parseable; Chrome launcher again reported only its known Windows temporary-profile cleanup `EPERM` after writing the artifacts.
 
+After adding the five-stage critical-user-journey map and download-only browser diagnostic receipt, three sequential audits ran against a separate local `next start` production server on port 3011. The receipt control remained disabled only during the finite browser check and used one atomic completion status after download.
+
+| `/webmcp` viewport | Performance | Accessibility | Best Practices | SEO | FCP | LCP | TBT | CLS | Console errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Lighthouse default mobile | 98 | 100 | 100 | 66 | 1.0 s | 2.3 s | 90 ms | 0 | 0 |
+| Explicit 375×812 | 95 | 100 | 100 | 66 | 1.1 s | 2.3 s | 180 ms | 0 | 0 |
+| Desktop | 100 | 100 | 100 | 66 | 0.3 s | 0.5 s | 0 ms | 0 | 0 |
+
+The explicit 375px final screenshot was parseable and showed the responsive single-column evidence summary without horizontal clipping. SEO remains intentionally fail-closed. Chrome launcher again emitted its known temporary-profile cleanup `EPERM` only after each JSON report and final screenshot had been written and parsed.
+
 Command shape:
 
 ```powershell

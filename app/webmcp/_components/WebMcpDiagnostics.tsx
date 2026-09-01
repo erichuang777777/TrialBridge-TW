@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
 import { executeSafeMethodToolCompat } from "@/lib/webmcp/compatibility";
+import { createWebMcpDiagnosticReceipt } from "@/lib/webmcp/diagnosticReceipt";
 
 type DiagnosticState = "checking" | "unsupported" | "ready" | "error";
 type HeaderChecks = { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
@@ -16,6 +17,7 @@ export function WebMcpDiagnostics() {
   const [executionAvailable, setExecutionAvailable] = useState(false);
   const [error, setError] = useState("");
   const [selfTest, setSelfTest] = useState<{ state: "idle" | "running" | "passed" | "failed"; output?: string }>({ state: "idle" });
+  const [receiptDownloaded, setReceiptDownloaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -78,6 +80,29 @@ export function WebMcpDiagnostics() {
     }
   }
 
+  function downloadDiagnosticReceipt() {
+    if (state === "checking") return;
+    const generatedAt = new Date().toISOString();
+    const receipt = createWebMcpDiagnosticReceipt({
+      generatedAt,
+      origin: location.origin,
+      browserState: state,
+      expectedToolNames: publicToolNames,
+      discoveredToolNames: discoveredNames,
+      securityHeaders: headers,
+      safeExecutionAvailable: executionAvailable,
+      safeSelfTestState: selfTest.state,
+    });
+    const url = URL.createObjectURL(new Blob([`${JSON.stringify(receipt, null, 2)}\n`], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `trialbridge-browser-diagnostic-${generatedAt.slice(0, 10)}.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    setReceiptDownloaded(true);
+    window.setTimeout(() => setReceiptDownloaded(false), 4_000);
+  }
+
   const supportLabel = {
     checking: "Checking this browser",
     unsupported: "WebMCP API not detected",
@@ -108,6 +133,11 @@ export function WebMcpDiagnostics() {
     </div>
     {!canExecute && state !== "checking" && <p className="field-helper">Live execution requires a browser implementation that exposes <code>document.modelContext.executeTool</code>. Static conformance and the human workflow remain available.</p>}
     {selfTest.output && <pre className={`diagnostic-output diagnostic-output-${selfTest.state}`} aria-label="Safe WebMCP execution output">{selfTest.output}</pre>}
+    <div className="diagnostic-receipt-panel">
+      <div><strong>Download this browser&apos;s diagnostic receipt</strong><p>Contains support state, public tool names, header checks, and safe-test status only. No prompts, arguments, outputs, or health information.</p></div>
+      <button type="button" disabled={state === "checking"} onClick={downloadDiagnosticReceipt}>{receiptDownloaded ? "Downloaded" : "Download JSON"}</button>
+    </div>
+    <p className="download-status" role="status" aria-atomic="true">{receiptDownloaded ? "Browser diagnostic receipt downloaded to this device." : ""}</p>
   </section>;
 }
 

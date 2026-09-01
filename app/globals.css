@@ -570,11 +570,36 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .self-test-panel { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
 .self-test-panel p { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.86rem; }
 .self-test-panel .primary-action { flex: 0 0 auto; }
+.diagnostic-receipt-panel { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.diagnostic-receipt-panel p { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.5; }
+.diagnostic-receipt-panel button { flex: 0 0 auto; min-height: 44px; padding: 8px 14px; border: 1px solid var(--primary); border-radius: 999px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.78rem; font-weight: 900; cursor: pointer; }
+.diagnostic-receipt-panel button:disabled { border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
 .diagnostic-output { max-height: 320px; margin: 18px 0 0; padding: 16px; overflow: auto; border: 1px solid var(--line); border-left: 4px solid var(--match-aligned); border-radius: 9px; color: var(--ink); background: #f3f8f7; font-size: 0.78rem; white-space: pre-wrap; }
 .diagnostic-output-failed { border-left-color: var(--match-different); background: #fff4f3; }
 .proof-section { margin-top: 64px; padding-top: 42px; border-top: 1px solid var(--line); }
 .proof-section-heading { max-width: 760px; }
 .proof-section-heading h2 { font-size: clamp(1.55rem, 3vw, 2.4rem); }
+.journey-evidence .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
+.journey-contract { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 26px; }
+.journey-contract article { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.journey-contract span, .journey-contract strong { display: block; }
+.journey-contract span { color: var(--primary-strong); font-size: 0.68rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
+.journey-contract strong { margin-top: 7px; font-size: 0.82rem; line-height: 1.55; }
+.critical-journey-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+.critical-journey-steps > li { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
+.journey-step-heading { display: flex; align-items: flex-start; gap: 12px; }
+.journey-step-heading > span { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--surface); background: var(--primary); font-size: 0.7rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.journey-step-heading small { display: block; color: var(--primary-strong); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+.journey-step-heading h3 { margin: 3px 0 0; font-size: 1rem; }
+.critical-journey-steps > li > p { margin: 12px 0 0; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.55; }
+.critical-journey-steps dl { display: grid; gap: 10px; margin: 14px 0 0; }
+.critical-journey-steps dl > div { padding-top: 9px; border-top: 1px solid var(--line); }
+.critical-journey-steps dt { color: var(--ink-soft); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; }
+.critical-journey-steps dd { display: flex; flex-wrap: wrap; gap: 5px 8px; margin: 4px 0 0; font-size: 0.77rem; line-height: 1.5; }
+.critical-journey-steps code { overflow-wrap: anywhere; color: var(--primary-strong); background: var(--mint); font-size: 0.7rem; font-weight: 800; }
+.journey-guidance-link { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 10px; padding: 13px 16px; border-left: 3px solid var(--primary); background: var(--mint); }
+.journey-guidance-link p { margin: 0; color: var(--ink-soft); font-size: 0.78rem; line-height: 1.5; }
+.journey-guidance-link a { flex: 0 0 auto; min-height: 44px; display: inline-flex; align-items: center; font-size: 0.76rem; font-weight: 900; }
 .standards-evidence .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
 .standards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 26px; }
 .standards-grid article { min-width: 0; padding: 19px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
@@ -683,9 +708,10 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .source-stack { justify-items: start; }
   .proof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .diagnostic-heading, .self-test-panel { align-items: stretch; flex-direction: column; }
+  .diagnostic-heading, .self-test-panel, .diagnostic-receipt-panel, .journey-guidance-link { align-items: stretch; flex-direction: column; }
   .diagnostic-status { max-width: none; align-self: flex-start; text-align: left; }
   .diagnostic-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey-contract { grid-template-columns: 1fr; }
   .self-test-panel .primary-action { width: 100%; }
   .standards-receipt, .selection-evidence-heading, .selection-receipt { align-items: stretch; flex-direction: column; }
   .standards-receipt > div { flex-basis: auto; }
@@ -751,7 +777,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .proof-summary span { min-height: 78px; }
   .diagnostic-console { padding: 20px; }
   .diagnostic-check-grid { grid-template-columns: 1fr; }
-  .standards-grid, .selection-intent-grid, .selection-boundaries { grid-template-columns: 1fr; }
+  .standards-grid, .selection-intent-grid, .selection-boundaries, .journey-contract, .critical-journey-steps { grid-template-columns: 1fr; }
   .selection-score { width: 100%; }
 }
 

@@ -132,6 +132,12 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /\/trials\?condition=%E8%83%83%E7%99%8C/);
   assert.match(page, /\/\?demo=synthetic#private-chat/);
   assert.match(page, /steps 1–3 are built into TrialBridge TW/);
+  assert.match(page, /Critical user journey/);
+  assert.match(page, /webMcpCriticalJourney\.steps/);
+  assert.match(page, /Chrome&apos;s user-journey guidance/);
+  assert.match(diagnostic, /createWebMcpDiagnosticReceipt/);
+  assert.match(diagnostic, /Download this browser&apos;s diagnostic receipt/);
+  assert.match(diagnostic, /Browser diagnostic receipt downloaded to this device/);
   assert.match(database, /parsePublicTrialSearchParams/);
   assert.match(database, /history\.replaceState/);
   assert.match(database, /not a curated general cancer condition/);

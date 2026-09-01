@@ -9,6 +9,8 @@ import { requiredCloudModel } from "../lib/llm/cloud.ts";
 import { webMcpSelectionDatasetDigest, webMcpSelectionToolContractDigest } from "../lib/webmcp/selectionEval.ts";
 import { appendCapabilitySet, appendToolExecution, createWebMcpSessionReceipt, maxWebMcpReceiptEvents } from "../lib/webmcp/receipt.ts";
 import { bilingualCancerQueryLexicon, createRegistryQueryPlan } from "../lib/trials/queryBridge.ts";
+import { webMcpCriticalJourney } from "../lib/webmcp/criticalJourney.ts";
+import { createWebMcpDiagnosticReceipt } from "../lib/webmcp/diagnosticReceipt.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -79,6 +81,17 @@ check(sessionReceipt.events.length <= maxWebMcpReceiptEvents, "WebMCP session re
 check(sessionReceipt.events[1]?.kind === "capability_set" && sessionReceipt.events[1].addedToolNames.length === 4, "WebMCP receipt must expose confirmed-context capability additions.");
 check(!/gastric cancer|fact_conformance|"(?:rawText|maskedText|medicalNote|profileFact|trialResult|prompt|argument|output)"\s*:/i.test(serializedReceipt), "WebMCP receipt contains health content or tool payload fields.");
 
+check(webMcpCriticalJourney.steps.length === 5, "Critical user journey must expose five visible state transitions.");
+check(webMcpCriticalJourney.steps[1]?.tools.length === 0, "Protected intake must intentionally expose no WebMCP tool.");
+check(webMcpCriticalJourney.steps.every((step) => step.siteReaction.length > 0 && step.recovery.length > 0), "Every critical journey step must define a visible UI reaction and recovery path.");
+const diagnosticReceipt = createWebMcpDiagnosticReceipt({
+  generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", browserState: "ready",
+  expectedToolNames: publicTools.map((tool) => tool.name), discoveredToolNames: publicTools.map((tool) => tool.name),
+  securityHeaders: { permissionsPolicy: true, openerPolicy: true, noSniff: true }, safeExecutionAvailable: true, safeSelfTestState: "passed",
+});
+check(diagnosticReceipt.containsHealthInformation === false && diagnosticReceipt.persistence === "download-only", "Browser diagnostic receipt must remain no-health-data and download-only.");
+check(diagnosticReceipt.publicToolDiscovery.complete, "Browser diagnostic receipt must verify the complete public tool set.");
+
 const knownToolNames = new Set(["search_public_trial_form", ...names]);
 check(webMcpJourneyCases.length >= 10, "At least ten WebMCP journey eval cases are required.");
 check(webMcpJourneyCases.some((item) => item.intent === "ambiguous"), "Journey evals must include ambiguous prompts.");
@@ -135,8 +148,13 @@ check(compatibility.includes("executeTool(tool, {})") && compatibility.includes(
 check(compatibility.includes('tool.name !== "trialbridge_method"') && compatibility.includes("readOnlyHint !== true"), "Execution compatibility retries must remain restricted to the safe read-only method tool.");
 
 const proofPage = readFileSync("app/webmcp/page.tsx", "utf8");
-for (const marker of ["Standards alignment", "Declarative API", "Imperative API", "Lifecycle compatibility", "Origin security", "Compatibility profile audited"]) {
+for (const marker of ["Standards alignment", "Declarative API", "Imperative API", "Lifecycle compatibility", "Origin security", "Compatibility profile audited", "Critical user journey", "webMcpCriticalJourney.steps", "user-journey guidance"]) {
   check(proofPage.includes(marker), `Competition evidence is missing the ${marker} standards marker.`);
+}
+
+const diagnosticSurface = readFileSync("app/webmcp/_components/WebMcpDiagnostics.tsx", "utf8");
+for (const marker of ["createWebMcpDiagnosticReceipt", "Download this browser&apos;s diagnostic receipt", "Browser diagnostic receipt downloaded to this device"]) {
+  check(diagnosticSurface.includes(marker), `Browser diagnostic surface is missing ${marker}.`);
 }
 
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
@@ -178,6 +196,8 @@ if (findings.length > 0) {
     forbiddenAbstention: `${forbiddenSamples.filter((sample) => sample.passed).length}/${forbiddenSamples.length}`,
     shortlistSelection: `${shortlistSamples.filter((sample) => sample.passed).length}/${shortlistSamples.length}`,
     receiptLimitEvents: maxWebMcpReceiptEvents,
+    criticalJourneySteps: webMcpCriticalJourney.steps.length,
+    browserDiagnosticReceipt: "download-only-no-health-data",
     executionCompatibilityProfiles: 2,
     registrySourceDeadlineMs: 20_000,
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
