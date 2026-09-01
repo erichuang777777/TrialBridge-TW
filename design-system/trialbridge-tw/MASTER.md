@@ -38,6 +38,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - Trial cards show patient-confirmed disease, subtype, stage, biomarker, and age separately from the registry comparison matrix.
 - Repeated comparison cells are color blocks with criterion, state, and rationale disclosed on pointer hover and keyboard focus. A visible legend and expanded text preserve non-color access.
 - The WebMCP capability layer has one compact, collapsible live-status surface. Its atomic status sentence reports browser support and verified registration; tool names, permission locks, safety boundaries, and judge prompts appear only on disclosure.
+- Outside the medical workflow, `/webmcp` may provide a dedicated competition-evidence dashboard. It leads with a single contextual status, uses text plus color for every check, progressively discloses execution output, and never requests medical context.
 
 ## Prohibited patterns
 

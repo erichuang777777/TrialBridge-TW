@@ -65,6 +65,23 @@ test("the visible public database form is also a declarative WebMCP tool", async
   assert.match(database, /respondWith\(searchPromise\)/);
 });
 
+test("the competition proof page exposes live WebMCP evidence without overstating Inspector validation", async () => {
+  const root = process.cwd();
+  const page = await readFile(path.join(root, "app", "webmcp", "page.tsx"), "utf8");
+  const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
+  const home = await readFile(path.join(root, "app", "page.tsx"), "utf8");
+  assert.match(home, /href="\/webmcp"/);
+  assert.match(page, /WebMCP, visible and testable/);
+  assert.match(page, /Model Context Tool Inspector/);
+  assert.match(page, /search_public_trial_form/);
+  assert.match(diagnostic, /document\.modelContext/);
+  assert.match(diagnostic, /getTools/);
+  assert.match(diagnostic, /executeTool/);
+  assert.match(diagnostic, /tools=\(self\)/);
+  assert.match(diagnostic, /aria-atomic="true"/);
+  assert.doesNotMatch(diagnostic, /rawText|maskedText|ConfirmedProfile/);
+});
+
 test("trial cards expose five useful comparison blocks, hover details, and patient facts without relying on color alone", async () => {
   const root = process.cwd();
   const component = await readFile(path.join(root, "app", "components", "TrialMatchCard.tsx"), "utf8");

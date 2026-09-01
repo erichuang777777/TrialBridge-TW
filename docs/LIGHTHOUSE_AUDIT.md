@@ -19,6 +19,8 @@ Re-audited on 2026-09-02 against a local `next start` production build with Ligh
 | Cumulative Layout Shift | 0 |
 | Console errors | 0 |
 
+The new `/webmcp` competition-evidence page was audited separately on 2026-09-02: Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.1 s, TBT 80 ms, CLS 0, and no console errors. Its SEO score has the same intentional no-index boundary described below.
+
 Command shape:
 
 ```powershell
@@ -33,4 +35,4 @@ The only SEO failure is crawlability. `app/layout.tsx` and `public/robots.txt` i
 
 ## Verification boundary
 
-Lighthouse exercised a real local Chrome renderer and network lifecycle. It does not replace keyboard-only, screen-reader, large-text, landscape, or Chrome Model Context Tool Inspector acceptance. The in-app browser-control plugin was unavailable because its runtime module was missing, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.
+Lighthouse exercised a real local Chrome renderer and network lifecycle. It does not replace keyboard-only, screen-reader, large-text, landscape, or Chrome Model Context Tool Inspector acceptance. The browser-control package could not initialize because its packaged documentation was missing, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.

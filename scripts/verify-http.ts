@@ -1,7 +1,7 @@
 export {};
 
 const baseUrl = process.env.TRIALBRIDGE_BASE_URL ?? "http://localhost:3001";
-const paths = ["/", "/trials", "/method", "/privacy", "/robots.txt", "/api/health"];
+const paths = ["/", "/trials", "/webmcp", "/method", "/privacy", "/robots.txt", "/api/health"];
 const results = [];
 for (const path of paths) {
   const response = await fetch(`${baseUrl}${path}`);
