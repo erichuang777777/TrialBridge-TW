@@ -14,15 +14,15 @@ test("English is the first-display language", () => {
 });
 
 test("chat state cannot skip privacy, masking, extraction, or confirmation", () => {
-  assert.equal(chatReducer(initialChatState, { type: "ACCEPT_PRIVACY" }).stage, "role");
-  const role = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
-  const capture = chatReducer(role, { type: "ACCEPT_PRIVACY" });
+  assert.equal(chatReducer(initialChatState, { type: "ACCEPT_PRIVACY" }).stage, "mode");
+  const privacy = chatReducer(initialChatState, { type: "START_INTAKE" });
+  const capture = chatReducer(privacy, { type: "ACCEPT_PRIVACY" });
   assert.equal(chatReducer(capture, { type: "EXTRACTION_START" }).stage, "capture");
   assert.equal(chatReducer(capture, { type: "EXTRACTION_SUCCESS", draft }).stage, "capture");
 });
 
 test("raw text is discarded when the visible cloud-organization action begins", () => {
-  let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
+  let state = chatReducer(initialChatState, { type: "START_INTAKE" });
   state = chatReducer(state, { type: "ACCEPT_PRIVACY" });
   state = chatReducer(state, { type: "SET_RAW_TEXT", value: "synthetic medical text long enough" });
   state = chatReducer(state, { type: "MASK_COMPLETE", result: { maskedText: "synthetic medical text long enough", findings: [] } });
@@ -39,7 +39,7 @@ test("raw text is discarded when the visible cloud-organization action begins", 
 });
 
 test("a cancelled extraction returns to the masked review", () => {
-  let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
+  let state = chatReducer(initialChatState, { type: "START_INTAKE" });
   state = chatReducer(state, { type: "ACCEPT_PRIVACY" });
   state = chatReducer(state, { type: "SET_RAW_TEXT", value: "synthetic medical text long enough" });
   state = chatReducer(state, { type: "MASK_COMPLETE", result: { maskedText: "synthetic medical text long enough", findings: [] } });
@@ -60,18 +60,17 @@ test("summary confirmation can return to the masked note on the same review flow
   assert.equal(capture.draft, undefined);
 });
 
-test("agent chat can update caregiver context without a separate role gate", () => {
-  let state = chatReducer(initialChatState, { type: "SELECT_ROLE", role: "patient" });
-  state = chatReducer(state, { type: "SET_SUBJECT_ROLE", role: "caregiver" });
+test("starting intake uses a neutral default without a patient-caregiver question", () => {
+  const state = chatReducer(initialChatState, { type: "START_INTAKE" });
   assert.equal(state.stage, "privacy");
-  assert.equal(state.subjectRole, "caregiver");
+  assert.equal(state.subjectRole, "patient");
 });
 
 test("reset clears anonymous session data but keeps language preference in memory", () => {
   const english = chatReducer(initialChatState, { type: "SET_LANGUAGE", language: "en" });
-  const role = chatReducer(english, { type: "SELECT_ROLE", role: "caregiver" });
-  const reset = chatReducer(role, { type: "RESET" });
-  assert.deepEqual(reset, { stage: "role", language: "en", rawText: "" });
+  const privacy = chatReducer(english, { type: "START_INTAKE" });
+  const reset = chatReducer(privacy, { type: "RESET" });
+  assert.deepEqual(reset, { stage: "mode", language: "en", subjectRole: "patient", rawText: "" });
 });
 
 test("development stage jumps are ignored outside development", () => {

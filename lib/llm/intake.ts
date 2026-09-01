@@ -3,8 +3,8 @@ import { hasDirectIdentifiers } from "../privacy/mask.ts";
 import { requiredCloudModel, validatedCloudModel } from "./cloud.ts";
 import { validatedLoopbackBaseUrl } from "./ollama.ts";
 
-const intakeStageSchema = z.enum(["role", "privacy", "capture", "mask_review", "extracting", "confirmation", "ready"]);
-const workflowActionSchema = z.enum(["select_patient", "select_caregiver", "accept_privacy", "append_medical_note", "organize_medical_note", "confirm_all_facts", "continue_confirmed_summary", "answer_current_question", "show_results", "none"]);
+const intakeStageSchema = z.enum(["mode", "privacy", "capture", "mask_review", "extracting", "confirmation", "ready"]);
+const workflowActionSchema = z.enum(["accept_privacy", "append_medical_note", "organize_medical_note", "confirm_all_facts", "continue_confirmed_summary", "answer_current_question", "show_results", "none"]);
 
 export const guidedIntakeRequestSchema = z.object({
   stage: intakeStageSchema,
@@ -41,11 +41,11 @@ export async function answerGuidedIntake(input: z.infer<typeof guidedIntakeReque
     body: JSON.stringify({ model: validatedCloudModel(), stream: false, think: false, format: "json", options: { temperature: 0.2, num_predict: 1200 }, messages: [
       { role: "system", content: [
         `You are the guided intake assistant for TrialBridge TW. Reply in ${parsed.language}.`,
-        "Help a patient or caregiver complete the visible clinical-trial matching workflow one step at a time.",
+        "Help the person complete the visible clinical-trial matching workflow one step at a time. Do not ask whether they are a patient or caregiver; that distinction is not part of this workflow.",
         "Do not diagnose, recommend treatment, claim benefit, or determine eligibility. Never invent a medical fact or mark a fact confirmed.",
         "Return only JSON: {\"reply\":\"short supportive response and at most one next question\",\"workflowAction\":\"...\"}.",
-        "Allowed workflowAction values: select_patient, select_caregiver, accept_privacy, append_medical_note, organize_medical_note, confirm_all_facts, continue_confirmed_summary, answer_current_question, show_results, none.",
-        "Use select_patient/select_caregiver only when the user clearly states that role. Use accept_privacy only for an explicit acknowledgement. Use append_medical_note only when the message actually contains patient medical or travel information. Use organize_medical_note only when the user explicitly says the note is complete and asks to organize or continue. Use confirm_all_facts only when the user explicitly says they reviewed and confirm every visible fact. Use continue_confirmed_summary only after facts are already confirmed and the user explicitly asks to continue. Use answer_current_question only when a currentQuestion is present and the message answers it. Use show_results only when all visible follow-up questions already have answers and the user explicitly asks to continue. Otherwise use none.",
+        "Allowed workflowAction values: accept_privacy, append_medical_note, organize_medical_note, confirm_all_facts, continue_confirmed_summary, answer_current_question, show_results, none.",
+        "Use accept_privacy only for an explicit acknowledgement. Use append_medical_note only when the message actually contains medical or travel information. Use organize_medical_note only when the user explicitly says the note is complete and asks to organize or continue. Use confirm_all_facts only when the user explicitly says they reviewed and confirm every visible fact. Use continue_confirmed_summary only after facts are already confirmed and the user explicitly asks to continue. Use answer_current_question only when a currentQuestion is present and the message answers it. Use show_results only when all visible follow-up questions already have answers and the user explicitly asks to continue. Otherwise use none.",
       ].join(" ") },
       { role: "user", content: JSON.stringify({ stage: parsed.stage, context: parsed.context, message: parsed.maskedMessage }) },
     ] }),

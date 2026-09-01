@@ -2,7 +2,7 @@
 
 ```text
 WELCOME
-  -> LANGUAGE_AND_MODE (agent or manual; patient context is the default)
+  -> LANGUAGE_AND_MODE (agent or manual; no patient/caregiver question)
   -> PRIVACY_NOTICE
   -> ENTER_NOTE (agent chat or manual entry into one shared note)
   -> CLOUD_ORGANIZATION_ACTION
@@ -20,7 +20,7 @@ WELCOME
 ## Invariants
 
 - Agent mode uses chat as the workflow controller; manual mode exposes direct entry, extraction, and confirmation controls. Switching modes preserves the same volatile intake note.
-- The separate patient-versus-caregiver gate is removed. Patient context is the initial default; a schema-bounded Agent action may update it only when the person clearly states they are a caregiver.
+- Patient-versus-caregiver identity is not an intake gate and the Agent is explicitly instructed not to ask for it. A neutral internal default exists only for profile-schema compatibility.
 - Only browser-masked text can enter cloud extraction after the visible cloud-organization action. A separate mask-review screen appears only as an error recovery state.
 - `FACT_CONFIRMATION` cannot be skipped; every used fact has explicit confirmation.
 - The masked note and extracted facts remain visible together during confirmation. One bulk action may mark every visible fact confirmed; editing a fact immediately clears that fact's confirmation.

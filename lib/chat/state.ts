@@ -1,7 +1,7 @@
 import type { MaskResult } from "../privacy/mask.ts";
 import type { ConfirmedProfile, ProfileDraft } from "../profile/schema.ts";
 
-export type ChatStage = "role" | "privacy" | "capture" | "mask_review" | "extracting" | "confirmation" | "ready";
+export type ChatStage = "mode" | "privacy" | "capture" | "mask_review" | "extracting" | "confirmation" | "ready";
 
 export interface ChatState {
   stage: ChatStage;
@@ -16,8 +16,7 @@ export interface ChatState {
 
 export type ChatEvent =
   | { type: "SET_LANGUAGE"; language: ChatState["language"] }
-  | { type: "SELECT_ROLE"; role: "patient" | "caregiver" }
-  | { type: "SET_SUBJECT_ROLE"; role: "patient" | "caregiver" }
+  | { type: "START_INTAKE" }
   | { type: "ACCEPT_PRIVACY" }
   | { type: "SET_RAW_TEXT"; value: string }
   | { type: "MASK_COMPLETE"; result: MaskResult }
@@ -31,16 +30,14 @@ export type ChatEvent =
   | { type: "DEV_SET_STATE"; state: ChatState }
   | { type: "RESET" };
 
-export const initialChatState: ChatState = { stage: "role", language: "en", rawText: "" };
+export const initialChatState: ChatState = { stage: "mode", language: "en", subjectRole: "patient", rawText: "" };
 
 export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
   switch (event.type) {
     case "SET_LANGUAGE":
-      return state.stage === "role" ? { ...state, language: event.language } : state;
-    case "SELECT_ROLE":
-      return state.stage === "role" ? { ...state, subjectRole: event.role, stage: "privacy" } : state;
-    case "SET_SUBJECT_ROLE":
-      return ["privacy", "capture", "mask_review", "extracting", "confirmation"].includes(state.stage) ? { ...state, subjectRole: event.role } : state;
+      return state.stage === "mode" ? { ...state, language: event.language } : state;
+    case "START_INTAKE":
+      return state.stage === "mode" ? { ...state, stage: "privacy" } : state;
     case "ACCEPT_PRIVACY":
       return state.stage === "privacy" ? { ...state, stage: "capture" } : state;
     case "SET_RAW_TEXT":

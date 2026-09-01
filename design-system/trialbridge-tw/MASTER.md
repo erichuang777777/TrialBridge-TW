@@ -31,7 +31,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - A generated statement must visually distinguish source fact, model interpretation, and patient confirmation.
 - The primary product shell uses three coordinated regions on desktop: a compact progress rail, the active review/work area, and a persistent right-side assistant.
 - The first choice is Agent mode or Manual mode. Agent mode uses chat as the workflow controller; Manual mode exposes direct note, extraction, and confirmation controls. Switching modes preserves the shared intake note.
-- The patient/caregiver choice is not a standalone gate. Patient context is the default, and Agent mode may update caregiver context only after a clear user statement.
+- Patient/caregiver identity is not an intake step or Agent question. The same workflow serves both, with a neutral internal default used only for schema compatibility.
 - Masked note and extracted facts share one review surface. `Confirmed` is a column heading, `Confirm all` sits beside it, and row checkboxes use accessible names without repeated visible labels.
 - Treatment, timing, subtype, stage, disease extent, and biomarker facts receive visible model-review-priority prompts. These prompts never claim an objective probability of correctness.
 - Trial cards show patient-confirmed disease, subtype, stage, biomarker, and age separately from the registry comparison matrix.

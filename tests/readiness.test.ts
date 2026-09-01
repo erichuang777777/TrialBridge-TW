@@ -108,6 +108,7 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(chat, /\/api\/cloud\/intake/);
   assert.doesNotMatch(chat, /I am the patient/);
   assert.doesNotMatch(chat, /I am a caregiver/);
+  assert.doesNotMatch(chat, /SELECT_ROLE|SET_SUBJECT_ROLE|select_patient|select_caregiver/);
   assert.match(chat, /No known public-record difference/);
   assert.match(chat, /More information needed/);
   assert.match(chat, /Public-record differences found/);
