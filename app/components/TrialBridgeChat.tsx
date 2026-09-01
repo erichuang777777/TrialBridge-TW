@@ -261,7 +261,6 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
           language: state.language,
           maskedMessage,
           context: {
-            subjectRole: state.subjectRole,
             confirmedDomains: state.confirmedProfile?.facts.map((fact) => fact.domain) ?? state.draft?.facts.map((fact) => fact.domain) ?? [],
             currentQuestion: currentQuestion ? (state.language === "en" ? currentQuestion.questionEn : currentQuestion.questionZhHant) : undefined,
             hasResults: matches.length > 0,

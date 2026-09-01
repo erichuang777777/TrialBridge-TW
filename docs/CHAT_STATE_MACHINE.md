@@ -21,7 +21,7 @@ WELCOME
 ## Invariants
 
 - Agent mode uses chat as the workflow controller; manual mode exposes direct entry, extraction, and confirmation controls. Switching modes preserves the same volatile intake note.
-- Patient-versus-caregiver identity is not an intake gate and the Agent is explicitly instructed not to ask for it. A neutral internal default exists only for profile-schema compatibility.
+- Patient-versus-caregiver identity is not an intake gate. Guided-chat requests omit the internal compatibility role, the Agent is explicitly instructed not to ask for a role, and a deterministic response guard replaces any model-generated identity question with the next stage-appropriate prompt. A neutral internal default exists only for profile-schema compatibility.
 - Only browser-masked text can enter cloud extraction after the visible cloud-organization action. A separate mask-review screen appears only as an error recovery state.
 - `FACT_CONFIRMATION` cannot be skipped; every used fact has explicit confirmation.
 - The masked note and extracted facts remain visible together during confirmation. One bulk action may mark every visible fact confirmed; editing a fact immediately clears that fact's confirmation.
