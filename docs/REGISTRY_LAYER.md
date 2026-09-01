@@ -11,6 +11,12 @@ The server accepts `POST /api/trials/search` so a cancer term is not copied into
 
 Both adapters run independently. One registry failure is returned as an explicit source failure and does not erase verified results from the other source.
 
+## Bilingual query bridge
+
+Direct public search applies a versioned deterministic lexicon covering the same 19 cancer groups declared in the all-cancer coverage matrix. An exact Traditional Chinese or English alias produces two visible registry-specific terms: Traditional Chinese for TFDA and English for ClinicalTrials.gov. The response carries the strategy, lexicon version, canonical coverage group, both outgoing terms, and a limitation statement; the human form and both public WebMCP search patterns expose the same plan.
+
+The bridge is terminology navigation, not clinical translation. It performs exact normalized alias matching only. A detailed or unrecognized term is sent unchanged to both registries, and the product does not infer histology, subtype, stage, biomarker, or eligibility. The matching flow separately uses the person's confirmed bilingual labels from the extraction and confirmation boundary.
+
 ## Normalization and provenance
 
 Every normalized record keeps registry ID, public URL, retrieval time, source update time, license when supplied, recruitment wording, locations, criteria, and cross-registry identifiers. Registry prose remains untrusted external content.

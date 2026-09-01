@@ -31,6 +31,8 @@ After adding the user-controlled shortlist, responsive comparison, seventh condi
 
 After adding the bounded, downloadable WebMCP session capability receipt and its evidence section, a fresh sequential production audit recorded: home Performance 97, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.4 s, TBT 110 ms, CLS 0, and zero console-error audit items; `/webmcp` recorded Performance 98, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.3 s, TBT 100 ms, CLS 0, and zero console-error audit items.
 
+After adding the visible 19-group bilingual registry query bridge and structured WebMCP query provenance, `/trials` recorded Performance 95, Accessibility 100, Best Practices 100, SEO 63, FCP 0.9 s, LCP 2.2 s, TBT 210 ms, CLS 0, and zero console-error audit items while its initial live public-registry search remained enabled. `/webmcp` recorded Performance 99, Accessibility 100, Best Practices 100, SEO 63, FCP 1.0 s, LCP 2.3 s, TBT 60 ms, CLS 0, and zero console-error audit items.
+
 Command shape:
 
 ```powershell

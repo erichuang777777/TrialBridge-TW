@@ -5,7 +5,7 @@ import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 const tools = [
   { name: "search_public_trial_form", kind: "Declarative", availability: "Visible on /trials", boundary: "Public condition only" },
   { name: "trialbridge_method", kind: "Imperative", availability: "Always public", boundary: "No patient context" },
-  { name: "search_public_cancer_trials", kind: "Imperative", availability: "Always public", boundary: "Read-only · untrusted registry output" },
+  { name: "search_public_cancer_trials", kind: "Imperative", availability: "Always public", boundary: "Bilingual query plan · untrusted registry output" },
   { name: "review_trial_followups", kind: "Imperative", availability: "Permission-gated", boundary: "Questions only · never records answers" },
   { name: "explain_confirmed_matches", kind: "Imperative", availability: "Permission-gated", boundary: "Confirmed, de-identified context only" },
   { name: "draft_trial_outreach", kind: "Imperative", availability: "Permission-gated", boundary: "Creates an unsent draft" },
@@ -29,7 +29,7 @@ export default function WebMcpProofPage() {
       <p className="eyebrow">Competition evidence</p>
       <h1>WebMCP, visible and testable.</h1>
       <p className="lead">TrialBridge TW combines one declarative form tool with up to seven imperative tools. The human interface remains complete when WebMCP is unavailable, while compatible browser agents receive typed, origin-scoped, read-only capabilities that follow visible page state.</p>
-      <div className="proof-summary" aria-label="WebMCP implementation summary"><span><strong>1</strong> declarative tool</span><span><strong>7</strong> maximum imperative tools</span><span><strong>{baselineJourneyCount}</strong> journey eval cases</span><span><strong>0</strong> send or enrollment tools</span></div>
+      <div className="proof-summary" aria-label="WebMCP implementation summary"><span><strong>1</strong> declarative tool</span><span><strong>7</strong> maximum imperative tools</span><span><strong>{baselineJourneyCount}</strong> journey eval cases</span><span><strong>19</strong> bilingual cancer groups</span><span><strong>0</strong> send or enrollment tools</span></div>
     </header>
 
     <WebMcpDiagnostics />

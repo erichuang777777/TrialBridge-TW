@@ -1,5 +1,6 @@
 import { trialSearchRequestSchema } from "@/lib/trials/schema";
 import { searchTrialRegistries } from "@/lib/trials/search";
+import { createRegistryQueryPlan } from "@/lib/trials/queryBridge";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
@@ -22,10 +23,12 @@ export async function POST(request: Request) {
     }, { status: 400 });
   }
 
-  const result = await searchTrialRegistries(parsed.data);
+  const queryPlan = createRegistryQueryPlan(parsed.data.condition);
+  const result = await searchTrialRegistries(parsed.data, undefined, queryPlan.registryConditions);
   const status = result.sources.length === 0 ? 503 : 200;
   return Response.json({
     ...result,
+    queryPlan,
     searchOrder: ["taiwan", "asia", "world", "unknown"],
     disclaimer: "Trial registries describe research plans. They do not prove benefit or determine final eligibility.",
   }, {

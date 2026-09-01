@@ -6,7 +6,9 @@ import type { FollowUpQuestion } from "../matching/followUp.ts";
 import type { TrialMatch } from "../matching/engine.ts";
 import { maxShortlistTrials, resolveShortlistedMatches } from "../matching/shortlist.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
+import type { RegistryQueryPlan } from "../trials/queryBridge.ts";
 import { capWebMcpOutput } from "./output.ts";
+import { createBoundedPublicSearchOutput } from "./publicSearchOutput.ts";
 
 export type WebMcpActivityState = "running" | "completed" | "failed" | "cancelled";
 
@@ -64,8 +66,8 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
         if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
         const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: false }), signal: options.signal });
         if (!response.ok) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
-        const payload = await response.json() as { trials?: TrialMatch["trial"][] };
-        return capWebMcpOutput((payload.trials ?? []).slice(0, 5).map((trial) => ({ id: trial.canonicalId, title: trial.title, region: trial.regionTier, recruitment: trial.recruitment.raw, sources: trial.sources.map((source) => ({ registry: source.registry, id: source.registryId, url: source.url, retrievedAt: source.retrievedAt })) })));
+        const payload = await response.json() as { trials?: TrialMatch["trial"][]; queryPlan?: RegistryQueryPlan; sources?: Array<{ registry: string; count: number; retrievedAt: string }>; failures?: Array<{ registry: string; message: string }>; disclaimer?: string };
+        return createBoundedPublicSearchOutput({ query: condition, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
       },
     },
   ];

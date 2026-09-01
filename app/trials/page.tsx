@@ -27,7 +27,7 @@ export default function TrialsPage() {
       <section className="database-hero" aria-labelledby="database-title">
         <p className="eyebrow">Public trial database · 公開試驗資料庫</p>
         <h1 id="database-title">Search trial registries directly.</h1>
-        <p className="lead">Browse TFDA and ClinicalTrials.gov without entering medical records. Results are ordered Taiwan, Asia, then worldwide.</p>
+        <p className="lead">Browse TFDA and ClinicalTrials.gov without entering medical records. Enter a supported cancer term in English or Traditional Chinese; the visible query bridge sends each registry its corresponding language. Results are ordered Taiwan, Asia, then worldwide.</p>
       </section>
 
       <TrialDatabase />

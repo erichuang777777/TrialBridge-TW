@@ -46,6 +46,13 @@ test("all LLM surfaces require gpt-oss cloud and expose no local inference path"
   assert.doesNotMatch(combined, /medgemma|modelPreference|\/api\/local-model/i);
 });
 
+test("privacy copy uses the visible cloud action without reintroducing a redundant checkbox", async () => {
+  const privacy = await readFile(path.join(process.cwd(), "app", "privacy", "page.tsx"), "utf8");
+  assert.match(privacy, /visible cloud-organization action/);
+  assert.match(privacy, /there is no redundant consent checkbox/);
+  assert.doesNotMatch(privacy, /explicit checkbox consent/);
+});
+
 test("the public trial database is directly linked from the English-first home page", async () => {
   const root = process.cwd();
   const home = await readFile(path.join(root, "app", "page.tsx"), "utf8");
@@ -63,6 +70,24 @@ test("the visible public database form is also a declarative WebMCP tool", async
   assert.match(database, /toolparamdescription=/);
   assert.match(database, /agentInvoked/);
   assert.match(database, /respondWith\(searchPromise\)/);
+});
+
+test("the public database exposes a deterministic bilingual registry query bridge", async () => {
+  const root = process.cwd();
+  const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
+  const route = await readFile(path.join(root, "app", "api", "trials", "search", "route.ts"), "utf8");
+  const bridge = await readFile(path.join(root, "lib", "trials", "queryBridge.ts"), "utf8");
+  assert.match(database, /Bilingual registry query bridge/);
+  assert.match(database, /跨語言試驗搜尋橋/);
+  assert.match(database, /queryPlan\.registryConditions\.TFDA/);
+  assert.match(database, /queryPlan\.registryConditions\["ClinicalTrials\.gov"\]/);
+  assert.match(database, /role="status" aria-atomic="true"/);
+  assert.doesNotMatch(database, /database-results" aria-live/);
+  assert.match(route, /createRegistryQueryPlan/);
+  assert.match(route, /queryPlan\.registryConditions/);
+  assert.match(bridge, /curated_bilingual_cancer_lexicon/);
+  assert.match(bridge, /pass_through/);
+  assert.doesNotMatch(bridge, /fetch\(|gpt-oss|ollama|cloud/i);
 });
 
 test("the competition proof page exposes live WebMCP evidence without overstating Inspector validation", async () => {
@@ -83,6 +108,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /review_trial_followups/);
   assert.match(page, /draft_trial_discussion_brief/);
   assert.match(page, /compare_shortlisted_trials/);
+  assert.match(page, /19<\/strong> bilingual cancer groups/);
   assert.match(page, /Capability changes leave a payload-free session receipt/);
   assert.match(page, /latest 20 lifecycle events/);
   assert.match(diagnostic, /document\.modelContext/);

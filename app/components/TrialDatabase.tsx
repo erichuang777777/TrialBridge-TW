@@ -2,17 +2,24 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { NormalizedTrial, RegionTier } from "@/lib/trials/types";
-import { capWebMcpOutput } from "@/lib/webmcp/output";
+import type { RegistryQueryPlan } from "@/lib/trials/queryBridge";
+import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput";
 
 type SearchResponse = {
   trials?: NormalizedTrial[];
+  queryPlan?: RegistryQueryPlan;
   sources?: Array<{ registry: string; count: number; retrievedAt: string; warning?: string }>;
   failures?: Array<{ registry: string; message: string }>;
   disclaimer?: string;
   error?: string;
 };
 
-const suggestions = ["breast cancer", "lung cancer", "gastric cancer", "colorectal cancer"];
+const suggestions = [
+  { condition: "breast cancer", label: "Breast cancer" },
+  { condition: "肺癌", label: "肺癌 · Lung cancer" },
+  { condition: "胃癌", label: "胃癌 · Gastric cancer" },
+  { condition: "colorectal cancer", label: "Colorectal cancer" },
+];
 const declarativeToolName = "search_public_trial_form";
 const regions: Array<{ value: "all" | RegionTier; label: string }> = [
   { value: "all", label: "All regions" },
@@ -53,19 +60,7 @@ export function TrialDatabase() {
       const payload = await response.json() as SearchResponse;
       if (!response.ok && !payload.trials) throw new Error(payload.error ?? "Trial registries are temporarily unavailable.");
       setResult(payload);
-      return capWebMcpOutput({
-        query: normalized,
-        recordCount: payload.trials?.length ?? 0,
-        records: (payload.trials ?? []).slice(0, 5).map((trial) => ({
-          id: trial.canonicalId,
-          title: trial.title,
-          region: trial.regionTier,
-          recruitment: trial.recruitment.raw,
-          sources: trial.sources.map((source) => ({ registry: source.registry, id: source.registryId, url: source.url })),
-        })),
-        untrustedExternalRegistryContent: true,
-        limitation: payload.disclaimer,
-      });
+      return createBoundedPublicSearchOutput({ query: normalized, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
     } catch (searchError) {
       setResult({});
       const message = searchError instanceof Error ? searchError.message : "Search failed. Please try again.";
@@ -119,7 +114,7 @@ export function TrialDatabase() {
 
   return (
     <section className="database-shell" aria-labelledby="database-search-title">
-      <form className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription="Search public TFDA and ClinicalTrials.gov cancer trial records by a general non-sensitive condition. Keeps the search and results visible." toolautosubmit="" onSubmit={submitSearch}>
+      <form className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription="Search public TFDA and ClinicalTrials.gov cancer trial records by an English or Traditional Chinese general condition. Shows the bilingual registry query plan and results visibly." toolautosubmit="" onSubmit={submitSearch}>
         <div className="search-heading">
           <div><p className="eyebrow">Direct registry search</p><h2 id="database-search-title">What condition are you looking for?</h2></div>
           <div className="source-stack"><span className="source-pill">TFDA + ClinicalTrials.gov</span><span className="webmcp-form-pill">Declarative WebMCP</span></div>
@@ -131,23 +126,28 @@ export function TrialDatabase() {
           <button className="primary-action" disabled={loading || query.trim().length < 2}>{loading ? "Searching…" : "Search trials"}</button>
         </div>
         <div className="suggestion-row" aria-label="Suggested searches">
-          {suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => { setQuery(suggestion); void search(suggestion); }}>{suggestion}</button>)}
+          {suggestions.map((suggestion) => <button type="button" key={suggestion.condition} onClick={() => { setQuery(suggestion.condition); void search(suggestion.condition); }}>{suggestion.label}</button>)}
         </div>
         <label className="confirm-check"><input name="includeNotOpen" type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} toolparamdescription="Include public records that are not currently accepting participants." />Include records that are not currently open</label>
-        <p className="field-helper">Use only a general condition here. Do not paste medical records or identifying information.</p>
+        <p className="field-helper">English and Traditional Chinese cancer terms are supported. Use only a general condition here; do not paste medical records or identifying information.</p>
       </form>
 
-      <div className="database-results" aria-live="polite" aria-busy={loading}>
+      <div className="database-results" aria-busy={loading}>
         {loading && <div className="results-loading" role="status"><div className="progress-track" aria-hidden="true"><span /></div><p>Searching public registries in Taiwan-first order…</p></div>}
         {!loading && error && <div className="error-panel" role="alert"><strong>Search stopped</strong><p>{error}</p><button onClick={() => void search(submittedQuery)}>Try again</button></div>}
         {!loading && !error && <>
           <div className="results-toolbar">
-            <div><p className="eyebrow">Results</p><h2>{visibleTrials.length} records for “{submittedQuery}”</h2></div>
+            <div role="status" aria-atomic="true"><p className="eyebrow">Results</p><h2>{visibleTrials.length} records for “{submittedQuery}”</h2></div>
             <div className="region-filters" aria-label="Filter results by region">
               {regions.map((region) => <button key={region.value} className={selectedRegion === region.value ? "selected" : ""} aria-pressed={selectedRegion === region.value} onClick={() => setSelectedRegion(region.value)}>{region.label}</button>)}
             </div>
           </div>
 
+          {result.queryPlan && <section className={`registry-query-plan query-${result.queryPlan.strategy}`} aria-labelledby="registry-query-plan-title">
+            <div><div><strong id="registry-query-plan-title">Bilingual registry query bridge</strong><span lang="zh-Hant">跨語言試驗搜尋橋</span></div><b>{result.queryPlan.strategy === "curated_bilingual_cancer_lexicon" ? "Mapped term · 已映射" : "Original term · 原詞搜尋"}</b></div>
+            <dl><div><dt>TFDA</dt><dd lang="zh-Hant">{result.queryPlan.registryConditions.TFDA}</dd></div><div><dt>ClinicalTrials.gov</dt><dd lang="en">{result.queryPlan.registryConditions["ClinicalTrials.gov"]}</dd></div></dl>
+            <p>{result.queryPlan.limitation} <small>Lexicon {result.queryPlan.dictionaryVersion}{result.queryPlan.canonicalGroup ? ` · ${result.queryPlan.canonicalGroup}` : ""}</small></p>
+          </section>}
           {(result.sources?.length ?? 0) > 0 && <div className="registry-receipts">{result.sources!.map((source) => <span key={source.registry}><strong>{source.registry}</strong> {source.count} · retrieved {new Date(source.retrievedAt).toLocaleDateString("en-CA")}</span>)}</div>}
           {(result.failures?.length ?? 0) > 0 && <div className="notice">Some sources were unavailable: {result.failures!.map((failure) => `${failure.registry} — ${failure.message}`).join("; ")}</div>}
 

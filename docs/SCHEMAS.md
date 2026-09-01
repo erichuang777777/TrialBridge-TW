@@ -19,6 +19,8 @@ Names, national IDs, medical-record numbers, exact addresses, phone numbers, ema
 
 A normalized trial preserves source-specific identifiers and raw-source provenance. Core fields: registry, registry ID, public URL, titles, recruitment status, study type, phases, conditions, interventions, eligibility text, structured age and sex, locations, contacts when public, first and last update dates, and retrieval timestamp.
 
+A public registry query plan preserves the submitted general condition, exact-map or pass-through strategy, lexicon version, optional canonical cancer group, separate TFDA and ClinicalTrials.gov terms, and the non-inference limitation. It never contains a medical note or an inferred subtype, stage, biomarker, histology, or eligibility state.
+
 ## Match explanation
 
 Each criterion is classified `possibly_met`, `possibly_not_met`, `unknown`, or `missing`, with links to both the exact confirmed profile fact and the exact registry source field. Overall output is `discuss`, `needs_review`, `needs_information`, or `unlikely_based_on_public_record`; it is never `eligible`.

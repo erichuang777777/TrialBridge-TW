@@ -17,6 +17,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
 - After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.
 - A person can visibly shortlist two or three result cards for aligned side-by-side comparison. Only then can the permission-gated, read-only WebMCP comparison tool appear; it cannot choose or alter the shortlist.
+- Public condition search uses a versioned 19-group bilingual query bridge: exact curated terms become a Traditional Chinese TFDA query and an English ClinicalTrials.gov query, while unrecognized detailed terms pass through unchanged without inferred subtype, stage, or biomarker.
 
 ## Delivery plan
 

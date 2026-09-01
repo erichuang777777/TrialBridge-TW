@@ -12,7 +12,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 ### Public imperative tools
 
 - `trialbridge_method` explains the Taiwan-first method, privacy boundaries, sources, and limitations.
-- `search_public_cancer_trials` searches public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic.
+- `search_public_cancer_trials` searches public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic and returns the same visible bilingual registry query provenance as the human form. Its bounded output separately reports completed sources with counts and retrieval times plus failed sources, so partial results cannot appear complete.
 
 ### Sensitive contextual tools
 
@@ -28,7 +28,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 - Sensitive tools read only an in-memory, confirmed, de-identified summary and require active consent for each execution context.
 - Registry output is tagged as untrusted external content and length-bounded.
 - Tools never send messages, submit forms, enroll, schedule, consent, change treatment, or perform background surveillance.
-- Tool results include source registry, retrieval time, limitations, and a patient-facing safety statement.
+- Tool results include source registry, retrieval time, limitations, and a patient-facing safety statement. Public search also preserves registry-level completion and failure status inside the output budget.
 - Imperative registration and cleanup are deterministic across client navigation, confirmed-summary permission, shortlist changes, and hot reload.
 - Declarative agent activity remains visible, focused, cancellable, and announced to assistive technology.
 - Imperative executions publish a payload-free visible status (`running`, `completed`, `failed`, or `cancelled`) so an agent call never becomes an invisible page action.

@@ -33,6 +33,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - The first choice is Agent mode or Manual mode. Agent mode uses chat as the workflow controller; Manual mode exposes direct note, extraction, and confirmation controls. Switching modes preserves the shared intake note.
 - Patient/caregiver identity is not an intake step or Agent question. The same workflow serves both, with a neutral internal default used only for schema compatibility.
 - Agent-filled declarative forms are never hidden duplicates: the agent uses the visible human form, the active form receives a strong focus treatment, and activation is announced in a nearby status message.
+- Public registry search displays the bilingual query plan before source receipts. Each registry term has an explicit registry label; mapped versus pass-through state uses text plus color, and the two-column plan stacks without horizontal scrolling on small screens.
 - Masked note and extracted facts share one review surface. `Confirmed` is a column heading, `Confirm all` sits beside it, and row checkboxes use accessible names without repeated visible labels.
 - Treatment, timing, subtype, stage, disease extent, and biomarker facts receive visible model-review-priority prompts. These prompts never claim an objective probability of correctness.
 - Trial cards show patient-confirmed disease, subtype, stage, biomarker, and age separately from the registry comparison matrix.

@@ -35,6 +35,33 @@ test("WebMCP exposes public tools without patient context and no write tools", (
   assert.equal(JSON.stringify(tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLowerCase().includes("rawnote"), false);
 });
 
+test("public WebMCP search returns the visible bilingual registry query plan", async () => {
+  const fetcher = (async () => new Response(JSON.stringify({
+    trials: [],
+    queryPlan: {
+      strategy: "curated_bilingual_cancer_lexicon",
+      canonicalGroup: "gastric",
+      dictionaryVersion: "2026-09-02",
+      registryConditions: { TFDA: "胃癌", "ClinicalTrials.gov": "gastric cancer" },
+    },
+    sources: [{ registry: "TFDA", count: 0, retrievedAt: "2026-09-02T00:00:00.000Z" }],
+    failures: [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }],
+  }), { status: 200, headers: { "Content-Type": "application/json" } })) as typeof fetch;
+  const tool = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, fetcher }).find((candidate) => candidate.name === "search_public_cancer_trials");
+  assert.ok(tool);
+  const output = await tool.execute({ condition: "胃癌" }, { signal: new AbortController().signal }) as {
+    queryPlan: { registryConditions: Record<string, string> };
+    sourceStatus: { completed: Array<{ registry: string; count: number; retrievedAt: string }>; failed: Array<{ registry: string; message: string }> };
+    records: unknown[];
+  };
+  assert.deepEqual(output.queryPlan.registryConditions, { TFDA: "胃癌", "ClinicalTrials.gov": "gastric cancer" });
+  assert.deepEqual(output.sourceStatus, {
+    completed: [{ registry: "TFDA", count: 0, retrievedAt: "2026-09-02T00:00:00.000Z" }],
+    failed: [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }],
+  });
+  assert.deepEqual(output.records, []);
+});
+
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {
   assert.equal(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: false }).length, 2);
   const tools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });

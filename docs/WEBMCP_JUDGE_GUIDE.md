@@ -22,7 +22,7 @@ This is not a generic chatbot wrapper. WebMCP lets the site remain the authority
 | --- | --- | --- |
 | `search_public_trial_form` | On `/trials` | An agent can fill and submit the same visible public search form a person uses; activation and results remain visible. |
 | `trialbridge_method` | Always | An agent can accurately explain Taiwan-first search, sources, privacy, and limits without reading the DOM. |
-| `search_public_cancer_trials` | Always | An agent can run a bounded TFDA and ClinicalTrials.gov search with source-linked structured output. |
+| `search_public_cancer_trials` | Always | An agent can run a bounded search and receive the same visible bilingual TFDA/ClinicalTrials.gov query plan, source-linked records, and explicit completed/failed registry status. |
 | `review_trial_followups` | Confirmed profile plus visible WebMCP permission | The agent can identify the exact registry-derived questions still blocking comparison and receive a recovery step, but cannot record or confirm an answer. |
 | `explain_confirmed_matches` | Confirmed profile plus visible WebMCP permission | The tool follows live patient-confirmed page state and never receives the raw note. |
 | `draft_trial_outreach` | Confirmed profile plus visible WebMCP permission | The agent can prepare an editable draft, but the product deliberately provides no send or enrollment capability. |
@@ -54,8 +54,8 @@ The expanded panel also keeps a bounded session capability receipt. It shows the
 ## Five-minute judge demonstration
 
 1. Open `/webmcp`. Show the live browser-support state, two public tool discovery count, same-origin security headers, exact capability inventory, 55-sample recorded selection baseline, and zero write-authority summary. Point out that the baseline is single-turn Ollama tool calling—not Inspector evidence. Run the safe method check when `executeTool()` is available.
-2. Open `/trials`. Invoke `search_public_trial_form`; show the agent-filled condition, visible activation notice, normal results UI, and structured response from the same form submission.
-3. Open the guided workflow. Expand **WebMCP Live** and show that the two public imperative tools are verified while four confirmed-context tools and the selection-dependent comparison tool are locked. Invoke `search_public_cancer_trials` and show source-linked bounded output plus the visible execution status.
+2. Open `/trials`. Search for `胃癌` or invoke `search_public_trial_form`; show the visible query bridge sending `胃癌` to TFDA and `gastric cancer` to ClinicalTrials.gov, the agent-filled condition and activation notice, normal results UI, and structured response from the same form submission. Then enter an unrecognized detailed term and show non-inferential pass-through.
+3. Open the guided workflow. Expand **WebMCP Live** and show that the two public imperative tools are verified while four confirmed-context tools and the selection-dependent comparison tool are locked. Invoke `search_public_cancer_trials` and show source-linked bounded output, registry-level completion/failure status, and the visible execution status.
 4. Select **Try a synthetic case**. The fictional note still passes through the visible privacy notice, real browser masking, `gpt-oss:120b-cloud` extraction, human fact confirmation, pre-match questions, and public-registry matching. Show that confirmed-context tools remain locked while WebMCP permission is off.
 5. Enable the visible WebMCP permission. Show the four base confirmed-context tools changing to active without a reload; confirm the live count changes from 2/2 to 6/6 while comparison still says **Select 2 trials to activate**.
 6. Add two result cards to the visible shortlist. Show the aligned desktop table or stacked mobile cards, then show `compare_shortlisted_trials` appear and the verified count change to 7/7. Invoke it and confirm the output contains only those human-selected trials and no trial-ID input parameter.

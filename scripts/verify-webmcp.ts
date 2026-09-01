@@ -8,6 +8,7 @@ import { webMcpJourneyCases } from "../evals/webmcp-journeys.ts";
 import { requiredCloudModel } from "../lib/llm/cloud.ts";
 import { webMcpSelectionDatasetDigest, webMcpSelectionToolContractDigest } from "../lib/webmcp/selectionEval.ts";
 import { appendCapabilitySet, appendToolExecution, createWebMcpSessionReceipt, maxWebMcpReceiptEvents } from "../lib/webmcp/receipt.ts";
+import { bilingualCancerQueryLexicon, createRegistryQueryPlan } from "../lib/trials/queryBridge.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -65,6 +66,9 @@ for (const toolName of ["search_public_cancer_trials", "review_trial_followups",
 const metadata = JSON.stringify(shortlistTools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLocaleLowerCase("en");
 check(!metadata.includes("rawnote") && !metadata.includes("maskednote"), "Raw or masked note fields must never enter an imperative tool contract.");
 check(JSON.stringify(capWebMcpOutput("x".repeat(maxWebMcpOutputChars * 2))).length <= maxWebMcpOutputChars + 32, "Tool-output cap is not effective.");
+const bilingualQueryPlan = createRegistryQueryPlan("胃癌");
+check(bilingualCancerQueryLexicon.length === 19, "Bilingual registry query bridge must cover all 19 declared cancer groups.");
+check(bilingualQueryPlan.registryConditions.TFDA === "胃癌" && bilingualQueryPlan.registryConditions["ClinicalTrials.gov"] === "gastric cancer", "Traditional Chinese public search must expose distinct Taiwan and overseas registry terms.");
 
 let receiptEvents = appendCapabilitySet([], publicTools.map((tool) => tool.name), "2026-09-02T00:00:00.000Z", 1);
 receiptEvents = appendCapabilitySet(receiptEvents, allTools.map((tool) => tool.name), "2026-09-02T00:00:01.000Z", 2);
@@ -136,6 +140,7 @@ check(headers.includes("Cross-Origin-Opener-Policy"), "Cross-Origin-Opener-Polic
 
 const productSources = [declarative, bridge, readFileSync("lib/webmcp/tools.ts", "utf8")].join("\n");
 check(!productSources.includes("navigator.modelContext"), "Deprecated navigator.modelContext must not be used.");
+check(productSources.includes("queryPlan") && productSources.includes("registryConditions"), "Public WebMCP search must return bilingual registry query provenance.");
 
 if (findings.length > 0) {
   console.error(findings.join("\n"));
@@ -152,6 +157,7 @@ if (findings.length > 0) {
     forbiddenAbstention: `${forbiddenSamples.filter((sample) => sample.passed).length}/${forbiddenSamples.length}`,
     shortlistSelection: `${shortlistSamples.filter((sample) => sample.passed).length}/${shortlistSamples.length}`,
     receiptLimitEvents: maxWebMcpReceiptEvents,
+    bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,
   }));

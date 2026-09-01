@@ -23,6 +23,7 @@
 | Cross-user exposure | Anonymous in-memory sessions; no shared server conversation store |
 | Log leakage | Metadata-only structured logs and automated secret/PHI fixtures |
 | Stale or conflicting registries | Preserve source records, timestamps, and conflicts; never silently overwrite disagreement |
+| Bilingual query bridge invents clinical detail | Use exact aliases from a versioned 19-group navigation lexicon; expose both outgoing registry terms and the mapping strategy; pass unrecognized detail through unchanged; never infer subtype, stage, biomarker, histology, or eligibility |
 
 ## Deployment gates
 

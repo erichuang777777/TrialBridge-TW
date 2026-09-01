@@ -8,6 +8,7 @@
 - Exact `gpt-oss:120b-cloud` allowlist, loopback-only proxy, and prohibition on local GPU or CPU inference.
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
 - Live TFDA zipped JSON parsing and ClinicalTrials.gov API v2 retrieval.
+- A visible, versioned bilingual query plan covering all 19 declared cancer groups, with exact-term mapping and non-inferential pass-through for unrecognized detail.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
 - One visible declarative WebMCP registry-search form plus up to seven read-only imperative tools, output limits, untrusted-content annotations, consent-driven sensitive registration, state-aware pending-question recovery, and a comparison capability that appears only after two visible shortlist selections.
@@ -21,6 +22,7 @@
 ## Not yet proven and required before public clinical use
 
 - No cancer group is clinically validated. All 19 coverage groups are `unreviewed`; searchability is not accuracy.
+- The 19-group bilingual query lexicon is an engineering navigation aid and has not been adjudicated by an oncology terminologist; its visible mapping is not a clinical translation claim.
 - Deterministic masking cannot guarantee removal of every name or contextual identifier.
 - Provider retention, data-processing location, terms, outage behavior, and production latency for cloud extraction are not yet accepted.
 - TFDA's full archive is currently decompressed on first request; production needs a scheduled validated snapshot.

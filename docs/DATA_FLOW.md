@@ -10,7 +10,7 @@ Agent-mode chat or manual-mode free text
   -> draft profile with uncertainty
   -> patient or caregiver reviews masked note and draft facts together
   -> patient-confirmed de-identified profile
-     -> registry query minimizer -> TFDA and ClinicalTrials.gov candidate discovery
+     -> registry query minimizer -> visible bilingual registry query plan -> TFDA and ClinicalTrials.gov candidate discovery
      -> source-derived missing-field questions -> confirmed profile update or explicit unknown
         -> optional consent-gated WebMCP question review (questions only; no answer input)
      -> grouped, source-traceable comparison
@@ -34,6 +34,7 @@ Agent-mode chat or manual-mode free text
 | Confirmed profile | user-approved, de-identified structured facts | registry query builder; optional cloud assistant; consent-gated WebMCP; explicit local discussion-brief download |
 | Pending registry questions | question, registry field, candidate-trial count | visible human form; consent-gated read-only WebMCP output; never WebMCP input |
 | Public registry facts | study title, sites, criteria, update date | browser; matching engine; WebMCP with untrusted-content marking |
+| Public bilingual query plan | input term, exact-map/pass-through strategy, lexicon version, TFDA and ClinicalTrials.gov terms | visible database UI; registry adapters; public WebMCP search output |
 | Shortlist state | two or three visible current trial IDs | browser volatile memory; consent-gated read-only WebMCP comparison; never model-selected or persisted |
 | WebMCP receipt metadata | UTC time, tool name, verified additions/removals, lifecycle state | current-tab volatile memory; explicit local JSON download only |
 

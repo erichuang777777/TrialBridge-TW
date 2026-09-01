@@ -9,7 +9,7 @@ Visible on `/trials` through declarative WebMCP:
 Always available on supporting browsers:
 
 - `trialbridge_method`: product method and boundaries; read-only.
-- `search_public_cancer_trials`: bounded TFDA and ClinicalTrials.gov search; read-only and untrusted-content marked.
+- `search_public_cancer_trials`: bounded TFDA and ClinicalTrials.gov search with the visible 19-group bilingual query plan; read-only and untrusted-content marked.
 
 Registered only while the visible WebMCP consent checkbox is enabled and a confirmed profile exists:
 
