@@ -7,7 +7,13 @@ const root = process.cwd();
 
 async function filesUnder(relativeDirectory: string): Promise<string[]> {
   const absolute = path.join(root, relativeDirectory);
-  const entries = await readdir(absolute, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await readdir(absolute, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
   const nested = await Promise.all(
     entries.map(async (entry) => {
       const relative = path.join(relativeDirectory, entry.name);
@@ -19,6 +25,7 @@ async function filesUnder(relativeDirectory: string): Promise<string[]> {
 
 test("public product surfaces contain no retired brand", async () => {
   const retiredBrand = ["Trial", "ign"].join("");
+  assert.deepEqual(await filesUnder("directory-that-does-not-exist"), []);
   const files = [
     "README.md",
     ...(await filesUnder("app")),
