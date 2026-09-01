@@ -576,6 +576,25 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .diagnostic-receipt-panel button:disabled { border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
 .diagnostic-output { max-height: 320px; margin: 18px 0 0; padding: 16px; overflow: auto; border: 1px solid var(--line); border-left: 4px solid var(--match-aligned); border-radius: 9px; color: var(--ink); background: #f3f8f7; font-size: 0.78rem; white-space: pre-wrap; }
 .diagnostic-output-failed { border-left-color: var(--match-different); background: #fff4f3; }
+.cloud-probe-panel { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 10px; background: var(--paper); }
+.cloud-probe-ready { border-left-color: var(--match-aligned); background: var(--success-surface); }
+.cloud-probe-failed { border-left-color: var(--match-different); background: var(--warning); }
+.cloud-probe-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.cloud-probe-heading strong { font-size: 0.94rem; }
+.cloud-probe-heading p { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.5; }
+.cloud-probe-heading > span { flex: 0 0 auto; padding: 4px 8px; border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.66rem; font-weight: 900; text-transform: uppercase; }
+.cloud-probe-progress { margin-top: 14px; }
+.cloud-probe-progress .progress-track { max-width: 480px; }
+.cloud-probe-progress p { margin: 6px 0 0; color: var(--ink-soft); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.cloud-probe-receipt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; }
+.cloud-probe-receipt > div { min-width: 0; padding: 10px; border: 1px solid var(--success-line); border-radius: 8px; background: var(--surface); }
+.cloud-probe-receipt dt { color: var(--ink-soft); font-size: 0.64rem; font-weight: 900; text-transform: uppercase; }
+.cloud-probe-receipt dd { margin: 3px 0 0; overflow-wrap: anywhere; font-size: 0.76rem; font-weight: 800; }
+.cloud-probe-status { min-height: 1.5em; margin: 12px 0 0; color: var(--primary-strong); font-size: 0.78rem; font-weight: 800; }
+.cloud-probe-actions { display: flex; align-items: center; gap: 12px 18px; margin-top: 10px; }
+.cloud-probe-actions button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.78rem; font-weight: 900; cursor: pointer; }
+.cloud-probe-actions .primary-action { border-color: var(--primary); color: var(--surface); background: var(--primary); }
+.cloud-probe-actions small { color: var(--ink-soft); font-size: 0.7rem; }
 .proof-section { margin-top: 64px; padding-top: 42px; border-top: 1px solid var(--line); }
 .proof-section-heading { max-width: 760px; }
 .proof-section-heading h2 { font-size: clamp(1.55rem, 3vw, 2.4rem); }
@@ -708,9 +727,10 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .source-stack { justify-items: start; }
   .proof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .diagnostic-heading, .self-test-panel, .diagnostic-receipt-panel, .journey-guidance-link { align-items: stretch; flex-direction: column; }
+  .diagnostic-heading, .self-test-panel, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading { align-items: stretch; flex-direction: column; }
   .diagnostic-status { max-width: none; align-self: flex-start; text-align: left; }
   .diagnostic-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cloud-probe-receipt { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .journey-contract { grid-template-columns: 1fr; }
   .self-test-panel .primary-action { width: 100%; }
   .standards-receipt, .selection-evidence-heading, .selection-receipt { align-items: stretch; flex-direction: column; }
@@ -777,6 +797,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .proof-summary span { min-height: 78px; }
   .diagnostic-console { padding: 20px; }
   .diagnostic-check-grid { grid-template-columns: 1fr; }
+  .cloud-probe-receipt { grid-template-columns: 1fr; }
+  .cloud-probe-actions { align-items: stretch; flex-direction: column; }
+  .cloud-probe-actions button { width: 100%; }
   .standards-grid, .selection-intent-grid, .selection-boundaries, .journey-contract, .critical-journey-steps { grid-template-columns: 1fr; }
   .selection-score { width: 100%; }
 }

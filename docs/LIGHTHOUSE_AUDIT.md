@@ -77,6 +77,18 @@ After adding the five-stage critical-user-journey map and download-only browser 
 
 The explicit 375px final screenshot was parseable and showed the responsive single-column evidence summary without horizontal clipping. SEO remains intentionally fail-closed. Chrome launcher again emitted its known temporary-profile cleanup `EPERM` only after each JSON report and final screenshot had been written and parsed.
 
+After adding the explicit, body-free `gpt-oss:120b-cloud` smoke test, `/webmcp` was rebuilt and audited on a separate production server. The optional probe is not run by Lighthouse; the audit covers its initial no-request state, stable reserved layout, cancel/retry controls, and diagnostic-receipt copy. The 375×812 and desktop URLs used `#cloud-probe-title` so the final screenshots captured the new component rather than only the page hero.
+
+| `/webmcp` viewport | Performance | Accessibility | Best Practices | SEO | FCP | LCP | TBT | CLS | Console errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Lighthouse default mobile | 99 | 100 | 100 | 66 | 1.1 s | 2.0 s | 100 ms | 0 | 0 |
+| Explicit 375×812, first run | 89 | 100 | 100 | 66 | 0.8 s | 2.3 s | 370 ms | 0 | 0 |
+| Explicit 375×812, repeat | 93 | 100 | 100 | 66 | 1.1 s | 2.4 s | 260 ms | 0 | 0 |
+| 844×390 landscape | 97 | 100 | 100 | 66 | 1.1 s | 2.3 s | 110 ms | 0 | 0 |
+| Desktop | 100 | 100 | 100 | 66 | 0.3 s | 0.5 s | 0 ms | 0 | 0 |
+
+Both 375px runs are retained as observed run-to-run variance. The original-size 375px, landscape, and desktop screenshots were visually inspected: the probe description, optional state, single primary action, finite-limit copy, and receipt download stack into one column on narrow screens without clipping; landscape and desktop retain the compact horizontal action row. The Windows Chrome launcher again reported only the known post-artifact temporary-profile cleanup `EPERM`; every JSON report and inspected screenshot was already present and parseable.
+
 Command shape:
 
 ```powershell

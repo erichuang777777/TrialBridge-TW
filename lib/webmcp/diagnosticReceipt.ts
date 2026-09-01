@@ -10,6 +10,13 @@ export function createWebMcpDiagnosticReceipt(input: {
   securityHeaders: { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
   safeExecutionAvailable: boolean;
   safeSelfTestState: WebMcpSelfTestState;
+  cloudProbe: {
+    state: "not-run" | "running" | "ready" | "failed" | "cancelled";
+    requestedModel?: string;
+    reportedModel?: string;
+    latencyMs?: number;
+    checkedAt?: string;
+  };
 }) {
   const expected = [...new Set(input.expectedToolNames)].sort((left, right) => left.localeCompare(right));
   const discovered = [...new Set(input.discoveredToolNames)].filter((name) => expected.includes(name)).sort((left, right) => left.localeCompare(right));
@@ -30,6 +37,15 @@ export function createWebMcpDiagnosticReceipt(input: {
       available: input.safeExecutionAvailable,
       state: input.safeSelfTestState,
       authority: "trialbridge_method only; read-only and no input",
+    },
+    cloudProbe: {
+      state: input.cloudProbe.state,
+      ...(input.cloudProbe.requestedModel ? { requestedModel: input.cloudProbe.requestedModel.slice(0, 200) } : {}),
+      ...(input.cloudProbe.reportedModel ? { reportedModel: input.cloudProbe.reportedModel.slice(0, 200) } : {}),
+      ...(typeof input.cloudProbe.latencyMs === "number" ? { latencyMs: Math.max(0, Math.round(input.cloudProbe.latencyMs)) } : {}),
+      ...(input.cloudProbe.checkedAt ? { checkedAt: input.cloudProbe.checkedAt } : {}),
+      containsHealthInformation: false,
+      storesModelContent: false,
     },
     evidenceBoundary: "Runtime metadata only. This receipt does not prove natural-language selection, permission transitions, Inspector validation, or clinical accuracy.",
   } as const;

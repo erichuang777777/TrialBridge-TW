@@ -263,3 +263,37 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(css, /criterion-tooltip/);
   assert.match(css, /patient-fact-strip/);
 });
+
+test("judge cloud smoke test is explicit, body-free, bounded, cancellable, and metadata-only", async () => {
+  const root = process.cwd();
+  const service = await readFile(path.join(root, "lib", "llm", "cloudProbe.ts"), "utf8");
+  const route = await readFile(path.join(root, "app", "api", "cloud", "probe", "route.ts"), "utf8");
+  const bodyGuard = await readFile(path.join(root, "lib", "security", "requestBody.ts"), "utf8");
+  const surface = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
+  const verifier = await readFile(path.join(root, "scripts", "verify-cloud.ts"), "utf8");
+  const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
+
+  assert.match(service, /cloudProbeTimeoutMs = 30_000/);
+  assert.match(service, /fixed synthetic availability probe/);
+  assert.match(service, /containsHealthInformation: false/);
+  assert.match(service, /storesModelContent: false/);
+  assert.doesNotMatch(service, /rawText|maskedText|confirmedProfile|trialResult/);
+  assert.match(route, /hasDeclaredRequestBody\(request\)/);
+  assert.match(bodyGuard, /request\.headers\.get\("content-length"\)/);
+  assert.match(bodyGuard, /request\.headers\.has\("transfer-encoding"\)/);
+  assert.match(bodyGuard, /request\.headers\.has\("content-type"\)/);
+  assert.match(route, /bucket: "cloud-probe", limit: 3, windowMs: 10 \* 60_000/);
+  assert.equal(route.indexOf("if (hasDeclaredRequestBody(request))") < route.indexOf("const limit = consumeRateLimit"), true);
+  assert.match(surface, /Live cloud model smoke test/);
+  assert.match(surface, /It never reads the note, profile, results, or chat/);
+  assert.match(surface, /Cancel probe/);
+  assert.match(surface, /role="status" aria-atomic="true"/);
+  assert.match(surface, /cloud-probe-progress" aria-hidden="true"/);
+  assert.match(surface, /Maximum 3 checks per 10 minutes/);
+  assert.match(verifier, /method: "POST"/);
+  assert.doesNotMatch(verifier, /body:/);
+  assert.match(verifier, /containsHealthInformation !== false/);
+  assert.match(verifier, /storesModelContent !== false/);
+  assert.match(css, /cloud-probe-actions button \{ min-height: 44px/);
+  assert.match(css, /cloud-probe-receipt \{ grid-template-columns: 1fr/);
+});

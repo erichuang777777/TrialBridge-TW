@@ -11,6 +11,7 @@ import { appendCapabilitySet, appendToolExecution, createWebMcpSessionReceipt, m
 import { bilingualCancerQueryLexicon, createRegistryQueryPlan } from "../lib/trials/queryBridge.ts";
 import { webMcpCriticalJourney } from "../lib/webmcp/criticalJourney.ts";
 import { createWebMcpDiagnosticReceipt } from "../lib/webmcp/diagnosticReceipt.ts";
+import { cloudProbeTimeoutMs } from "../lib/llm/cloudProbe.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -88,9 +89,11 @@ const diagnosticReceipt = createWebMcpDiagnosticReceipt({
   generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", browserState: "ready",
   expectedToolNames: publicTools.map((tool) => tool.name), discoveredToolNames: publicTools.map((tool) => tool.name),
   securityHeaders: { permissionsPolicy: true, openerPolicy: true, noSniff: true }, safeExecutionAvailable: true, safeSelfTestState: "passed",
+  cloudProbe: { state: "ready", requestedModel: requiredCloudModel, reportedModel: "gpt-oss:120b", latencyMs: 600, checkedAt: "2026-09-02T00:00:00.000Z" },
 });
 check(diagnosticReceipt.containsHealthInformation === false && diagnosticReceipt.persistence === "download-only", "Browser diagnostic receipt must remain no-health-data and download-only.");
 check(diagnosticReceipt.publicToolDiscovery.complete, "Browser diagnostic receipt must verify the complete public tool set.");
+check(diagnosticReceipt.cloudProbe.containsHealthInformation === false && diagnosticReceipt.cloudProbe.storesModelContent === false, "Browser diagnostic receipt must not store cloud-probe content.");
 
 const knownToolNames = new Set(["search_public_trial_form", ...names]);
 check(webMcpJourneyCases.length >= 10, "At least ten WebMCP journey eval cases are required.");
@@ -157,6 +160,26 @@ for (const marker of ["createWebMcpDiagnosticReceipt", "Download this browser&ap
   check(diagnosticSurface.includes(marker), `Browser diagnostic surface is missing ${marker}.`);
 }
 
+const cloudProbeService = readFileSync("lib/llm/cloudProbe.ts", "utf8");
+const cloudProbeRoute = readFileSync("app/api/cloud/probe/route.ts", "utf8");
+const requestBodyGuard = readFileSync("lib/security/requestBody.ts", "utf8");
+const cloudProbeVerifier = readFileSync("scripts/verify-cloud.ts", "utf8");
+check(cloudProbeTimeoutMs === 30_000, "Cloud smoke test must keep its 30-second hard limit.");
+for (const marker of ["fixed synthetic availability probe", 'think: "low"', "num_predict: 128", "containsHealthInformation: false", "storesModelContent: false"]) {
+  check(cloudProbeService.includes(marker), `Cloud smoke test service is missing ${marker}.`);
+}
+for (const marker of ["hasDeclaredRequestBody(request)", 'bucket: "cloud-probe"', "limit: 3", "10 * 60_000", '"Cache-Control": "no-store"']) {
+  check(cloudProbeRoute.includes(marker), `Cloud smoke test route is missing ${marker}.`);
+}
+for (const marker of ['request.headers.get("content-length")', 'request.headers.has("transfer-encoding")', 'request.headers.has("content-type")']) {
+  check(requestBodyGuard.includes(marker), `Cloud smoke test body guard is missing ${marker}.`);
+}
+check(cloudProbeRoute.indexOf("if (hasDeclaredRequestBody(request))") < cloudProbeRoute.indexOf("const limit = consumeRateLimit"), "Cloud smoke test must reject request bodies before spending a provider-call allowance.");
+for (const marker of ["Live cloud model smoke test", "It never reads the note, profile, results, or chat", 'role="status"', 'aria-atomic="true"', "Cancel probe", "Maximum 3 checks per 10 minutes"]) {
+  check(diagnosticSurface.includes(marker), `Cloud smoke test UI is missing ${marker}.`);
+}
+check(cloudProbeVerifier.includes('method: "POST"') && !cloudProbeVerifier.includes("body:"), "Explicit cloud verifier must send a body-free POST.");
+
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
 for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt"]) {
   check(bridge.includes(marker), `Imperative bridge is missing ${marker}.`);
@@ -198,6 +221,9 @@ if (findings.length > 0) {
     receiptLimitEvents: maxWebMcpReceiptEvents,
     criticalJourneySteps: webMcpCriticalJourney.steps.length,
     browserDiagnosticReceipt: "download-only-no-health-data",
+    cloudProbeTimeoutMs,
+    cloudProbeRateLimit: "3/10m",
+    cloudProbeEvidence: "metadata-only-no-health-data",
     executionCompatibilityProfiles: 2,
     registrySourceDeadlineMs: 20_000,
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
