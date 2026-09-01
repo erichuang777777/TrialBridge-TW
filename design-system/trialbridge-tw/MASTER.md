@@ -45,6 +45,7 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - The disclosed WebMCP session receipt is a compact metadata timeline, not a second live region. It shows UTC time and plain-text lifecycle changes, retains at most 20 events, stacks on small screens, and gives its explicit local JSON download a clear disabled and completion state.
 - Outside the medical workflow, `/webmcp` may provide a dedicated competition-evidence dashboard. It leads with a single contextual status, uses text plus color for every check, progressively discloses execution output, and never requests medical context.
 - The competition dashboard starts with a four-step judge runbook. Numbered cards remain equal-height on desktop, stack to two then one column, and explicitly label the manual Chrome Inspector boundary.
+- The runbook's synthetic workflow uses a fixed `?demo=synthetic` deep link with no authored health content. It prepares the fictional note at the privacy boundary, announces that state in-page, and never bypasses masking, organization, confirmation, clarification, or matching. Clearing the anonymous conversation removes the fixed demo parameter.
 - Social preview imagery uses the same calm editorial tokens and verified capability facts. It contains no patient imagery, testimonials, outcome claims, or remotely fetched fonts.
 
 ## Prohibited patterns

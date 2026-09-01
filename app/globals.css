@@ -612,8 +612,6 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .mode-toggle button { flex: 1; }
   .dev-stage-switcher { padding-inline: 22px; }
   .synthetic-demo-banner { padding-inline: 22px; }
-  .webmcp-live-panel > summary { grid-template-columns: 14px minmax(0, 1fr); padding-inline: 22px; }
-  .webmcp-live-status { grid-column: 2; max-width: none; justify-self: start; text-align: left; }
   .webmcp-live-body { padding: 18px 22px 22px; }
   .webmcp-tool-groups { grid-template-columns: 1fr; }
   .clarification-list, .match-card-grid.card-view { grid-template-columns: 1fr; }
@@ -664,6 +662,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 }
 
 @media (max-width: 1000px) {
+  .webmcp-live-panel > summary { grid-template-columns: 14px minmax(0, 1fr); padding-inline: 22px; }
+  .webmcp-live-status { grid-column: 2; max-width: none; justify-self: start; text-align: left; }
   .chat-workspace { grid-template-columns: 1fr; }
   .flow-rail { padding: 12px; border-bottom: 1px solid var(--line); }
   .flow-rail ol { position: static; grid-template-columns: repeat(3, 1fr); }
@@ -722,5 +722,5 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }

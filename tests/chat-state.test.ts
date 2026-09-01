@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chatReducer, initialChatState, syntheticCompetitionNote } from "../lib/chat/state.ts";
+import { chatReducer, initialChatState, isSyntheticDemoValue, removeSyntheticDemoSearch, syntheticCompetitionNote } from "../lib/chat/state.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 
 const draft = profileDraftSchema.parse({
@@ -72,6 +72,15 @@ test("synthetic competition entry prefills fiction but cannot bypass the protect
   assert.equal(privacy.rawText, syntheticCompetitionNote);
   assert.match(privacy.rawText, /no real patient data/i);
   assert.equal(chatReducer(privacy, { type: "EXTRACTION_START" }).stage, "privacy");
+});
+
+test("the synthetic judge deep link carries no note and can be cleared without losing other URL state", () => {
+  assert.equal(isSyntheticDemoValue("synthetic"), true);
+  assert.equal(isSyntheticDemoValue("patient-note"), false);
+  assert.equal(isSyntheticDemoValue(["synthetic"]), false);
+  assert.equal(isSyntheticDemoValue(undefined), false);
+  assert.equal(removeSyntheticDemoSearch("?demo=synthetic&lang=en"), "?lang=en");
+  assert.equal(removeSyntheticDemoSearch("?demo=patient-note&lang=en"), "?demo=patient-note&lang=en");
 });
 
 test("reset clears anonymous session data but keeps language preference in memory", () => {

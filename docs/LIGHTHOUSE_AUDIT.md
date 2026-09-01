@@ -53,6 +53,16 @@ After adding the four-step in-product judge runbook and curated public-search de
 
 Final screenshots were inspected at original output size. The first desktop render exposed a global `<nav>` style collision that compressed the runbook heading; the wrapper was changed to a labelled `<section>`, after which four equal-height desktop cards and one-column mobile cards rendered correctly. The trial screenshot visibly contained `胃癌` in the same declarative search field. One initial deep-link audit emitted `NO_NAVSTART` with no valid trace or screenshot; it was discarded and the same live production URL was re-run successfully. SEO remains intentionally below 100 in this table because the handoff artifact is the default `noindex` profile.
 
+After adding the fixed `/?demo=synthetic#private-chat` judge entry, Lighthouse loaded that exact query against a local `next start` build so the initial privacy state—not only the ordinary home page—was exercised. The first client-only implementation produced CLS 0.084; moving the fixed query decision to the server-rendered page reduced it to 0.010. A first 844×390 landscape pass then exposed CLS 0.117 when the WebMCP status changed inside a three-column summary. Aligning that summary's stable two-row breakpoint with the 1000px workflow breakpoint removed the shift, and the reduced-motion rule stopped creating an unintended all-property transition.
+
+| Synthetic demo viewport | Performance | Accessibility | Best Practices | FCP | LCP | TBT | CLS | Console errors | Non-composited animations |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Lighthouse default mobile | 96 | 100 | 100 | 1.0 s | 2.4 s | 150 ms | 0.010 | 0 | 0 |
+| 375×667 | 93 | 100 | 100 | 0.8 s | 2.2 s | 280 ms | 0.010 | 0 | 0 |
+| 844×390 landscape | 93 | 100 | 100 | 0.8 s | 2.5 s | 250 ms | 0 | 0 | 0 |
+
+These final three audits connected Lighthouse to an explicitly managed Chrome 152 remote-debugging port and exited zero, avoiding the Windows temporary-profile cleanup error described below. One trace-only `NO_NAVSTART` attempt produced no valid report and was discarded before the successful landscape rerun.
+
 Command shape:
 
 ```powershell
@@ -67,4 +77,4 @@ The default profile's only SEO failure is crawlability. `app/layout.tsx` and `ap
 
 ## Verification boundary
 
-Lighthouse exercised a real local Chrome renderer and network lifecycle. It does not replace keyboard-only, screen-reader, large-text, landscape, or Chrome Model Context Tool Inspector acceptance. The installed browser-control plugin is missing its required `scripts/browser-client.mjs` runtime, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.
+Lighthouse exercised a real local Chrome renderer and network lifecycle, including the final synthetic deep link at 375×667 and 844×390 landscape. It does not replace keyboard-only, screen-reader, large-text, or Chrome Model Context Tool Inspector acceptance. The installed browser-control plugin is missing its required `scripts/browser-client.mjs` runtime, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.

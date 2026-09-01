@@ -15,7 +15,7 @@
 - Eleven deterministic WebMCP journey cases plus a version-locked, no-PHI `gpt-oss:120b-cloud` selection baseline: 55/55 expected tool calls or safe abstentions across direct, ambiguous, recovery, and forbidden intents in one uninterrupted run. Shortlist comparison was 5/5 and forbidden abstention was 10/10. This does not replace the browser Inspector gate.
 - Deterministic WebMCP conformance verification and GitHub CI gates for tests, types, clean-room boundaries, dependency audit, and production build.
 - A built-in `/webmcp` competition-evidence page that reports current-browser support, public tool discovery, same-origin security headers, safe method execution, and the remaining Inspector boundary.
-- A responsive four-step judge runbook plus shareable broad-cancer search links that reopen the same visible declarative form. URL state rejects direct identifiers, multiline content, and unrecognized detailed conditions; production Lighthouse screenshots verified desktop and mobile layouts.
+- A responsive four-step judge runbook plus shareable broad-cancer search links that reopen the same visible declarative form. A fixed no-PHI synthetic-case deep link server-renders at the privacy boundary without skipping protected stages and removes itself when the anonymous conversation is cleared. URL state rejects direct identifiers, multiline content, and unrecognized detailed conditions; production Lighthouse verified default mobile, 375×667, and 844×390 landscape layouts.
 - A bounded, payload-free WebMCP session receipt that makes capability registration changes and tool lifecycle states visible and optionally downloadable without server persistence.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.
 - A payload-free configuration health endpoint and pre-body, process-local rate limits with machine-readable `429`/`Retry-After` responses.
@@ -32,6 +32,6 @@
 - No oncologist/research-nurse adjudicated gold set, false-eligible measurement, calibration, or subgroup fairness evaluation exists.
 - Taiwan privacy-law review, clinical governance, threat-model review, incident response, data-processing records, abuse controls, and user research are incomplete.
 - Chrome Model Context Tool Inspector was not run because the installed browser-control runtime is incomplete. The separate 55-sample Ollama tool-calling baseline does not verify browser registration, execution, or permission transitions.
-- Visual QA at 375px, landscape, large text, keyboard-only, screen reader, and reduced motion has not been run in a real browser.
+- Manual large-text, keyboard-only, and screen-reader acceptance has not been run in a real browser. Automated production Lighthouse now covers 375×667 and 844×390 landscape with Accessibility 100, zero console errors, and no non-composited animation finding; this is not equivalent to assistive-technology testing.
 
 TrialBridge TW is therefore an engineering MVP for controlled local development, not a public clinical service.

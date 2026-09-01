@@ -34,6 +34,17 @@ export type ChatEvent =
 export const initialChatState: ChatState = { stage: "mode", language: "en", subjectRole: "patient", rawText: "" };
 export const syntheticCompetitionNote = "Synthetic competition case — no real patient data. A 62-year-old person with stage IV gastric adenocarcinoma, HER2-negative, PD-L1 CPS 10, previously received FOLFOX; last treatment 8 weeks ago. ECOG 1. Can travel within Taiwan and Asia.";
 
+export function isSyntheticDemoValue(value: unknown): boolean {
+  return value === "synthetic";
+}
+
+export function removeSyntheticDemoSearch(search: string): string {
+  const params = new URLSearchParams(search);
+  if (params.get("demo") === "synthetic") params.delete("demo");
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
 export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
   switch (event.type) {
     case "SET_LANGUAGE":

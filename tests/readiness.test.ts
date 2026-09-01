@@ -117,6 +117,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /Four-step judge path/);
   assert.match(page, /About 5 minutes/);
   assert.match(page, /\/trials\?condition=%E8%83%83%E7%99%8C/);
+  assert.match(page, /\/\?demo=synthetic#private-chat/);
   assert.match(page, /steps 1–3 are built into TrialBridge TW/);
   assert.match(database, /parsePublicTrialSearchParams/);
   assert.match(database, /history\.replaceState/);
@@ -190,6 +191,9 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(chat, /Chat is the main interface/);
   assert.match(chat, /Try a synthetic case/);
   assert.match(chat, /START_SYNTHETIC_DEMO/);
+  assert.match(chat, /initialSyntheticDemo/);
+  assert.match(chat, /removeSyntheticDemoSearch/);
+  assert.match(chat, /Privacy, masking, cloud organization, confirmation, and questions still run in order/);
   assert.match(chat, /No real patient data/);
   assert.match(chat, /\/api\/cloud\/intake/);
   assert.doesNotMatch(chat, /I am the patient/);

@@ -45,7 +45,7 @@ export default function WebMcpProofPage() {
       <ol>
         <li><span>01</span><h3>Check this browser</h3><p>Inspect origin-scoped discovery, security headers, and the safe public method tool.</p><a href="#live-diagnostic-title">Open live diagnostics</a></li>
         <li><span>02</span><h3>Run a bilingual search</h3><p>Open the same visible declarative form with a shareable Traditional Chinese condition.</p><Link href="/trials?condition=%E8%83%83%E7%99%8C">Search 胃癌</Link></li>
-        <li><span>03</span><h3>Walk the protected flow</h3><p>Use the fictional case; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/#private-chat">Open synthetic workflow</Link></li>
+        <li><span>03</span><h3>Walk the protected flow</h3><p>Open the fictional case directly; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/?demo=synthetic#private-chat">Open synthetic workflow</Link></li>
         <li><span>04</span><h3>Finish in Inspector</h3><p>Verify natural-language selection, manual calls, permission transitions, and cleanup.</p><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Inspector guide</a></li>
       </ol>
       <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. Step 4 remains a manual Chrome Model Context Tool Inspector gate and is never inferred from static tests.</p>

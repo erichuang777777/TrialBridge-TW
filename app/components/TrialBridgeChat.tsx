@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { chatReducer, initialChatState, syntheticCompetitionNote, type ChatState } from "@/lib/chat/state";
+import { chatReducer, initialChatState, removeSyntheticDemoSearch, syntheticCompetitionNote, type ChatState } from "@/lib/chat/state";
 import { maskDirectIdentifiers } from "@/lib/privacy/mask";
 import { confirmProfile, profileDraftSchema, setCloudUseApproval, type ConfirmedProfile } from "@/lib/profile/schema";
 import { createOutreachDraft } from "@/lib/matching/outreach";
@@ -64,11 +64,12 @@ const syntheticDevDraft = profileDraftSchema.parse({
   safetyNote: "Synthetic development fixture. Not medical advice or an eligibility decision.",
 });
 
-export function TrialBridgeChat() {
-  const [state, dispatch] = useReducer(chatReducer, initialChatState);
+export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSyntheticDemo?: boolean }) {
+  const initialState = initialSyntheticDemo ? chatReducer(initialChatState, { type: "START_SYNTHETIC_DEMO" }) : initialChatState;
+  const [state, dispatch] = useReducer(chatReducer, initialState);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const [intakeMode, setIntakeMode] = useState<"agent" | "manual" | null>(null);
+  const [intakeMode, setIntakeMode] = useState<"agent" | "manual" | null>(initialSyntheticDemo ? "manual" : null);
   const [matches, setMatches] = useState<TrialMatch[]>([]);
   const [clarificationQuestions, setClarificationQuestions] = useState<FollowUpQuestion[]>([]);
   const [resultView, setResultView] = useState<"cards" | "list">("cards");
@@ -130,6 +131,25 @@ export function TrialBridgeChat() {
     extractionController.current?.abort();
     extractionController.current = null;
     dispatch({ type: "EXTRACTION_CANCEL" });
+  }
+
+  function clearAnonymousConversation() {
+    extractionController.current?.abort();
+    setChecked({});
+    setEdits({});
+    setMatches([]);
+    setShortlistedTrialIds([]);
+    setClarificationQuestions([]);
+    setClarificationAnswers({});
+    setOutreach(undefined);
+    setDiscussionBrief(undefined);
+    setChatInput("");
+    setChatMessages([]);
+    setIntakeMode(null);
+    setWebMcpConsent(false);
+    const nextSearch = removeSyntheticDemoSearch(window.location.search);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
+    dispatch({ type: "RESET" });
   }
 
   async function finishConfirmation() {
@@ -303,14 +323,14 @@ export function TrialBridgeChat() {
       ].map((item) => <li key={item.number} className={step === item.number ? "current" : step > item.number ? "complete" : ""} aria-current={step === item.number ? "step" : undefined}><span>{step > item.number ? "✓" : item.number}</span><strong>{state.language === "en" ? item.en : item.zh}</strong></li>)}</ol></aside>
       <div className="workflow-pane">
       {state.stage === "mode" && <div className="chat-turn mode-onboarding"><div className="language-switch" aria-label="Language"><button className={state.language === "en" ? "selected" : ""} onClick={() => dispatch({ type: "SET_LANGUAGE", language: "en" })}>English</button><button className={state.language === "zh-Hant" ? "selected" : ""} onClick={() => dispatch({ type: "SET_LANGUAGE", language: "zh-Hant" })}>繁中</button></div><p className="eyebrow">{state.language === "en" ? "Choose how to work" : "選擇使用方式"}</p><h3>{state.language === "en" ? "Start with an agent or complete the steps yourself" : "由 Agent 引導，或自行完成每個步驟"}</h3><div className="mode-choice-grid"><button onClick={() => { setIntakeMode("agent"); dispatch({ type: "START_INTAKE" }); }}><strong>{state.language === "en" ? "Agent mode" : "代理模式"}</strong><small>{state.language === "en" ? "Chat is the main interface. The agent fills the shared note and guides every step." : "以對談為主要介面；Agent 填入共用病況並引導全部步驟。"}</small></button><button onClick={() => { setIntakeMode("manual"); dispatch({ type: "START_INTAKE" }); }}><strong>{state.language === "en" ? "Manual mode" : "手動模式"}</strong><small>{state.language === "en" ? "Enter the note, run extraction, review facts, and continue." : "自行輸入病歷、執行整理、核對 facts 後繼續。"}</small></button></div><div className="synthetic-demo-entry"><button type="button" onClick={() => { setIntakeMode("manual"); dispatch({ type: "START_SYNTHETIC_DEMO" }); }}>{state.language === "en" ? "Try a synthetic case" : "試用虛構案例"}</button><small>{state.language === "en" ? "Fictional data · real masking, cloud extraction, confirmation, questions, and matching" : "虛構資料 · 真實執行遮蔽、雲端整理、確認、補問與配對"}</small></div></div>}
+      {(state.stage === "privacy" || state.stage === "capture") && state.rawText === syntheticCompetitionNote && <div className="synthetic-demo-banner" role="status" aria-live="polite"><strong>{state.language === "en" ? "Synthetic competition case ready" : "競賽虛構案例已準備"}</strong><span>{state.language === "en" ? "No real patient data. Privacy, masking, cloud organization, confirmation, and questions still run in order." : "不含真實病人資料；隱私、遮蔽、雲端整理、確認與補問仍會依序執行。"}</span></div>}
       {state.stage === "privacy" && <div className="chat-turn"><p>{t.privacy}</p><button className="primary-action" onClick={() => dispatch({ type: "ACCEPT_PRIVACY" })}>{t.accept}</button></div>}
-      {state.stage === "capture" && state.rawText === syntheticCompetitionNote && <div className="synthetic-demo-banner" role="note"><strong>{state.language === "en" ? "Synthetic competition case" : "競賽虛構案例"}</strong><span>{state.language === "en" ? "No real patient data. Continue through the same protected workflow." : "不含真實病人資料，並使用相同受保護流程。"}</span></div>}
       {state.stage === "capture" && <div className="chat-turn intake-entry">{intakeMode === "agent" ? <div className="chat-intake-summary"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Agent mode · Chat is everything" : "代理模式 · 以對談完成全部流程"}</p><h3>{state.language === "en" ? "Build the note through the assistant" : "透過助手建立病況內容"}</h3></div><span>{state.rawText.trim().length} {state.language === "en" ? "characters collected" : "字已蒐集"}</span></div><div className="agent-note-preview" aria-live="polite">{state.rawText.trim() || (state.language === "en" ? "Start in the chat panel. Medical answers will appear here as one shared note." : "請從右側對談開始；醫療相關回答會整理成同一份病況內容。")}</div><p className="field-helper">{state.language === "en" ? "Tell the assistant when the note is complete. It can start masking and extraction for you." : "內容完整後請告訴助手；它可以為您啟動遮蔽與雲端整理。"}</p></div> : <div className="note-intake"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Manual mode" : "手動模式"}</p><h3>{state.language === "en" ? "Enter the note, then extract" : "輸入病歷後執行整理"}</h3></div><span>{state.language === "en" ? "You control each step" : "自行控制每一步"}</span></div><label htmlFor="medical-note">{t.prompt}</label><textarea id="medical-note" value={state.rawText} onChange={(event) => dispatch({ type: "SET_RAW_TEXT", value: event.target.value })} aria-describedby="note-helper" rows={9} /><p id="note-helper" className="field-helper">{t.helper}</p><button className="primary-action" disabled={state.rawText.trim().length < 20} onClick={() => void extract(maskDirectIdentifiers(state.rawText))}>{t.review}</button></div>}</div>}
       {state.stage === "mask_review" && state.maskResult && <div className="chat-turn"><h3>{state.language === "en" ? "Cloud organization needs attention" : "雲端整理需要處理"}</h3><pre className="masked-preview">{state.maskResult.maskedText}</pre><p className="field-helper">{state.language === "en" ? "Masked items" : "已遮蔽項目"}: {state.maskResult.findings.length}.</p><div className="cloud-transfer-note"><strong>{state.language === "en" ? "Cloud organization" : "雲端整理"}</strong><p>{t.cloudNotice}</p></div>{state.error && <div className="error-panel" role="alert"><strong>{state.language === "en" ? "Cloud extraction stopped" : "雲端整理已停止"}</strong><p>{state.error}</p></div>}<div className="action-row"><button onClick={() => dispatch({ type: "BACK_TO_CAPTURE" })}>{t.back}</button><button className="primary-action" onClick={() => void extract()}>{t.extract}</button></div></div>}
       {state.stage === "extracting" && <div className="chat-turn extraction-progress" role="status" aria-live="polite" aria-atomic="true"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>{t.cloudWorking}</strong><span className="elapsed-time">{t.elapsed}: {elapsedSeconds}s</span></div><p>{elapsedSeconds < 30 ? t.waiting : t.timeoutHint}</p><p className="eta-copy">{t.expected}</p><p className="deadline-copy">{t.remaining} <strong>{Math.max(0, 120 - elapsedSeconds)}s</strong></p><p className="field-helper">gpt-oss:120b-cloud · Remote cloud via localhost proxy · 120s hard limit</p><button onClick={cancelExtraction}>{t.cancel}</button></div>}
       {(state.stage === "confirmation" || state.stage === "ready") && state.draft && state.maskResult && <SummaryConfirmation completed={state.stage === "ready"} draft={state.draft} maskResult={state.maskResult} language={state.language} model={extractionRuntime?.model} edits={edits} checked={checked} onEdit={(id, value) => { setEdits((current) => ({ ...current, [id]: value })); setChecked((current) => ({ ...current, [id]: false })); }} onCheck={(id, value) => setChecked((current) => ({ ...current, [id]: value }))} onCheckAll={() => setChecked(Object.fromEntries(state.draft!.facts.map((fact) => [fact.id, true])))} onBack={() => dispatch({ type: "BACK_TO_CAPTURE" })} onFinish={() => void finishConfirmation()} />}
       {state.stage === "ready" && state.confirmedProfile && <div className="chat-turn ready-stage">
-        <div className="post-confirmation-controls"><label className="confirm-check webmcp-consent"><input type="checkbox" checked={webMcpConsent} onChange={(event) => setWebMcpConsent(event.target.checked)} />{state.language === "en" ? "Allow WebMCP to use the confirmed summary and current results." : "允許 WebMCP 使用確認摘要與目前結果。"}</label><button onClick={() => { setChecked({}); setEdits({}); setMatches([]); setShortlistedTrialIds([]); setClarificationQuestions([]); setClarificationAnswers({}); setOutreach(undefined); setDiscussionBrief(undefined); setChatInput(""); setChatMessages([]); setIntakeMode(null); setWebMcpConsent(false); dispatch({ type: "RESET" }); }}>{t.clear}</button></div>
+        <div className="post-confirmation-controls"><label className="confirm-check webmcp-consent"><input type="checkbox" checked={webMcpConsent} onChange={(event) => setWebMcpConsent(event.target.checked)} />{state.language === "en" ? "Allow WebMCP to use the confirmed summary and current results." : "允許 WebMCP 使用確認摘要與目前結果。"}</label><button onClick={clearAnonymousConversation}>{t.clear}</button></div>
         {matching && <div className="matching-progress" role="status">{state.language === "en" ? "Checking public trial requirements…" : "正在檢查公開試驗條件…"}</div>}
         {clarificationQuestions.length > 0 && <ClarificationPanel questions={clarificationQuestions} language={state.language} answers={clarificationAnswers} onAnswersChange={setClarificationAnswers} onConfirm={confirmClarifications} />}
         {matches.length > 0 && <div className="visual-results" aria-live="polite">

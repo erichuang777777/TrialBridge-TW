@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "./components/BrandMark";
 import { TrialBridgeChat } from "./components/TrialBridgeChat";
+import { isSyntheticDemoValue } from "@/lib/chat/state";
 
 const regions = [
   { step: "01", title: "Taiwan first", detail: "Start with trials and contact sites in Taiwan." },
@@ -8,7 +9,9 @@ const regions = [
   { step: "03", title: "Then worldwide", detail: "Finally review public registries worldwide." },
 ];
 
-export default function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const query = await searchParams;
+  const initialSyntheticDemo = isSyntheticDemoValue(query.demo);
   return (
     <main id="main-content" tabIndex={-1}>
       <header className="site-header">
@@ -58,7 +61,7 @@ export default function Home() {
         </aside>
       </section>
 
-      <TrialBridgeChat />
+      <TrialBridgeChat initialSyntheticDemo={initialSyntheticDemo} />
 
       <section className="principles" aria-labelledby="principles-title">
         <div>
