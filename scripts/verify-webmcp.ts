@@ -152,6 +152,17 @@ const productSources = [declarative, bridge, readFileSync("lib/webmcp/tools.ts",
 check(!productSources.includes("navigator.modelContext"), "Deprecated navigator.modelContext must not be used.");
 check(productSources.includes("queryPlan") && productSources.includes("registryConditions"), "Public WebMCP search must return bilingual registry query provenance.");
 
+const registryReliability = [
+  readFileSync("lib/trials/reliability.ts", "utf8"),
+  readFileSync("lib/trials/search.ts", "utf8"),
+  readFileSync("lib/trials/adapters/clinicalTrialsGov.ts", "utf8"),
+  readFileSync("lib/webmcp/publicSearchOutput.ts", "utf8"),
+  declarative,
+].join("\n");
+for (const marker of ["registrySourceTimeoutMs = 20_000", "AbortController", "SOURCE_TIMEOUT", "durationMs", 'completeness: failures.length > 0', "Partial registry results", "Each registry stops after"]) {
+  check(registryReliability.includes(marker), `Registry reliability contract is missing ${marker}.`);
+}
+
 if (findings.length > 0) {
   console.error(findings.join("\n"));
   process.exitCode = 1;
@@ -168,6 +179,7 @@ if (findings.length > 0) {
     shortlistSelection: `${shortlistSamples.filter((sample) => sample.passed).length}/${shortlistSamples.length}`,
     receiptLimitEvents: maxWebMcpReceiptEvents,
     executionCompatibilityProfiles: 2,
+    registrySourceDeadlineMs: 20_000,
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

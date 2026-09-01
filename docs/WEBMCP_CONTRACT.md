@@ -12,7 +12,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 ### Public imperative tools
 
 - `trialbridge_method` explains the Taiwan-first method, privacy boundaries, sources, and limitations.
-- `search_public_cancer_trials` searches public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic and returns the same visible bilingual registry query provenance as the human form. Its bounded output separately reports completed sources with counts, query times, and live/fresh-cache/stale-cache snapshot state plus failed sources, so cached or partial results cannot appear live and complete.
+- `search_public_cancer_trials` searches public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic and returns the same visible bilingual registry query provenance as the human form. Its bounded output reports `complete`, `partial`, or `unavailable` coverage; completed sources include counts, elapsed milliseconds, query times, and live/fresh-cache/stale-cache snapshot state, while failed sources include a bounded code and latency. Cached, timed-out, or partial results therefore cannot appear live and complete.
 
 ### Sensitive contextual tools
 

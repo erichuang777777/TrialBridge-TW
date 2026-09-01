@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
+import { ClinicalTrialsGovAdapter, normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
 import { normalizeTfdaRecord, TfdaAdapter } from "../lib/trials/adapters/tfda.ts";
 import { deduplicateTrials } from "../lib/trials/dedupe.ts";
 import { rankTrials } from "../lib/trials/regions.ts";
 import { trialSearchRequestSchema } from "../lib/trials/schema.ts";
 import { searchTrialRegistries } from "../lib/trials/search.ts";
-import type { TrialRegistryAdapter } from "../lib/trials/types.ts";
+import type { TrialAdapterSearchOptions, TrialRegistryAdapter } from "../lib/trials/types.ts";
 import { ctgovFixture, tfdaFixture } from "./fixtures/registry.ts";
 
 const retrievedAt = "2026-09-01T00:00:00.000Z";
@@ -26,6 +26,27 @@ test("ClinicalTrials.gov normalization retains registry facts and locations", ()
   assert.deepEqual(trial.conditions, ["Gastric Cancer"]);
   assert.equal(trial.locations.length, 2);
   assert.equal(trial.sources[0].lastUpdated, "2026-08-20");
+});
+
+test("ClinicalTrials.gov forwards the registry deadline signal to both upstream requests", async () => {
+  const observedSignals: Array<AbortSignal | null | undefined> = [];
+  const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
+    observedSignals.push(init?.signal);
+    const url = String(input);
+    return new Response(JSON.stringify(url.endsWith("/version")
+      ? { dataTimestamp: "2026-09-02T00:00:00Z" }
+      : { studies: [ctgovFixture], totalCount: 1 }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+  const controller = new AbortController();
+  await new ClinicalTrialsGovAdapter(fetcher).search(
+    { condition: "gastric cancer", pageSize: 1, includeNotOpen: false },
+    { signal: controller.signal },
+  );
+  assert.equal(observedSignals.length, 2);
+  assert.equal(observedSignals.every((signal) => signal === controller.signal), true);
 });
 
 test("deduplication merges only explicit shared identifiers and keeps both sources", () => {
@@ -57,7 +78,52 @@ test("one registry failure does not erase another source", async () => {
   const result = await searchTrialRegistries({ condition: "胃癌", pageSize: 10, includeNotOpen: false }, [failing, healthy]);
   assert.equal(result.trials.length, 1);
   assert.deepEqual(result.sources[0].dataState, { mode: "live", loadedAt: result.sources[0].retrievedAt });
-  assert.deepEqual(result.failures, [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }]);
+  assert.equal(result.sources[0].durationMs >= 0, true);
+  assert.equal(result.failures[0].registry, "ClinicalTrials.gov");
+  assert.equal(result.failures[0].message, "Registry temporarily unavailable");
+  assert.equal(result.failures[0].code, "SOURCE_UNAVAILABLE");
+  assert.equal(result.failures[0].durationMs >= 0, true);
+});
+
+test("a registry deadline preserves another source and reports a machine-readable timeout", async () => {
+  let timeoutSignal: AbortSignal | undefined;
+  const never: TrialRegistryAdapter = {
+    registry: "ClinicalTrials.gov",
+    search(_input, options: TrialAdapterSearchOptions = {}) {
+      timeoutSignal = options.signal;
+      return new Promise(() => undefined);
+    },
+  };
+  const healthy = new TfdaAdapter(fetch, async () => [tfdaFixture]);
+  const result = await searchTrialRegistries(
+    { condition: "胃癌", pageSize: 10, includeNotOpen: false },
+    [never, healthy],
+    {},
+    { timeoutMs: 5 },
+  );
+  assert.equal(result.trials.length, 1);
+  assert.equal(timeoutSignal?.aborted, true);
+  assert.deepEqual(result.failures, [{
+    registry: "ClinicalTrials.gov",
+    message: "Source did not respond within 5 ms",
+    code: "SOURCE_TIMEOUT",
+    durationMs: 5,
+  }]);
+});
+
+test("successful source receipts expose independently measured latency", async () => {
+  let clock = 100;
+  const healthy = new TfdaAdapter(fetch, async () => {
+    clock = 142;
+    return [tfdaFixture];
+  });
+  const result = await searchTrialRegistries(
+    { condition: "胃癌", pageSize: 10, includeNotOpen: false },
+    [healthy],
+    {},
+    { timeoutMs: 1_000, now: () => clock },
+  );
+  assert.equal(result.sources[0].durationMs, 42);
 });
 
 test("public search request rejects raw-note fields", () => {

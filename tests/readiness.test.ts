@@ -84,6 +84,11 @@ test("the public database exposes a deterministic bilingual registry query bridg
   assert.match(database, /fresh cache · snapshot/);
   assert.match(database, /stale cache · snapshot/);
   assert.match(database, /refresh requested/);
+  assert.match(database, /Each registry stops after/);
+  assert.match(database, /searchElapsedSeconds/);
+  assert.match(database, /Partial registry results/);
+  assert.match(database, /formatRegistryDuration/);
+  assert.match(database, /SOURCE_TIMEOUT/);
   assert.match(database, /role="status" aria-atomic="true"/);
   assert.doesNotMatch(database, /database-results" aria-live/);
   assert.match(route, /createRegistryQueryPlan/);

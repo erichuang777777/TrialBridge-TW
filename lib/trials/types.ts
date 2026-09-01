@@ -79,7 +79,11 @@ export interface TrialAdapterResult {
   };
 }
 
+export interface TrialAdapterSearchOptions {
+  signal?: AbortSignal;
+}
+
 export interface TrialRegistryAdapter {
   readonly registry: RegistryName;
-  search(input: TrialSearchInput): Promise<TrialAdapterResult>;
+  search(input: TrialSearchInput, options?: TrialAdapterSearchOptions): Promise<TrialAdapterResult>;
 }

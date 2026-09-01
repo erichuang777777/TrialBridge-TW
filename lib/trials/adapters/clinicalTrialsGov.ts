@@ -7,6 +7,7 @@ import type {
   NormalizedTrial,
   RecruitmentCategory,
   TrialAdapterResult,
+  TrialAdapterSearchOptions,
   TrialRegistryAdapter,
   TrialSearchInput,
 } from "../types.ts";
@@ -156,7 +157,7 @@ export class ClinicalTrialsGovAdapter implements TrialRegistryAdapter {
     this.fetcher = fetcher;
   }
 
-  async search(input: TrialSearchInput): Promise<TrialAdapterResult> {
+  async search(input: TrialSearchInput, options: TrialAdapterSearchOptions = {}): Promise<TrialAdapterResult> {
     const retrievedAt = new Date().toISOString();
     const searchUrl = new URL(`${API_BASE}/studies`);
     searchUrl.searchParams.set("query.cond", input.condition);
@@ -167,8 +168,8 @@ export class ClinicalTrialsGovAdapter implements TrialRegistryAdapter {
     if (!input.includeNotOpen) searchUrl.searchParams.set("filter.overallStatus", OPEN_STATUSES.join("|"));
 
     const [studiesResponse, versionResponse] = await Promise.all([
-      this.fetcher(searchUrl, { headers: { Accept: "application/json" }, cache: "no-store" }),
-      this.fetcher(`${API_BASE}/version`, { headers: { Accept: "application/json" }, cache: "no-store" }),
+      this.fetcher(searchUrl, { headers: { Accept: "application/json" }, cache: "no-store", signal: options.signal }),
+      this.fetcher(`${API_BASE}/version`, { headers: { Accept: "application/json" }, cache: "no-store", signal: options.signal }),
     ]);
     if (!studiesResponse.ok) throw new Error(`ClinicalTrials.gov returned HTTP ${studiesResponse.status}`);
     const payload = searchResponseSchema.parse(await studiesResponse.json());

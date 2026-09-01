@@ -65,8 +65,8 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
         const condition = typeof input.condition === "string" ? input.condition.trim() : "";
         if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
         const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: false }), signal: options.signal });
-        if (!response.ok) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
-        const payload = await response.json() as { trials?: TrialMatch["trial"][]; queryPlan?: RegistryQueryPlan; sources?: Array<{ registry: string; count: number; retrievedAt: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>; failures?: Array<{ registry: string; message: string }>; disclaimer?: string };
+        const payload = await response.json() as { trials?: TrialMatch["trial"][]; queryPlan?: RegistryQueryPlan; sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>; failures?: Array<{ registry: string; message: string; code?: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs?: number }>; disclaimer?: string };
+        if (!response.ok && (payload.failures?.length ?? 0) === 0) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
         return createBoundedPublicSearchOutput({ query: condition, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
       },
     },

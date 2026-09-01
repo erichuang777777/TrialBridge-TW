@@ -9,7 +9,7 @@
 
 The server accepts `POST /api/trials/search` so a cancer term is not copied into browser history or ordinary query-string logs. The request is bounded to 2–120 characters and 1–100 results per source. Response caching is disabled.
 
-Both adapters run independently. One registry failure is returned as an explicit source failure and does not erase verified results from the other source. Every successful source receipt identifies whether its data came from a live load, a fresh process-local snapshot, or a bounded stale snapshot, plus the actual snapshot load time; the visible search and WebMCP output preserve that state.
+Both adapters run independently with a fixed 20-second source deadline. One registry failure or timeout is returned with a machine-readable code and elapsed milliseconds and does not erase verified results from the other source. Every successful source receipt reports its own elapsed milliseconds and identifies whether its data came from a live load, a fresh process-local snapshot, or a bounded stale snapshot, plus the actual snapshot load time; the visible search and WebMCP output preserve that state. ClinicalTrials.gov receives the deadline's `AbortSignal`. A shared TFDA cold snapshot is allowed to finish in the background so one request timeout cannot cancel the single-flight load for concurrent readers.
 
 ## Bilingual query bridge
 

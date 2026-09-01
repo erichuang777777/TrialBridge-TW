@@ -13,8 +13,8 @@ export function createBoundedPublicSearchOutput({
   query: string;
   queryPlan?: RegistryQueryPlan;
   trials: NormalizedTrial[];
-  sources?: Array<{ registry: string; count: number; retrievedAt: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
-  failures?: Array<{ registry: string; message: string }>;
+  sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
+  failures?: Array<{ registry: string; message: string; code?: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs?: number }>;
   limitation?: string;
 }): unknown {
   const compactPlan = queryPlan ? {
@@ -36,8 +36,9 @@ export function createBoundedPublicSearchOutput({
     query,
     queryPlan: compactPlan,
     recordCount: trials.length,
+    completeness: failures.length > 0 ? (sources.length > 0 ? "partial" : "unavailable") : "complete",
     sourceStatus: {
-      completed: sources.map((source) => ({ registry: source.registry, count: source.count, retrievedAt: source.retrievedAt, ...(source.dataState ? { dataState: source.dataState } : {}) })),
+      completed: sources.map((source) => ({ registry: source.registry, count: source.count, retrievedAt: source.retrievedAt, ...(source.durationMs !== undefined ? { durationMs: source.durationMs } : {}), ...(source.dataState ? { dataState: source.dataState } : {}) })),
       failed: failures,
     },
     records,

@@ -44,22 +44,45 @@ test("public WebMCP search returns the visible bilingual registry query plan", a
       dictionaryVersion: "2026-09-02",
       registryConditions: { TFDA: "胃癌", "ClinicalTrials.gov": "gastric cancer" },
     },
-    sources: [{ registry: "TFDA", count: 0, retrievedAt: "2026-09-02T00:00:00.000Z" }],
-    failures: [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }],
+    sources: [{ registry: "TFDA", count: 0, retrievedAt: "2026-09-02T00:00:00.000Z", durationMs: 75 }],
+    failures: [{ registry: "ClinicalTrials.gov", message: "Source did not respond within 20 s", code: "SOURCE_TIMEOUT", durationMs: 20_000 }],
   }), { status: 200, headers: { "Content-Type": "application/json" } })) as typeof fetch;
   const tool = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, fetcher }).find((candidate) => candidate.name === "search_public_cancer_trials");
   assert.ok(tool);
   const output = await tool.execute({ condition: "胃癌" }, { signal: new AbortController().signal }) as {
     queryPlan: { registryConditions: Record<string, string> };
-    sourceStatus: { completed: Array<{ registry: string; count: number; retrievedAt: string }>; failed: Array<{ registry: string; message: string }> };
+    completeness: string;
+    sourceStatus: { completed: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number }>; failed: Array<{ registry: string; message: string; code?: string; durationMs?: number }> };
     records: unknown[];
   };
   assert.deepEqual(output.queryPlan.registryConditions, { TFDA: "胃癌", "ClinicalTrials.gov": "gastric cancer" });
+  assert.equal(output.completeness, "partial");
   assert.deepEqual(output.sourceStatus, {
-    completed: [{ registry: "TFDA", count: 0, retrievedAt: "2026-09-02T00:00:00.000Z" }],
-    failed: [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }],
+    completed: [{ registry: "TFDA", count: 0, retrievedAt: "2026-09-02T00:00:00.000Z", durationMs: 75 }],
+    failed: [{ registry: "ClinicalTrials.gov", message: "Source did not respond within 20 s", code: "SOURCE_TIMEOUT", durationMs: 20_000 }],
   });
   assert.deepEqual(output.records, []);
+});
+
+test("public WebMCP search preserves structured source failures when every registry is unavailable", async () => {
+  const fetcher = (async () => Response.json({
+    trials: [],
+    failures: [
+      { registry: "TFDA", message: "Source unavailable", code: "SOURCE_UNAVAILABLE", durationMs: 120 },
+      { registry: "ClinicalTrials.gov", message: "Source did not respond within 20 s", code: "SOURCE_TIMEOUT", durationMs: 20_000 },
+    ],
+  }, { status: 503 })) as typeof fetch;
+  const tool = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, fetcher }).find((candidate) => candidate.name === "search_public_cancer_trials");
+  assert.ok(tool);
+  const output = await tool.execute({ condition: "gastric cancer" }, { signal: new AbortController().signal }) as {
+    completeness: string;
+    sourceStatus: { failed: Array<{ registry: string; code?: string }> };
+  };
+  assert.equal(output.completeness, "unavailable");
+  assert.deepEqual(output.sourceStatus.failed.map((failure) => [failure.registry, failure.code]), [
+    ["TFDA", "SOURCE_UNAVAILABLE"],
+    ["ClinicalTrials.gov", "SOURCE_TIMEOUT"],
+  ]);
 });
 
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {

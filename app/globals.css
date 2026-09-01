@@ -283,6 +283,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .extraction-progress > button { margin-top: 10px; }
 .error-panel { margin-top: 18px; padding: 18px 20px; border: 1px solid #c56a4c; border-left: 4px solid #9f3f25; border-radius: 10px; background: var(--warning); }
 .error-panel p { margin: 6px 0 14px; }
+.registry-error-sources { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
+.registry-error-sources li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.registry-error-sources span { color: var(--match-different); font-size: 0.78rem; font-weight: 900; }
 .cloud-transfer-note { margin-top: 16px; padding: 11px 14px; border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0; background: var(--paper); }
 .cloud-transfer-note p { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.88rem; }
 
@@ -486,6 +489,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .database-results { min-height: 220px; }
 .results-loading, .empty-results { padding: 34px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); text-align: center; }
 .results-loading .progress-track { max-width: 520px; margin: 0 auto 18px; }
+.results-loading .progress-copy { max-width: 520px; margin: 0 auto; }
+.results-loading > p:last-child { max-width: 620px; margin: 10px auto 0; color: var(--ink-soft); font-size: 0.82rem; }
 .results-toolbar { align-items: flex-end; }
 .registry-query-plan { margin-bottom: 16px; padding: 16px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 10px; background: #f8fbfb; }
 .registry-query-plan > div:first-child { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -504,6 +509,13 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .registry-receipts span { display: grid; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-soft); font-size: 0.85rem; }
 .registry-receipts small { color: var(--ink-soft); font-size: 0.7rem; line-height: 1.35; }
 .registry-receipts .receipt-stale_cache { border-color: #c49326; background: #fff8df; }
+.registry-partial-notice { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.75fr); gap: 18px; margin: 0 0 20px; padding: 16px 18px; border: 1px solid var(--match-uncertain); border-left-width: 4px; border-radius: 10px; background: var(--warning); }
+.registry-partial-notice p { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.82rem; }
+.registry-partial-notice ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.registry-partial-notice li { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+.registry-partial-notice li:first-child { padding-top: 0; border-top: 0; }
+.registry-partial-notice li span { color: var(--match-uncertain); font-size: 0.72rem; font-weight: 900; }
+.registry-partial-notice li small { grid-column: 1 / -1; color: var(--ink-soft); font-size: 0.72rem; }
 .trial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .trial-card { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 8px 24px rgba(20, 52, 59, 0.06); }
 .trial-card-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
@@ -667,6 +679,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .patient-fact-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trial-grid { grid-template-columns: 1fr; }
   .search-heading, .results-toolbar { align-items: flex-start; flex-direction: column; }
+  .registry-partial-notice { grid-template-columns: 1fr; }
   .source-stack { justify-items: start; }
   .proof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }

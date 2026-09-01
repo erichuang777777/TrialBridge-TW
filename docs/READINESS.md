@@ -8,6 +8,7 @@
 - Exact `gpt-oss:120b-cloud` allowlist, loopback-only proxy, and prohibition on local GPU or CPU inference.
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
 - Live TFDA zipped JSON parsing with bounded 24-hour fresh/seven-day stale-while-revalidate snapshot state, plus ClinicalTrials.gov API v2 retrieval. Visible and WebMCP source receipts distinguish live, fresh-cache, and stale-cache reads with the true snapshot time.
+- Independent 20-second registry deadlines, upstream abort propagation for ClinicalTrials.gov, machine-readable timeout/unavailable codes, per-source latency receipts, and partial-result preservation when another source succeeds.
 - A visible, versioned bilingual query plan covering all 19 declared cancer groups, with exact-term mapping and non-inferential pass-through for unrecognized detail.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.

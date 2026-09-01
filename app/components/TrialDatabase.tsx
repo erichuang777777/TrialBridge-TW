@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { NormalizedTrial, RegionTier } from "@/lib/trials/types";
 import type { RegistryQueryPlan } from "@/lib/trials/queryBridge";
+import { formatRegistryDuration, registrySourceTimeoutMs } from "@/lib/trials/reliability";
 import { createPublicTrialSearchPath, defaultPublicTrialCondition, normalizePublicTrialCondition, normalizeShareablePublicTrialCondition, parsePublicTrialSearchParams } from "@/lib/trials/searchUrl";
 import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput";
 
 type SearchResponse = {
   trials?: NormalizedTrial[];
   queryPlan?: RegistryQueryPlan;
-  sources?: Array<{ registry: string; count: number; retrievedAt: string; warning?: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
-  failures?: Array<{ registry: string; message: string }>;
+  sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs: number; warning?: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
+  failures?: Array<{ registry: string; message: string; code: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs: number }>;
   disclaimer?: string;
   error?: string;
 };
@@ -52,6 +53,7 @@ export function TrialDatabase() {
   const [urlNotice, setUrlNotice] = useState("");
   const [declarativeNotice, setDeclarativeNotice] = useState("");
   const [declarativeActive, setDeclarativeActive] = useState(false);
+  const [searchElapsedSeconds, setSearchElapsedSeconds] = useState(0);
   const initialSearchStarted = useRef(false);
 
   async function search(condition: string, includeClosed = includeNotOpen, syncUrl = true): Promise<unknown> {
@@ -82,9 +84,12 @@ export function TrialDatabase() {
         body: JSON.stringify({ condition: normalized, pageSize: 40, includeNotOpen: includeClosed }),
       });
       const payload = await response.json() as SearchResponse;
-      if (!response.ok && !payload.trials) throw new Error(payload.error ?? "Trial registries are temporarily unavailable.");
       setResult(payload);
-      return createBoundedPublicSearchOutput({ query: normalized, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
+      const boundedOutput = createBoundedPublicSearchOutput({ query: normalized, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
+      if (!response.ok && (payload.sources?.length ?? 0) === 0) {
+        setError(payload.error ?? "No registry responded before its deadline. Please try again.");
+      }
+      return boundedOutput;
     } catch (searchError) {
       setResult({});
       const message = searchError instanceof Error ? searchError.message : "Search failed. Please try again.";
@@ -106,6 +111,14 @@ export function TrialDatabase() {
     const declarativeEvent = event.nativeEvent as SubmitEvent;
     if (declarativeEvent.agentInvoked && declarativeEvent.respondWith) declarativeEvent.respondWith(searchPromise);
   }
+
+  useEffect(() => {
+    if (!loading) return;
+    setSearchElapsedSeconds(0);
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setSearchElapsedSeconds(Math.floor((Date.now() - startedAt) / 1_000)), 1_000);
+    return () => window.clearInterval(timer);
+  }, [loading]);
 
   useEffect(() => {
     if (initialSearchStarted.current) return;
@@ -168,8 +181,8 @@ export function TrialDatabase() {
       </form>
 
       <div className="database-results" aria-busy={loading}>
-        {loading && <div className="results-loading" role="status"><div className="progress-track" aria-hidden="true"><span /></div><p>Searching public registries in Taiwan-first order…</p></div>}
-        {!loading && error && <div className="error-panel" role="alert"><strong>Search stopped</strong><p>{error}</p><button onClick={() => void search(submittedQuery)}>Try again</button></div>}
+        {loading && <div className="results-loading" role="status"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>Searching public registries in Taiwan-first order…</strong><span aria-hidden="true">Elapsed {searchElapsedSeconds}s</span></div><p>Each registry stops after {registrySourceTimeoutMs / 1_000} seconds. If one source is unavailable, verified results from the other source will still appear.</p></div>}
+        {!loading && error && <div className="error-panel" role="alert"><strong>Search stopped</strong><p>{error}</p>{(result.failures?.length ?? 0) > 0 && <ul className="registry-error-sources">{result.failures!.map((failure) => <li key={failure.registry}><strong>{failure.registry}</strong><span>{failure.code === "SOURCE_TIMEOUT" ? "Timed out" : "Unavailable"} · {formatRegistryDuration(failure.durationMs)}</span></li>)}</ul>}<button onClick={() => void search(submittedQuery)}>Try again</button></div>}
         {!loading && !error && <>
           <div className="results-toolbar">
             <div role="status" aria-atomic="true"><p className="eyebrow">Results</p><h2>{visibleTrials.length} records for “{submittedQuery}”</h2></div>
@@ -183,8 +196,8 @@ export function TrialDatabase() {
             <dl><div><dt>TFDA</dt><dd lang="zh-Hant">{result.queryPlan.registryConditions.TFDA}</dd></div><div><dt>ClinicalTrials.gov</dt><dd lang="en">{result.queryPlan.registryConditions["ClinicalTrials.gov"]}</dd></div></dl>
             <p>{result.queryPlan.limitation} <small>Lexicon {result.queryPlan.dictionaryVersion}{result.queryPlan.canonicalGroup ? ` · ${result.queryPlan.canonicalGroup}` : ""}</small></p>
           </section>}
-          {(result.sources?.length ?? 0) > 0 && <div className="registry-receipts">{result.sources!.map((source) => <span className={`receipt-${source.dataState?.mode ?? "live"}`} key={source.registry}><strong>{source.registry}</strong> {source.count}<small>{sourceStateLabel(source)}</small></span>)}</div>}
-          {(result.failures?.length ?? 0) > 0 && <div className="notice">Some sources were unavailable: {result.failures!.map((failure) => `${failure.registry} — ${failure.message}`).join("; ")}</div>}
+          {(result.sources?.length ?? 0) > 0 && <div className="registry-receipts">{result.sources!.map((source) => <span className={`receipt-${source.dataState?.mode ?? "live"}`} key={source.registry}><strong>{source.registry}</strong> {source.count}<small>{sourceStateLabel(source)} · {formatRegistryDuration(source.durationMs)}</small></span>)}</div>}
+          {(result.failures?.length ?? 0) > 0 && <div className="registry-partial-notice" role="status" aria-atomic="true"><div><strong>Partial registry results</strong><p>Available records are still shown below. Retry later to restore complete source coverage.</p></div><ul>{result.failures!.map((failure) => <li key={failure.registry}><strong>{failure.registry}</strong><span>{failure.code === "SOURCE_TIMEOUT" ? "Timed out" : "Unavailable"} · {formatRegistryDuration(failure.durationMs)}</span><small>{failure.message}</small></li>)}</ul></div>}
 
           {visibleTrials.length === 0 ? <div className="empty-results"><h3>No records in this view</h3><p>Try another cancer term, include closed records, or switch to All regions.</p></div> : <div className="trial-grid">{visibleTrials.map((trial) => <article className="trial-card" key={trial.canonicalId}>
             <div className="trial-card-top"><span className="region-badge">{regionLabel(trial.regionTier)}</span><span className={`recruitment-badge recruitment-${trial.recruitment.category}`}>{trial.recruitment.acceptingNewParticipants ? "Accepting participants" : trial.recruitment.raw}</span></div>
