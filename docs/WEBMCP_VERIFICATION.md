@@ -27,6 +27,12 @@ Changing profile, pending questions, matching state, results, or consent aborts 
 
 The JSON artifact is implementation evidence only. It contains no current-browser result, request, workflow state, note, profile, trial result, prompt, argument, output, or health information, and it does not claim protocol metadata or Inspector completion.
 
+## State-scoped registration model
+
+`lib/webmcp/capabilityStates.ts` derives public, permission-gated, and shortlist-dependent names from the canonical catalog, then defines four synthetic human states. `tests/webmcp-capability-states.test.ts` constructs each equivalent runtime context and requires exact tool-name equality with `buildTrialBridgeTools()`: two public tools, still two after confirmation with permission off, six with visible permission, and seven after two visible shortlist selections. The `/webmcp` simulator exposes this as an accessible button group and one atomic status sentence.
+
+The model contains tool names and public boundary copy only. It executes no tool, reads no browser or medical workflow state, persists nothing, and remains distinct from the runtime diagnostic and manual Inspector gate.
+
 ## Draft and Origin Trial compatibility
 
 The upstream WebMCP draft and Chrome's current Origin Trial do not yet expose an identical execution boundary. The draft accepts an object in `executeTool()`, while the current Chromium implementation accepts a serialized JSON string. TrialBridge's safe diagnostic tries the draft object form first and retries with the same serialized object only when that call rejects. The diagnostic executes only the read-only, no-input `trialbridge_method` tool, so this compatibility retry cannot duplicate a write.
@@ -61,6 +67,6 @@ Open `/webmcp` to inspect the current browser without providing medical data. Th
 
 The five-stage critical-user-journey map follows Chrome's current [WebMCP user-journey framework](https://developer.chrome.com/docs/ai/webmcp/build-tools): each stage states the user goal, initial visible state, available capability, site reaction, and recovery path. Protected intake intentionally has no WebMCP tool. The same diagnostic can download a JSON receipt containing only browser support state, expected/discovered public tool names, three security-header booleans, and safe-test status. It is generated locally, filters unrelated extension tools, stores no prompts, arguments, outputs, or health information, and does not substitute for Model Context Tool Inspector.
 
-The adjacent judge conformance matrix is a separate static evidence layer. Seven rows are repository-verified, one row records the bounded 55-sample cloud-model selection evaluation, and one row remains an explicit manual Inspector gate. `/webmcp/evidence.json` returns the same source-linked matrix, exact capability inventory, implementation-landscape audit metadata, and full artifact digests as public JSON. It neither reads nor claims current-browser runtime state; the downloadable browser diagnostic receipt remains the distinct artifact for that state.
+The adjacent judge conformance matrix is a separate static evidence layer. Seven rows are repository-verified, one row records the bounded 55-sample cloud-model selection evaluation, and one row remains an explicit manual Inspector gate. `/webmcp/evidence.json` returns the same source-linked matrix, exact capability inventory, four-state tested registration model, implementation-landscape audit metadata, and full artifact digests as public JSON. It neither reads nor claims current-browser runtime state; the downloadable browser diagnostic receipt remains the distinct artifact for that state.
 
 The searchable Tool Contract Explorer is adjacent repository evidence. Its exact downloadable representation is `/webmcp/contracts.json`; it demonstrates that eight contracts are defined within the audited authority and size limits, while leaving real discovery and invocation to the runtime diagnostic and required Inspector gate.

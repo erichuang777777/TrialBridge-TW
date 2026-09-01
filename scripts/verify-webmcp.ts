@@ -19,6 +19,7 @@ import { createWebMcpInspectorAcceptanceReceipt, webMcpInspectorAcceptanceCases 
 import { verifyWebMcpInspectorAcceptanceReceipt } from "../lib/webmcp/receiptVerification.ts";
 import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webmcp/toolContractCatalog.ts";
 import { publicTrialFormContractCore } from "../lib/webmcp/toolContractCore.ts";
+import { webMcpCapabilityStateBundle, webMcpCapabilityStates } from "../lib/webmcp/capabilityStates.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -52,6 +53,9 @@ check(new Set(names).size === names.length, "Imperative tool names must be uniqu
 check(publicTools.length === 2, "Exactly two public imperative tools must remain available without confirmed context.");
 check(allTools.length === 6, "Exactly six imperative tools must be available after confirmed-context permission.");
 check(shortlistTools.length === 7, "Exactly seven imperative tools must be available after two visible shortlist selections.");
+check(webMcpCapabilityStates.length === 4, "Capability simulator must expose four synthetic human-controlled states.");
+check(webMcpCapabilityStates.map((state) => state.activeImperativeToolNames.length).join("|") === "2|2|6|7", "Capability simulator must preserve the 2-2-6-7 registration sequence.");
+check(webMcpCapabilityStateBundle.privacyBoundary.containsHealthInformation === false && webMcpCapabilityStateBundle.privacyBoundary.executesTools === false, "Capability simulator must remain static no-health-data evidence.");
 
 for (const tool of shortlistTools) {
   check(/^[A-Za-z0-9_.-]+$/.test(tool.name), `${tool.name}: name contains unsupported characters.`);
@@ -255,6 +259,7 @@ check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length === 1, "Judge matrix must retain the manual Inspector gate.");
 check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
+check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
 check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
 
@@ -288,6 +293,7 @@ if (findings.length > 0) {
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     manualInspectorReceipt: "self-attested-no-health-data",
     toolContractCatalog: `${webMcpToolContractBundle.summary.withinChromeGuidance}/${webMcpToolContractBundle.summary.tools}-within-guidance`,
+    capabilityStateSequence: webMcpCapabilityStates.map((state) => state.activeImperativeToolNames.length).join("-"),
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

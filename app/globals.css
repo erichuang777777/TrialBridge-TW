@@ -788,6 +788,44 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .tool-contract-download { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 10px; padding: 16px; border-left: 3px solid var(--primary); background: var(--mint); }
 .tool-contract-download p { max-width: 70ch; margin: 4px 0 0; color: var(--ink-soft); font-size: 0.77rem; line-height: 1.55; }
 .tool-contract-download .action-link { flex: 0 0 auto; background: var(--surface); }
+.capability-state-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
+.capability-state-heading .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
+.capability-state-score { flex: 0 0 150px; min-height: 108px; display: grid; place-content: center; padding: 14px; border: 1px solid var(--line); border-radius: 14px; color: var(--primary-strong); background: var(--mint); text-align: center; }
+.capability-state-score strong { font-size: 1.75rem; font-variant-numeric: tabular-nums; line-height: 1; }
+.capability-state-score span { margin-top: 7px; font-size: 0.64rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
+.capability-state-selector { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
+.capability-state-selector button { min-width: 0; min-height: 64px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink-soft); background: var(--surface); font: inherit; text-align: left; }
+.capability-state-selector button > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: var(--primary-strong); background: var(--mint); font-size: 0.72rem; font-weight: 900; }
+.capability-state-selector button strong { min-width: 0; color: var(--ink); font-size: 0.76rem; overflow-wrap: anywhere; }
+.capability-state-selector button small { color: inherit; font-size: 0.66rem; font-variant-numeric: tabular-nums; font-weight: 900; }
+.capability-state-selector button[aria-pressed="true"] { border-color: var(--primary); color: var(--surface); background: var(--primary); }
+.capability-state-selector button[aria-pressed="true"] > span { color: var(--surface); background: rgba(255, 255, 255, 0.2); }
+.capability-state-selector button[aria-pressed="true"] strong { color: var(--surface); }
+.capability-state-status { min-height: 1.5em; margin: 10px 0 0; color: var(--primary-strong); font-size: 0.76rem; font-weight: 800; }
+.capability-state-board { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 10px; margin-top: 8px; }
+.capability-state-context, .capability-state-tools { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.capability-state-context { padding: 20px; }
+.capability-state-context h3 { margin-top: 4px; font-size: 1.2rem; }
+.capability-state-context dl { display: grid; gap: 0; margin: 16px 0 0; }
+.capability-state-context dl > div { padding: 10px 0; border-top: 1px solid var(--line); }
+.capability-state-context dt { color: var(--primary-strong); font-size: 0.63rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+.capability-state-context dd { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.78rem; line-height: 1.5; }
+.capability-state-boundary { margin: 14px 0 0; padding: 11px 12px; border-left: 3px solid var(--primary); color: var(--ink-soft); background: var(--mint); font-size: 0.72rem; line-height: 1.5; }
+.capability-state-boundary strong { color: var(--ink); }
+.capability-state-tools { overflow: hidden; }
+.capability-state-tool-heading { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 15px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.capability-state-tool-heading strong { font-size: 0.82rem; }
+.capability-state-tool-heading span { color: var(--ink-soft); font-size: 0.68rem; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+.capability-state-tools ul { margin: 0; padding: 0; list-style: none; }
+.capability-state-tools li { min-height: 56px; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 11px; align-items: center; padding: 9px 14px; }
+.capability-state-tools li + li { border-top: 1px solid var(--line); }
+.capability-state-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--match-missing); }
+.capability-state-tools li.is-registered .capability-state-indicator { background: var(--match-good); }
+.capability-state-tools li > div { min-width: 0; display: grid; gap: 2px; }
+.capability-state-tools code { color: var(--ink); font-size: 0.75rem; font-weight: 900; overflow-wrap: anywhere; }
+.capability-state-tools small { color: var(--ink-soft); font-size: 0.67rem; line-height: 1.35; }
+.capability-state-tools li > strong { color: var(--ink-soft); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.capability-state-tools li.is-registered > strong { color: var(--success-ink); }
 .conformance-evidence .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
 .conformance-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
 .conformance-summary article { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
@@ -851,13 +889,6 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .selection-receipt p { display: grid; gap: 3px; margin: 0; font-size: 0.77rem; }
 .selection-receipt p span { color: var(--ink-soft); }
 .selection-receipt a { flex: 0 0 auto; min-height: 44px; display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 900; }
-.tool-inventory { display: grid; gap: 8px; margin-top: 24px; }
-.tool-inventory article { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(170px, 0.75fr) minmax(0, 1fr); gap: 18px; align-items: center; padding: 15px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-.tool-inventory article > div { min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.tool-inventory code { overflow-wrap: anywhere; color: var(--ink); font-size: 0.8rem; font-weight: 800; }
-.tool-inventory span { padding: 3px 7px; border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.66rem; font-weight: 900; }
-.tool-inventory article > strong { font-size: 0.82rem; }
-.tool-inventory p { margin: 0; color: var(--ink-soft); font-size: 0.82rem; }
 .receipt-proof .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
 .receipt-proof .method-proof-grid { margin: 24px 0 18px; }
 .proof-next-step { margin-top: 54px; padding: 22px; border-left: 4px solid var(--focus); background: var(--warning); }
@@ -928,7 +959,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .cloud-probe-receipt { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .journey-contract { grid-template-columns: 1fr; }
   .self-test-panel .primary-action { width: 100%; }
-  .standards-receipt, .selection-evidence-heading, .selection-receipt, .implementation-boundary, .inspector-kit-heading, .inspector-kit-download, .tool-contract-heading, .tool-contract-download { align-items: stretch; flex-direction: column; }
+  .standards-receipt, .selection-evidence-heading, .selection-receipt, .implementation-boundary, .inspector-kit-heading, .inspector-kit-download, .tool-contract-heading, .tool-contract-download, .capability-state-heading { align-items: stretch; flex-direction: column; }
   .inspector-kit-progress { width: 150px; min-height: 96px; flex-basis: auto; }
   .inspector-setup-note { grid-template-columns: 1fr; }
   .inspector-setup-note a { justify-self: start; }
@@ -949,9 +980,11 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .tool-contract-availability { grid-column: 2; text-align: left; }
   .tool-contract-chevron { grid-column: 3; grid-row: 1 / span 2; }
   .tool-contract-download .action-link { width: 100%; }
+  .capability-state-score { width: 150px; min-height: 96px; flex-basis: auto; }
+  .capability-state-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capability-state-board { grid-template-columns: 1fr; }
   .selection-intent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .selection-receipt a { align-self: flex-start; }
-  .tool-inventory article { grid-template-columns: 1fr; gap: 7px; }
 }
 
 @media (max-width: 1000px) {
@@ -1018,6 +1051,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .cloud-probe-actions button { width: 100%; }
   .inspector-kit-progress { width: 100%; }
   .tool-contract-score { width: 100%; }
+  .capability-state-score { width: 100%; }
   .tool-contract-summary { grid-template-columns: 1fr; }
   .tool-contract-summary span { min-height: 58px; }
   .tool-contract-search-row { grid-template-columns: 1fr; }
@@ -1032,6 +1066,12 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .tool-contract-actions { align-items: stretch; flex-direction: column; }
   .tool-contract-actions button { width: 100%; }
   .tool-contract-actions small { margin: 0; }
+  .capability-state-selector button { min-height: 72px; grid-template-columns: 28px minmax(0, 1fr); }
+  .capability-state-selector button small { grid-column: 2; }
+  .capability-state-tool-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .capability-state-tool-heading span { text-align: left; }
+  .capability-state-tools li { grid-template-columns: 8px minmax(0, 1fr); }
+  .capability-state-tools li > strong { grid-column: 2; }
   .inspector-case > summary { grid-template-columns: 38px minmax(0, 1fr); }
   .inspector-case-state { grid-column: 2; justify-self: start; }
   .inspector-prompt { grid-template-columns: 1fr; }

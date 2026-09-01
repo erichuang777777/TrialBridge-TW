@@ -128,6 +128,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const evidenceRoute = await readFile(path.join(root, "app", "webmcp", "evidence.json", "route.ts"), "utf8");
   const contractRoute = await readFile(path.join(root, "app", "webmcp", "contracts.json", "route.ts"), "utf8");
   const contractExplorer = await readFile(path.join(root, "app", "webmcp", "_components", "ToolContractExplorer.tsx"), "utf8");
+  const capabilitySimulator = await readFile(path.join(root, "app", "webmcp", "_components", "CapabilityStateSimulator.tsx"), "utf8");
   const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
   const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
   const searchUrl = await readFile(path.join(root, "lib", "trials", "searchUrl.ts"), "utf8");
@@ -143,6 +144,11 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(contractExplorer, /Download contracts JSON/);
   assert.match(contractExplorer, /role="status" aria-atomic="true"/);
   assert.match(contractRoute, /dynamic = "force-static"/);
+  assert.match(page, /CapabilityStateSimulator/);
+  assert.match(capabilitySimulator, /State-scoped capability simulator/);
+  assert.match(capabilitySimulator, /role="group" aria-label="Choose a synthetic capability state"/);
+  assert.match(capabilitySimulator, /role="status" aria-atomic="true"/);
+  assert.match(capabilitySimulator, /No tool is executed and no health information is created, read, or stored/);
   assert.match(page, /baselineJourneyCount/);
   assert.match(page, /Recorded cloud-model baseline/);
   assert.match(page, /selectionBaseline\.summary\.passed/);

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPageMetadata } from "@/lib/site/metadata";
-import { webMcpCapabilityInventory } from "@/lib/webmcp/capabilityInventory";
 import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
 import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandscape";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBundle";
@@ -9,6 +8,7 @@ import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import { CompetitionPreflight } from "./_components/CompetitionPreflight";
 import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
 import { ToolContractExplorer } from "./_components/ToolContractExplorer";
+import { CapabilityStateSimulator } from "./_components/CapabilityStateSimulator";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 export const metadata: Metadata = createPageMetadata({
@@ -99,6 +99,8 @@ export default function WebMcpProofPage() {
 
     <ToolContractExplorer />
 
+    <CapabilityStateSimulator />
+
     <section className="proof-section conformance-evidence" aria-labelledby="conformance-title">
       <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, the recorded cloud-model eval, and the remaining manual Inspector gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>
       <div className="conformance-summary" aria-label="Conformance evidence summary">
@@ -143,11 +145,6 @@ export default function WebMcpProofPage() {
         <article><span>What remains separate</span><strong>Chrome Inspector and clinical validation</strong><p>This does not execute tools or prove browser registration, permissions, multi-turn recovery, clinical safety, fairness, or eligibility accuracy.</p></article>
       </div>
       <div className="selection-receipt"><p><strong>Recorded {selectionBaseline.evaluatedAt.slice(0, 10)} UTC</strong><span>Dataset <code>{selectionBaseline.datasetDigestSha256.slice(0, 12)}…</code> · Tool contract <code>{selectionBaseline.toolContractDigestSha256.slice(0, 12)}…</code></span></p><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-selection-baseline.json" target="_blank" rel="noreferrer">Inspect the full JSON artifact</a></div>
-    </section>
-
-    <section className="proof-section" aria-labelledby="tool-inventory-title">
-      <div className="proof-section-heading"><p className="eyebrow">Capability inventory</p><h2 id="tool-inventory-title">The site declares exactly what an agent may do.</h2></div>
-      <div className="tool-inventory" role="list">{webMcpCapabilityInventory.map((tool) => <article key={tool.name} role="listitem"><div><code>{tool.name}</code><span>{tool.kind}</span></div><strong>{tool.availability}</strong><p>{tool.boundary}</p></article>)}</div>
     </section>
 
     <section className="proof-section proof-guardrails" aria-labelledby="guardrails-title">

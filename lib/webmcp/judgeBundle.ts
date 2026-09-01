@@ -4,6 +4,7 @@ import { webMcpCriticalJourney } from "./criticalJourney.ts";
 import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
 import { webMcpInspectorAcceptanceCases } from "./inspectorAcceptance.ts";
 import { webMcpToolContractBundle } from "./toolContractCatalog.ts";
+import { webMcpCapabilityStateBundle } from "./capabilityStates.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -30,7 +31,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "State-scoped capabilities",
     implementation: "Consent, confirmed context, pending questions, and the visible shortlist determine which tools exist.",
-    evidence: ["app/components/WebMcpBridge.tsx", "tests/webmcp.test.ts"],
+    evidence: ["lib/webmcp/capabilityStates.ts", "app/components/WebMcpBridge.tsx", "tests/webmcp-capability-states.test.ts"],
   },
   {
     id: "C-04",
@@ -119,6 +120,7 @@ export const webMcpJudgeBundle = {
     conformanceItems: webMcpConformanceMatrix.length,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
+    capabilityStates: webMcpCapabilityStateBundle.states.length,
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,
@@ -129,6 +131,7 @@ export const webMcpJudgeBundle = {
     withinChromeGuidance: webMcpToolContractBundle.summary.withinChromeGuidance,
     containsHealthInformation: webMcpToolContractBundle.privacyBoundary.containsHealthInformation,
   },
+  capabilityStateModel: webMcpCapabilityStateBundle,
   conformance: webMcpConformanceMatrix,
   recordedSelectionEval: {
     evaluatedAt: selectionBaseline.evaluatedAt,

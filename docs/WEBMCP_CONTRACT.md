@@ -43,6 +43,8 @@ The visible declarative form and all seven imperative tools import their names, 
 
 This eliminates a separate hand-maintained judge schema that could drift from runtime authority. It does not turn the catalog into a protocol endpoint or prove current-browser registration, tool selection, execution, cancellation, or cleanup.
 
+The derived four-state capability model documents the registration boundary without medical data: public `2`, confirmed-but-locked `2`, permission-enabled `6`, and visible-shortlist `7`. Deterministic tests build the matching runtime context for each state and require exact name equality. The in-product simulator executes no tool; Chrome Inspector remains responsible for proving the corresponding transitions in a supported browser.
+
 ## Verification target
 
 `npm run verify:webmcp` statically checks both API styles, exact runtime/catalog contract equality, current Chrome name/description/parameter/output budgets, object-first/current-Chrome serialized execution compatibility, cancellation event compatibility, execution-signal propagation, schemas, annotations, output caps, same-origin exposure, security headers, deprecated API absence, the eleven-case journey manifest, and freshness/privacy invariants for the recorded cloud-model selection artifact. Deterministic tests additionally verify exact abort-reason preservation, downstream adapter cancellation, and shared TFDA-load isolation. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection in Chrome, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.
