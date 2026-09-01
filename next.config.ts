@@ -1,9 +1,20 @@
 import type { NextConfig } from "next";
 
+const securityHeaders = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), tools=(self)",
+  },
+];
+
 const nextConfig: NextConfig = {
-  // Trial is a self-contained app: a React UI plus server route handlers that
-  // proxy ClinicalTrials.gov and call the Anthropic API. No special config needed;
-  // Vercel auto-detects Next.js at the repo root.
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
 };
 
 export default nextConfig;

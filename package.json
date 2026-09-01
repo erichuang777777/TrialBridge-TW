@@ -1,28 +1,27 @@
 {
-  "name": "trial",
+  "name": "trialbridge-tw",
   "version": "0.1.0",
   "private": true,
-  "description": "Coordinator-first clinical trial matcher — live ClinicalTrials.gov data with per-criterion Claude reasoning.",
+  "type": "module",
+  "description": "Taiwan-first bilingual cancer clinical-trial navigation with patient-confirmed matching and WebMCP.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "eval": "node --test evals/*.test.ts",
-    "eval:model": "node evals/ledger.ts"
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
-    "next": "^16.2.10",
+    "next": "^16.3.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "unpdf": "^1.6.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "webmcp-types": "^0.1.5"
   }
 }

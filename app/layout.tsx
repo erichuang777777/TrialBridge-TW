@@ -1,38 +1,19 @@
 import type { Metadata } from "next";
-import { Manrope, Newsreader } from "next/font/google";
-import { AuthProvider } from "./auth-context";
+import type { ReactNode } from "react";
 import "./globals.css";
 
-// Trialign design system (design.md §4). Manrope is the app-wide sans; loaded as a
-// variable font so the app's in-between weights (560/640/680) render true.
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-  display: "swap",
-});
-// Newsreader italic — editorial serif for emphasis inside display headlines.
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  style: ["italic"],
-  variable: "--font-newsreader",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: "Trialign — transparent clinical trial matching",
-  description:
-    "Research prototype. Describe your situation and see recruiting ClinicalTrials.gov studies you may be eligible for, with the reasoning behind every match. Not medical advice; synthetic data only.",
-  icons: { icon: "/images/trial-logo.png", apple: "/images/trial-logo.png" },
-  // Consent-flow-spec §1.1 — the demo must not be publicly discoverable/indexed.
-  robots: { index: false, follow: false, nocache: true },
+  title: "TrialBridge TW 試驗橋",
+  description: "從台灣出發，以對話協助癌症病人與家屬理解臨床試驗資訊。",
+  robots: { index: false, follow: false },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Light is the default theme; the in-app toggle stamps data-theme on <html>.
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" data-theme="light" className={`${manrope.variable} ${newsreader.variable}`}>
+    <html lang="zh-Hant-TW">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <a className="skip-link" href="#main-content">跳到主要內容</a>
+        {children}
       </body>
     </html>
   );
