@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
+import { executeSafeMethodToolCompat } from "@/lib/webmcp/compatibility";
 
 type DiagnosticState = "checking" | "unsupported" | "ready" | "error";
 type HeaderChecks = { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
@@ -69,8 +70,8 @@ export function WebMcpDiagnostics() {
       const tools = await modelContext.getTools({ fromOrigins: [location.origin] });
       const methodTool = tools.find((tool) => tool.name === "trialbridge_method");
       if (!methodTool) throw new Error("trialbridge_method is not discoverable on this page.");
-      const result = await modelContext.executeTool(methodTool, JSON.stringify({}));
-      const output = JSON.stringify(result, null, 2);
+      const result = await executeSafeMethodToolCompat(modelContext, methodTool);
+      const output = typeof result === "string" ? result : JSON.stringify(result, null, 2);
       setSelfTest({ state: "passed", output: output.length > 1_500 ? `${output.slice(0, 1_450)}\n…` : output });
     } catch (selfTestError) {
       setSelfTest({ state: "failed", output: selfTestError instanceof Error ? selfTestError.message : "Safe tool execution failed." });

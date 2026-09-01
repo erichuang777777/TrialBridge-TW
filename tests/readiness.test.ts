@@ -117,6 +117,11 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /19<\/strong> bilingual cancer groups/);
   assert.match(page, /Capability changes leave a payload-free session receipt/);
   assert.match(page, /latest 20 lifecycle events/);
+  assert.match(page, /Standards alignment/);
+  assert.match(page, /One product surface, both WebMCP API styles/);
+  assert.match(page, /Compatibility profile audited/);
+  assert.match(page, /toolcanceled · toolcancel/);
+  assert.match(page, /webmachinelearning\.github\.io\/webmcp/);
   assert.match(page, /Four-step judge path/);
   assert.match(page, /About 5 minutes/);
   assert.match(page, /\/trials\?condition=%E8%83%83%E7%99%8C/);
@@ -126,12 +131,16 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(database, /history\.replaceState/);
   assert.match(database, /not a curated general cancer condition/);
   assert.match(database, /without storing it in the URL/);
+  assert.match(database, /addEventListener\("toolcanceled"/);
+  assert.match(database, /addEventListener\("toolcancel"/);
   assert.match(searchUrl, /hasDirectIdentifiers/);
   assert.match(searchUrl, /curated_bilingual_cancer_lexicon/);
   assert.match(css, /\.judge-runbook ol/);
+  assert.match(css, /\.standards-grid/);
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /getTools/);
   assert.match(diagnostic, /executeTool/);
+  assert.match(diagnostic, /executeSafeMethodToolCompat/);
   assert.match(diagnostic, /tools=\(self\)/);
   assert.match(diagnostic, /aria-atomic="true"/);
   assert.doesNotMatch(diagnostic, /rawText|maskedText|ConfirmedProfile/);

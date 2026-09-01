@@ -135,9 +135,11 @@ export function TrialDatabase() {
       }
     };
     window.addEventListener("toolactivated", activated);
+    window.addEventListener("toolcanceled", cancelled);
     window.addEventListener("toolcancel", cancelled);
     return () => {
       window.removeEventListener("toolactivated", activated);
+      window.removeEventListener("toolcanceled", cancelled);
       window.removeEventListener("toolcancel", cancelled);
     };
   }, []);

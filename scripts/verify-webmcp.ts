@@ -128,6 +128,16 @@ for (const marker of ["const declarativeToolName = \"search_public_trial_form\""
   check(declarative.includes(marker), `Declarative search form is missing ${marker}.`);
 }
 check((declarative.match(/toolname=/g) ?? []).length === 1, "The public database must expose one visible declarative form tool.");
+check(declarative.includes('addEventListener("toolcanceled"') && declarative.includes('addEventListener("toolcancel"'), "Declarative cancellation must cover the upstream draft and current Chromium event names.");
+
+const compatibility = readFileSync("lib/webmcp/compatibility.ts", "utf8");
+check(compatibility.includes("executeTool(tool, {})") && compatibility.includes("executeTool(tool, JSON.stringify({}))"), "Safe live execution must try the upstream object input before the current Chrome serialized-input fallback.");
+check(compatibility.includes('tool.name !== "trialbridge_method"') && compatibility.includes("readOnlyHint !== true"), "Execution compatibility retries must remain restricted to the safe read-only method tool.");
+
+const proofPage = readFileSync("app/webmcp/page.tsx", "utf8");
+for (const marker of ["Standards alignment", "Declarative API", "Imperative API", "Lifecycle compatibility", "Origin security", "Compatibility profile audited"]) {
+  check(proofPage.includes(marker), `Competition evidence is missing the ${marker} standards marker.`);
+}
 
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
 for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt"]) {
@@ -157,6 +167,7 @@ if (findings.length > 0) {
     forbiddenAbstention: `${forbiddenSamples.filter((sample) => sample.passed).length}/${forbiddenSamples.length}`,
     shortlistSelection: `${shortlistSamples.filter((sample) => sample.passed).length}/${shortlistSamples.length}`,
     receiptLimitEvents: maxWebMcpReceiptEvents,
+    executionCompatibilityProfiles: 2,
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

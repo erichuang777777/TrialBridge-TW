@@ -21,6 +21,12 @@ Registered only while the visible WebMCP consent checkbox is enabled and a confi
 
 Changing profile, pending questions, matching state, results, or consent aborts the previous registration before registering the current tool set. Tools are exposed only to the current origin. Tool names are at most 30 characters and output is capped at 1,500 serialized characters, following Chrome's current security guidance. No tool accepts raw or masked medical text and there are no send, submit, enroll, book, consent, or treatment-change tools. Each imperative execution emits a visible payload-free lifecycle status.
 
+## Draft and Origin Trial compatibility
+
+The upstream WebMCP draft and Chrome's current Origin Trial do not yet expose an identical execution boundary. The draft accepts an object in `executeTool()`, while the current Chromium implementation accepts a serialized JSON string. TrialBridge's safe diagnostic tries the draft object form first and retries with the same serialized object only when that call rejects. The diagnostic executes only the read-only, no-input `trialbridge_method` tool, so this compatibility retry cannot duplicate a write.
+
+Declarative cancellation has the same temporary naming difference. TrialBridge listens for the upstream `toolcanceled` event and Chromium's current `toolcancel` event; both clear the same visible form-active state. Registration cleanup itself remains deterministic through `AbortSignal`.
+
 ## Origin trial
 
 Set `NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN` to emit the Chrome origin-trial meta token. For local testing, use a compatible Chrome build and its WebMCP testing flag.
@@ -33,4 +39,4 @@ This repository has unit, type, build, HTTP, and `npm run verify:webmcp` validat
 
 ## In-product evidence page
 
-Open `/webmcp` to inspect the current browser without providing medical data. The page registers the two public imperative tools, queries same-origin discovery, checks the WebMCP Permissions Policy plus isolation and MIME headers, and exposes a safe `trialbridge_method` execution check when supported. It also renders the recorded 55-sample selection baseline with its exact limits and artifact digests. Neither evidence surface substitutes for Model Context Tool Inspector.
+Open `/webmcp` to inspect the current browser without providing medical data. The page registers the two public imperative tools, queries same-origin discovery, checks the WebMCP Permissions Policy plus isolation and MIME headers, and exposes a safe `trialbridge_method` execution check when supported. A dated standards-alignment profile maps the visible declarative API, imperative API, lifecycle compatibility, and origin controls to the official draft and Chrome guidance. The page also renders the recorded 55-sample selection baseline with its exact limits and artifact digests. None of these evidence surfaces substitutes for Model Context Tool Inspector.

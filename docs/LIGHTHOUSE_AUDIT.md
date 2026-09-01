@@ -65,6 +65,8 @@ These final three audits connected Lighthouse to an explicitly managed Chrome 15
 
 After adding explicit `live`, `fresh cache`, and bounded `stale cache` registry receipts with the true snapshot load time, a production audit of `/trials?condition=胃癌` recorded Performance 98, Accessibility 100, Best Practices 100, FCP 0.9 s, LCP 2.2 s, TBT 120 ms, CLS 0, zero console errors, and zero non-composited-animation findings. The audit connected to the same explicitly managed Chrome 152 remote-debugging boundary and exited zero.
 
+After adding the dated standards-alignment profile and upstream-draft/current-Chrome execution compatibility, a production audit of `/webmcp` at an explicit 375×812 CSS viewport recorded Performance 98, Accessibility 100, Best Practices 100, FCP 1.1 s, LCP 2.3 s, TBT 110 ms, CLS 0, and zero console errors. The report and final Lighthouse screenshot were parseable; Chrome launcher again reported only its known Windows temporary-profile cleanup `EPERM` after writing the artifacts.
+
 Command shape:
 
 ```powershell

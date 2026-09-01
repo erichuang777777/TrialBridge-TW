@@ -31,9 +31,10 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 - Tool results include source registry, retrieval time, limitations, and a patient-facing safety statement. Public search also preserves registry-level completion and failure status inside the output budget.
 - Imperative registration and cleanup are deterministic across client navigation, confirmed-summary permission, shortlist changes, and hot reload.
 - Declarative agent activity remains visible, focused, cancellable, and announced to assistive technology.
+- Declarative cancellation clears visible agent state for both the upstream `toolcanceled` event and Chromium Origin Trial's current `toolcancel` event.
 - Imperative executions publish a payload-free visible status (`running`, `completed`, `failed`, or `cancelled`) so an agent call never becomes an invisible page action.
 - The current tab retains at most 20 payload-free lifecycle events. A user-triggered JSON receipt may include UTC time, tool names, verified additions/removals, and execution states only; it excludes notes, profile facts, trial results, prompts, arguments, outputs, and error details, and is never uploaded.
 
 ## Verification target
 
-`npm run verify:webmcp` statically checks both API styles, schemas, annotations, output caps, same-origin exposure, security headers, deprecated API absence, the eleven-case journey manifest, and freshness/privacy invariants for the recorded cloud-model selection artifact. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection in Chrome, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.
+`npm run verify:webmcp` statically checks both API styles, object-first/current-Chrome serialized execution compatibility, cancellation event compatibility, schemas, annotations, output caps, same-origin exposure, security headers, deprecated API absence, the eleven-case journey manifest, and freshness/privacy invariants for the recorded cloud-model selection artifact. Chrome Model Context Tool Inspector must still confirm real discovery, manual calls, natural-language selection in Chrome, declarative form activation, sensitive consent behavior, cancellation, and tool cleanup.

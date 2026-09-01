@@ -32,11 +32,13 @@ declare global {
 
   interface WindowEventMap {
     toolactivated: ToolActivationEvent;
+    toolcanceled: ToolActivationEvent;
     toolcancel: ToolActivationEvent;
   }
 
   namespace WebMCP {
     interface ModelContext {
+      executeTool(tool: RegisteredTool, input?: Record<string, unknown>, options?: { signal?: AbortSignal }): Promise<unknown>;
       executeTool(tool: RegisteredTool, input: string, options?: { signal?: AbortSignal }): Promise<unknown>;
     }
   }
