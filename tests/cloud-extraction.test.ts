@@ -56,7 +56,7 @@ test("cloud extraction uses only gpt-oss:120b-cloud and validates its draft", as
   const mockFetch: typeof fetch = async (input, init) => {
     assert.equal(new URL(input.toString()).hostname, "127.0.0.1");
     requestBody = JSON.parse(String(init?.body));
-    return Response.json({ message: { content: JSON.stringify(draftFixture) }, done_reason: "stop" });
+    return Response.json({ model: "gpt-oss:120b", message: { content: JSON.stringify(draftFixture) }, done_reason: "stop" });
   };
   const result = await extractProfileInCloud({
     maskedText: "[MASKED_NAME_1] was diagnosed with gastric adenocarcinoma.",
@@ -66,11 +66,23 @@ test("cloud extraction uses only gpt-oss:120b-cloud and validates its draft", as
   }, mockFetch);
   assert.equal(result.remote, true);
   assert.equal(result.model, "gpt-oss:120b-cloud");
+  assert.equal(result.reportedModel, "gpt-oss:120b");
   assert.equal(result.draft.facts[0].confirmed, false);
   assert.equal(requestBody?.model, "gpt-oss:120b-cloud");
   assert.equal(requestBody?.think, false);
   assert.equal(requestBody?.format, "json");
   assert.deepEqual((requestBody?.options as { num_predict: number }).num_predict, 4096);
+});
+
+test("cloud extraction tolerates an omitted provider model label", async () => {
+  const mockFetch: typeof fetch = async () => Response.json({ message: { content: JSON.stringify(draftFixture) }, done_reason: "stop" });
+  const result = await extractProfileInCloud({
+    maskedText: "Synthetic masked oncology note long enough for this test.",
+    subjectRole: "patient",
+    language: "en",
+    cloudUseApproved: true,
+  }, mockFetch);
+  assert.equal(result.reportedModel, null);
 });
 
 test("a truncated cloud response is classified for safe retry", async () => {

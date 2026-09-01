@@ -298,6 +298,15 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .confirmation-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .confirmation-heading h3 { margin-top: 0; }
 .confirmation-heading p { max-width: 66ch; margin: 4px 0 16px; color: var(--ink-soft); }
+.extraction-receipt { margin: 0 0 14px; padding: 13px 15px; border: 1px solid var(--line); border-left: 3px solid var(--primary); border-radius: 9px; background: var(--mint); }
+.extraction-receipt > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.extraction-receipt > div > span { color: var(--ink-soft); font-size: 0.72rem; font-weight: 800; }
+.extraction-receipt dl, .extraction-failure-receipt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; }
+.extraction-receipt dl > div, .extraction-failure-receipt > div { min-width: 0; }
+.extraction-receipt dt, .extraction-failure-receipt dt { color: var(--ink-soft); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
+.extraction-receipt dd, .extraction-failure-receipt dd { margin: 3px 0 0; color: var(--ink); font-size: 0.76rem; font-weight: 900; overflow-wrap: anywhere; }
+.extraction-receipt > p { margin: 9px 0 0; color: var(--ink-soft); font-size: 0.72rem; }
+.extraction-failure-receipt { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 10px; border-top: 1px solid #d9a08c; }
 .confirmation-workspace { display: grid; grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.35fr); gap: 14px; align-items: stretch; }
 .masked-summary-panel, .summary-facts-panel { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .review-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -730,6 +739,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .webmcp-tool-groups { grid-template-columns: 1fr; }
   .clarification-list, .match-card-grid.card-view { grid-template-columns: 1fr; }
   .confirmation-workspace { grid-template-columns: 1fr; }
+  .extraction-receipt dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .confirmation-heading, .clarification-heading { flex-direction: column; }
   .intake-entry-heading { flex-direction: column; }
   .mode-choice-grid { grid-template-columns: 1fr; }
@@ -817,6 +827,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   h1 { font-size: 2.35rem; }
   .route-card { padding: 22px; }
   .progress-copy { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .extraction-receipt > div { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .extraction-receipt dl, .extraction-failure-receipt { grid-template-columns: 1fr; }
   .flow-rail li { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .flow-rail li strong { font-size: 0.72rem; }
   .match-matrix { grid-template-columns: repeat(5, 32px); }

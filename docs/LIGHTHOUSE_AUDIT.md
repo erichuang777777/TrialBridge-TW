@@ -111,6 +111,8 @@ After adding the nine-row judge conformance matrix and static `/webmcp/evidence.
 
 Two fragment-targeted visual runs are also retained rather than hidden: explicit 375×812 scored 89 with TBT 350 ms, and 844×390 scored 88 with TBT 380 ms. Main-thread comparison showed lower total style/layout work than the preceding build, so these slower scores reflect long-task distribution while scrolling directly to the deeper fragment rather than an increase in total main-thread work. Their original-size screenshots were visually inspected: status counts stack on mobile, evidence rows become a readable single column, multi-column titles and paths align at 844px and desktop, long paths wrap, and no horizontal clipping is present. The static JSON response was separately verified at 6,629 bytes with `application/json`, nine conformance items, `containsHealthInformation: false`, and `readsMedicalWorkflowState: false`.
 
+After adding the volatile cloud-extraction receipt and explicit failure recovery metadata, the production home-page regression recorded Performance 97, Accessibility 100, Best Practices 100, FCP 1.0 s, LCP 2.5 s, TBT 110 ms, CLS 0, and zero console errors. The fixed synthetic extraction was also exercised through the live localhost proxy: the route returned `gpt-oss:120b-cloud`, provider-reported `gpt-oss:120b`, 6,577 ms server latency, 11 draft facts, `trialBridgePersisted: false`, and `providerRetention: not_assessed`. Original-size development-stage screenshots at 1440×1000 and 375×812 showed the receipt as four compact columns and one mobile column respectively, with no horizontal overflow; those synthetic shortcuts are development-only and do not replace the protected competition flow.
+
 Command shape:
 
 ```powershell
@@ -125,4 +127,4 @@ The default profile's only SEO failure is crawlability. `app/layout.tsx` and `ap
 
 ## Verification boundary
 
-Lighthouse exercised a real local Chrome renderer and network lifecycle, including the final synthetic deep link at 375×667 and 844×390 landscape. It does not replace keyboard-only, screen-reader, large-text, or Chrome Model Context Tool Inspector acceptance. The installed browser-control plugin is missing its required `scripts/browser-client.mjs` runtime, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.
+Lighthouse exercised a real local Chrome renderer and network lifecycle, including the final synthetic deep link at 375×667 and 844×390 landscape. It does not replace keyboard-only, screen-reader, large-text, or Chrome Model Context Tool Inspector acceptance. The installed browser-control package could not initialize because its packaged browser documentation directory is missing, so no claim is made about completed scripted clicks or WebMCP Inspector behavior.

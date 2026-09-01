@@ -18,6 +18,8 @@ The request uses JSON mode and disables thinking output. The application enforce
 
 The cloud model must represent missing information as questions and may not diagnose, recommend treatment, claim benefit, reconstruct identifiers, or decide eligibility. The application does not persist the request or response, but provider-side handling must be reviewed separately before public launch.
 
+After each extraction attempt, the route returns a nested metadata-only receipt. A successful receipt records requested and provider-reported model labels, localhost-proxy/remote-cloud transport, server-observed latency, masked-note request type, and `trialBridgePersisted: false`. A failed receipt adds only a bounded recovery code and elapsed time. The receipt never copies the note, extracted facts, prompts, model content, or detailed provider errors, and it explicitly keeps provider retention as `not_assessed`. The browser shows this receipt beside confirmation or the retry controls; it is not persisted or uploaded.
+
 The confirmation UI treats model-reported confidence only as a review-priority signal, never as a calibrated correctness probability. Treatment names and timing, histologic subtype, stage or disease extent, and biomarkers are always flagged for careful comparison with the source report. Lower-confidence fields receive an additional review prompt.
 
 ## Human confirmation

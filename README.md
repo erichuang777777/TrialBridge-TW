@@ -26,6 +26,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - The `/webmcp` page starts with a four-step judge runbook. Exact broad cancer aliases can use shareable `/trials?condition=...` links in the same visible declarative form; a fixed `/?demo=synthetic` link opens the fictional case at the privacy boundary without skipping any protected stage. Neither route stores patient-authored content in the URL.
 - The `/webmcp` page also shows a dated, source-linked implementation landscape for ChatGPT Desktop, Chrome, and Brave. Those cards are explicitly source-reported ecosystem evidence, not a claim that the current browser completed TrialBridge TW's runtime or Inspector checks.
 - A compact judge conformance matrix classifies every WebMCP claim as repository-verified, recorded model evaluation, or a remaining manual Inspector gate. `/webmcp/evidence.json` exposes the same static, source-linked bundle with artifact digests and no browser-session or medical-workflow data; it is competition evidence, not a WebMCP protocol endpoint.
+- Cloud organization now leaves a volatile, metadata-only receipt beside confirmation: requested/provider-reported model labels, localhost-proxy/remote-cloud transport, actual server latency, and TrialBridge non-persistence. Failures show a bounded code, elapsed time, and retry/edit path without copying medical or model content.
 
 ## Delivery plan
 

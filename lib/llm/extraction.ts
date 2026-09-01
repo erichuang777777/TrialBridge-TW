@@ -4,6 +4,7 @@ import { validatedCloudModel } from "./cloud.ts";
 import { validatedLoopbackBaseUrl } from "./ollama.ts";
 
 const ollamaResponseSchema = z.object({
+  model: z.string().trim().min(1).max(200).optional(),
   message: z.object({ content: z.string() }),
   done_reason: z.string().optional(),
 });
@@ -78,7 +79,7 @@ export async function extractProfileInCloud(
   input: CloudExtractionRequest,
   fetcher: typeof fetch = fetch,
   requestSignal?: AbortSignal,
-): Promise<{ draft: ProfileDraft; model: string; remote: true }> {
+): Promise<{ draft: ProfileDraft; model: string; reportedModel: string | null; remote: true }> {
   const parsedInput = cloudExtractionRequestSchema.parse(input);
   const model = validatedCloudModel();
   const timeoutSignal = AbortSignal.timeout(120_000);
@@ -112,8 +113,10 @@ export async function extractProfileInCloud(
   }
 
   let extracted: z.infer<typeof modelExtractionSchema>;
+  let reportedModel: string | null = null;
   try {
     const payload = ollamaResponseSchema.parse(await response.json());
+    reportedModel = payload.model ?? null;
     if (payload.done_reason === "length") {
       throw new CloudExtractionError("The cloud response was cut off before the structured draft was complete. Please retry.", "CLOUD_OUTPUT_TRUNCATED", model);
     }
@@ -140,5 +143,5 @@ export async function extractProfileInCloud(
       ? "This is a draft for your correction, not medical advice or a final trial eligibility decision."
       : "這是供您修正的草稿，不是醫療建議，也不是最終臨床試驗資格判定。",
   });
-  return { draft, model, remote: true };
+  return { draft, model, reportedModel, remote: true };
 }

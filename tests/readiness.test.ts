@@ -53,6 +53,23 @@ test("privacy copy uses the visible cloud action without reintroducing a redunda
   assert.doesNotMatch(privacy, /explicit checkbox consent/);
 });
 
+test("cloud extraction exposes a compact success and failure receipt without storing content", async () => {
+  const [chat, confirmation, route, receipt] = await Promise.all([
+    readFile(path.join(process.cwd(), "app/components/TrialBridgeChat.tsx"), "utf8"),
+    readFile(path.join(process.cwd(), "app/components/SummaryConfirmation.tsx"), "utf8"),
+    readFile(path.join(process.cwd(), "app/api/cloud/extract/route.ts"), "utf8"),
+    readFile(path.join(process.cwd(), "lib/llm/extractionReceipt.ts"), "utf8"),
+  ]);
+  assert.match(chat, /extraction-failure-receipt/);
+  assert.match(confirmation, /Cloud extraction receipt/);
+  assert.match(confirmation, /Provider retention is not assessed/);
+  assert.match(route, /createCloudExtractionReceipt/);
+  assert.match(receipt, /trialBridgePersisted: false/);
+  assert.match(receipt, /containsMedicalContent: false/);
+  assert.match(receipt, /containsModelContent: false/);
+  assert.doesNotMatch(receipt, /maskedText|rawText|facts|promptContent|modelContent/);
+});
+
 test("the public trial database is directly linked from the English-first home page", async () => {
   const root = process.cwd();
   const home = await readFile(path.join(root, "app", "page.tsx"), "utf8");

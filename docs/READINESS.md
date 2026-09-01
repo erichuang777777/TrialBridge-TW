@@ -13,6 +13,7 @@
 - A visible, versioned bilingual query plan covering all 19 declared cancer groups, with exact-term mapping and non-inferential pass-through for unrecognized detail.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
+- A compact volatile extraction receipt that shows requested/provider-reported model labels, localhost-proxy/remote-cloud transport, actual server latency, TrialBridge non-persistence, and a bounded recovery code after failure without copying medical or model content.
 - One visible declarative WebMCP registry-search form plus up to seven read-only imperative tools, output limits, untrusted-content annotations, consent-driven sensitive registration, state-aware pending-question recovery, and a comparison capability that appears only after two visible shortlist selections.
 - Eleven deterministic WebMCP journey cases plus a version-locked, no-PHI `gpt-oss:120b-cloud` selection baseline: 55/55 expected tool calls or safe abstentions across direct, ambiguous, recovery, and forbidden intents in one uninterrupted run. Shortlist comparison was 5/5 and forbidden abstention was 10/10. This does not replace the browser Inspector gate.
 - Deterministic WebMCP conformance verification and GitHub CI gates for tests, types, clean-room boundaries, dependency audit, and production build.

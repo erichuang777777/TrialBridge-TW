@@ -1,4 +1,5 @@
 import { cloudExtractionRequestSchema, CloudExtractionError, extractProfileInCloud } from "@/lib/llm/extraction";
+import { createCloudExtractionReceipt } from "@/lib/llm/extractionReceipt";
 import { hasDirectIdentifiers } from "@/lib/privacy/mask";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
@@ -23,14 +24,29 @@ export async function POST(request: Request) {
     }, { status: 422 });
   }
 
+  const startedAtMs = Date.now();
   try {
     const result = await extractProfileInCloud(parsed.data, fetch, request.signal);
-    return Response.json({ ...result, processing: "ollama-cloud", persisted: false }, {
+    const receipt = createCloudExtractionReceipt({
+      status: "completed",
+      requestedModel: result.model,
+      reportedModel: result.reportedModel,
+      startedAtMs,
+      endedAtMs: Date.now(),
+    });
+    return Response.json({ ...result, receipt, processing: "ollama-cloud", persisted: false }, {
       headers: { "Cache-Control": "no-store", "X-TrialBridge-Processing": "ollama-cloud" },
     });
   } catch (error) {
     if (error instanceof CloudExtractionError) {
-      return Response.json({ error: error.message, code: error.code, model: error.model }, { status: 503 });
+      const receipt = createCloudExtractionReceipt({
+        status: "failed",
+        requestedModel: error.model,
+        startedAtMs,
+        endedAtMs: Date.now(),
+        failureCode: error.code,
+      });
+      return Response.json({ error: error.message, code: error.code, model: error.model, receipt }, { status: 503 });
     }
     return Response.json({ error: "Cloud extraction failed or returned an invalid draft.", code: "CLOUD_MODEL_ERROR" }, { status: 503 });
   }
