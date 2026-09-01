@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 
 const retiredBrand = ["Trial", "ign"].join("").toLocaleLowerCase("en");
 const forbiddenNames = ["trial-video.mp4", "trial-hero-poster.jpg", "trial-logo.png"];
@@ -8,7 +8,7 @@ const tracked = execFileSync("git", ["ls-files", "--cached", "--others", "--excl
 const findings: string[] = [];
 
 for (const file of tracked) {
-  if (!existsSync(file)) continue;
+  if (!existsSync(file) || !statSync(file).isFile()) continue;
   const normalized = file.replaceAll("\\", "/").toLocaleLowerCase("en");
   if (forbiddenNames.some((name) => normalized.endsWith(name))) findings.push(`${file}: retired asset`);
   if (normalized.includes("/api/") && /raw(?:_|-)?(?:note|record)/i.test(normalized)) findings.push(`${file}: forbidden raw-data route`);
