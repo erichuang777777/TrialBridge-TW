@@ -5,6 +5,7 @@ import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
 import { webMcpInspectorAcceptanceCases } from "./inspectorAcceptance.ts";
 import { webMcpToolContractBundle } from "./toolContractCatalog.ts";
 import { webMcpCapabilityStateBundle } from "./capabilityStates.ts";
+import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName } from "./runtimeAcceptance.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -23,7 +24,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "Typed imperative discovery",
     implementation: "Seven schema-bounded tools use registerTool(), getTools(), and executeTool() without write authority.",
-    evidence: ["lib/webmcp/tools.ts", "scripts/verify-webmcp.ts"],
+    evidence: ["lib/webmcp/tools.ts", "lib/webmcp/runtimeAcceptance.ts", "scripts/verify-webmcp.ts"],
   },
   {
     id: "C-03",
@@ -55,7 +56,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "Execution lifecycle and cancellation",
     implementation: "The execution signal reaches browser fetch, Next.js, matching, and every registry adapter with payload-free status.",
-    evidence: ["lib/webmcp/tools.ts", "lib/trials/search.ts", "tests/registry-layer.test.ts"],
+    evidence: ["lib/webmcp/runtimeAcceptance.ts", "lib/webmcp/tools.ts", "lib/trials/search.ts", "tests/webmcp-runtime-acceptance.test.ts"],
   },
   {
     id: "C-07",
@@ -121,6 +122,7 @@ export const webMcpJudgeBundle = {
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
+    runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,
@@ -132,6 +134,13 @@ export const webMcpJudgeBundle = {
     containsHealthInformation: webMcpToolContractBundle.privacyBoundary.containsHealthInformation,
   },
   capabilityStateModel: webMcpCapabilityStateBundle,
+  runtimeAcceptanceProfile: {
+    artifactClass: "browser_runtime_suite_definition_not_runtime_result",
+    probeToolName: webMcpRuntimeProbeName,
+    checks: webMcpRuntimeAcceptanceChecks,
+    privacyBoundary: { containsHealthInformation: false, storesToolPayloads: false, networkRequests: false },
+    evidenceBoundary: "Static suite definition only. A downloaded current-browser receipt is required to claim a live pass, and Inspector remains separate.",
+  },
   conformance: webMcpConformanceMatrix,
   recordedSelectionEval: {
     evaluatedAt: selectionBaseline.evaluatedAt,

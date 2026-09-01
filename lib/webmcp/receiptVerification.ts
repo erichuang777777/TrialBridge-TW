@@ -1,4 +1,5 @@
 import { webMcpInspectorAcceptanceCases } from "./inspectorAcceptance.ts";
+import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName } from "./runtimeAcceptance.ts";
 
 export interface WebMcpReceiptVerification {
   kind: "browser_runtime" | "manual_inspector";
@@ -47,7 +48,11 @@ export function verifyWebMcpBrowserDiagnosticReceipt(value: unknown): WebMcpRece
   const discovery = record(receipt.publicToolDiscovery);
   const headers = record(receipt.securityHeaders);
   const execution = record(receipt.safeExecution);
-  check(receipt.schemaVersion === "1.0", "schemaVersion must be 1.0.", errors);
+  const lifecycle = record(receipt.lifecycleAcceptance);
+  const lifecycleChecks = Array.isArray(lifecycle.checks) ? lifecycle.checks.map(record) : [];
+  const expectedLifecycleIds = webMcpRuntimeAcceptanceChecks.map((item) => item.id).sort();
+  const receivedLifecycleIds = lifecycleChecks.map((item) => item.id).filter((id): id is string => typeof id === "string").sort();
+  check(receipt.schemaVersion === "1.1", "schemaVersion must be 1.1.", errors);
   check(validIsoInstant(receipt.generatedAt), "generatedAt must be a valid UTC ISO instant.", errors);
   check(validHttpOrigin(receipt.origin), "origin must be an exact HTTP(S) origin.", errors);
   check(receipt.persistence === "download-only", "Receipt must be download-only.", errors);
@@ -58,6 +63,12 @@ export function verifyWebMcpBrowserDiagnosticReceipt(value: unknown): WebMcpRece
   check(JSON.stringify(stringArray(discovery.discovered)) === JSON.stringify(publicToolNames), "Discovered public tools do not match the contract.", errors);
   check(headers.permissionsPolicy === true && headers.openerPolicy === true && headers.noSniff === true, "All security-header checks must pass.", errors);
   check(execution.available === true && execution.state === "passed", "Safe trialbridge_method execution must pass.", errors);
+  check(lifecycle.state === "passed", "Live lifecycle acceptance must pass.", errors);
+  check(lifecycle.probeToolName === webMcpRuntimeProbeName, "Lifecycle probe name does not match the current contract.", errors);
+  check(JSON.stringify(receivedLifecycleIds) === JSON.stringify(expectedLifecycleIds), "Lifecycle receipt check IDs do not match the current suite.", errors);
+  check(lifecycleChecks.every((item) => item.status === "pass"), "Every live lifecycle check must pass.", errors);
+  check(typeof lifecycle.toolchangeEvents === "number" && lifecycle.toolchangeEvents >= 2 && lifecycle.toolchangeEvents <= 99, "Lifecycle receipt must record register and cleanup toolchange events.", errors);
+  check(lifecycle.containsHealthInformation === false && lifecycle.storesToolPayloads === false, "Lifecycle receipt must exclude health information and tool payloads.", errors);
   check(typeof receipt.evidenceBoundary === "string" && /does not prove/i.test(receipt.evidenceBoundary), "Runtime evidence boundary is missing.", errors);
   check(!hasForbiddenPayload(receipt), "Receipt contains a forbidden payload field.", errors);
   return { kind: "browser_runtime", ok: errors.length === 0, errors, metadataOnly: !hasForbiddenPayload(receipt), evidenceClass: "runtime_metadata" };

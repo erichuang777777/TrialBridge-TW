@@ -26,7 +26,7 @@ test("accessibility foundation includes skip link, focus, touch size, and reduce
 });
 
 test("no browser persistence API is used in product code", async () => {
-  const files = ["app/components/TrialBridgeChat.tsx", "app/components/WebMcpBridge.tsx", "lib/chat/state.ts", "lib/privacy/mask.ts", "lib/webmcp/receipt.ts"];
+  const files = ["app/components/TrialBridgeChat.tsx", "app/components/WebMcpBridge.tsx", "app/webmcp/_components/WebMcpDiagnostics.tsx", "lib/chat/state.ts", "lib/privacy/mask.ts", "lib/webmcp/receipt.ts", "lib/webmcp/runtimeAcceptance.ts"];
   for (const file of files) {
     const content = await readFile(path.join(process.cwd(), file), "utf8");
     assert.doesNotMatch(content, /localStorage|sessionStorage|indexedDB/i, file);
@@ -130,6 +130,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const contractExplorer = await readFile(path.join(root, "app", "webmcp", "_components", "ToolContractExplorer.tsx"), "utf8");
   const capabilitySimulator = await readFile(path.join(root, "app", "webmcp", "_components", "CapabilityStateSimulator.tsx"), "utf8");
   const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
+  const runtimeAcceptance = await readFile(path.join(root, "lib", "webmcp", "runtimeAcceptance.ts"), "utf8");
   const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
   const searchUrl = await readFile(path.join(root, "lib", "trials", "searchUrl.ts"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
@@ -164,8 +165,9 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /Standards alignment/);
   assert.match(page, /One product surface, both WebMCP API styles/);
   assert.match(page, /Compatibility profile audited/);
-  assert.match(page, /register signal · execute signal · toolcanceled/);
-  assert.match(page, /agent cancellation reaches the browser fetch, Next request, and each registry adapter/);
+  assert.match(page, /toolchange · register signal · execute signal/);
+  assert.match(page, /Run six no-PHI lifecycle checks/);
+  assert.match(page, /product execution cancellation also reaches browser fetch, Next request, and each registry adapter/);
   assert.match(page, /webmachinelearning\.github\.io\/webmcp/);
   assert.match(page, /Four-step judge path/);
   assert.match(page, /About 5 minutes/);
@@ -206,8 +208,18 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(css, /\.conformance-matrix > article \{ grid-template-columns: 1fr/);
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /getTools/);
-  assert.match(diagnostic, /executeTool/);
-  assert.match(diagnostic, /executeSafeMethodToolCompat/);
+  assert.match(diagnostic, /runWebMcpRuntimeAcceptance/);
+  assert.match(diagnostic, /One-click WebMCP lifecycle acceptance/);
+  assert.match(diagnostic, /role="status" aria-atomic="true"/);
+  assert.match(diagnostic, /trialbridge_runtime_probe/);
+  assert.match(runtimeAcceptance, /registerTool/);
+  assert.match(runtimeAcceptance, /getTools/);
+  assert.match(runtimeAcceptance, /executeTool/);
+  assert.match(runtimeAcceptance, /executeSafeMethodToolCompat/);
+  assert.match(runtimeAcceptance, /addEventListener\("toolchange"/);
+  assert.match(runtimeAcceptance, /registrationController\.abort\(\)/);
+  assert.match(runtimeAcceptance, /containsHealthInformation: false/);
+  assert.match(runtimeAcceptance, /storesToolPayloads: false/);
   assert.match(diagnostic, /tools=\(self\)/);
   assert.match(diagnostic, /aria-atomic="true"/);
   assert.doesNotMatch(diagnostic, /rawText|maskedText|ConfirmedProfile/);

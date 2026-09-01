@@ -121,6 +121,16 @@ After adding the canonical eight-tool Contract Explorer and static `/webmcp/cont
 
 After adding the four-state Capability State Simulator, Lighthouse targeted `/webmcp#capability-state-title` on the rebuilt isolated production server. The final 375×812 audit recorded Performance 95, Accessibility 100, Best Practices 100, FCP 1.3 s, LCP 2.6 s, TBT 160 ms, CLS 0, zero console errors, and zero non-composited-animation findings. The 844×390 landscape audit recorded Performance 95, Accessibility 100, Best Practices 100, FCP 1.2 s, LCP 2.6 s, TBT 150 ms, CLS 0, and the same zero-error findings. Desktop recorded Performance 100, Accessibility 100, Best Practices 100, FCP 0.4 s, LCP 0.6 s, TBT 0 ms, and the same stability/error results. SEO remained 66 under the deliberate no-index boundary. The first mobile audit scored Accessibility 97 because the small `LOCKED` label measured 3.53:1 against white; changing that label to the darker semantic text token restored 100 in the rebuilt final audit. Original-size screenshots confirm a readable 2×2 state selector and stacked board at 375px, a single selector row plus two-column board at 844×390 and desktop, visible text labels in addition to color, and no horizontal clipping. Lighthouse covers the initial public state; deterministic tests separately exercise all four synthetic states and exact-match their 2-2-6-7 tool sets to runtime construction.
 
+After adding the one-click six-check WebMCP lifecycle acceptance suite, the initial diagnostic layout briefly shifted when unsupported-browser guidance appeared after hydration. Keeping that guidance in the server-rendered layout and reserving the diagnostic-card height reduced the final CLS to 0 on mobile, 0.007 at 844×390, and 0.008 on desktop. The accepted reports are recorded without selecting only the fastest viewport result:
+
+| `/webmcp` viewport | Performance | Accessibility | Best Practices | SEO | FCP | LCP | TBT | CLS | Console errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 375×812 mobile | 99 | 100 | 100 | 66 | 1.4 s | 2.0 s | 70 ms | 0 | 0 |
+| 844×390 landscape | 76 | 100 | 100 | 66 | 1.7 s | 2.6 s | 120 ms | 0.007 | 0 |
+| Desktop | 100 | 100 | 100 | 66 | 0.5 s | 0.6 s | 0 ms | 0.008 | 0 |
+
+Original-size 375×812, 844×390, and 1440×900 screenshots were inspected. Runtime measurement confirmed `documentElement.scrollWidth === clientWidth` in all three viewports, with no overflowing descendants. The landscape score is retained as an observed cost of laying out the long evidence page in a 390px-high emulated viewport. One mobile trace returned `NO_NAVSTART` and was discarded; the successful fresh-Chrome retry produced the complete mobile report above. Lighthouse covers the suite's no-request initial state only. It does not claim that `registerTool`, `getTools`, `executeTool`, cancellation propagation, `toolchange`, or cleanup ran in a WebMCP-enabled browser; those behaviors are covered by deterministic tests until a compatible Chrome Origin Trial session is inspected manually.
+
 Command shape:
 
 ```powershell

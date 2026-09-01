@@ -16,10 +16,11 @@ import { webMcpImplementationLandscape } from "../lib/webmcp/implementationLands
 import { webMcpCapabilityInventory } from "../lib/webmcp/capabilityInventory.ts";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "../lib/webmcp/judgeBundle.ts";
 import { createWebMcpInspectorAcceptanceReceipt, webMcpInspectorAcceptanceCases } from "../lib/webmcp/inspectorAcceptance.ts";
-import { verifyWebMcpInspectorAcceptanceReceipt } from "../lib/webmcp/receiptVerification.ts";
+import { verifyWebMcpBrowserDiagnosticReceipt, verifyWebMcpInspectorAcceptanceReceipt } from "../lib/webmcp/receiptVerification.ts";
 import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webmcp/toolContractCatalog.ts";
 import { publicTrialFormContractCore } from "../lib/webmcp/toolContractCore.ts";
 import { webMcpCapabilityStateBundle, webMcpCapabilityStates } from "../lib/webmcp/capabilityStates.ts";
+import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName, type WebMcpRuntimeAcceptanceResult } from "../lib/webmcp/runtimeAcceptance.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -100,10 +101,20 @@ const diagnosticReceipt = createWebMcpDiagnosticReceipt({
   generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", browserState: "ready",
   expectedToolNames: publicTools.map((tool) => tool.name), discoveredToolNames: publicTools.map((tool) => tool.name),
   securityHeaders: { permissionsPolicy: true, openerPolicy: true, noSniff: true }, safeExecutionAvailable: true, safeSelfTestState: "passed",
+  runtimeAcceptance: { state: "passed", result: {
+    schemaVersion: "1.0", artifactClass: "live_browser_runtime_acceptance",
+    startedAt: "2026-09-02T00:00:00.000Z", completedAt: "2026-09-02T00:00:01.000Z", state: "passed",
+    probeToolName: webMcpRuntimeProbeName, toolchangeEvents: 2,
+    checks: webMcpRuntimeAcceptanceChecks.map((item) => ({ ...item, status: "pass", detail: "Verified." })),
+    persistence: "volatile-tab-only", containsHealthInformation: false, storesToolPayloads: false,
+    evidenceBoundary: "Current-browser API metadata only. This does not prove Inspector behavior.",
+  } satisfies WebMcpRuntimeAcceptanceResult },
   cloudProbe: { state: "ready", requestedModel: requiredCloudModel, reportedModel: "gpt-oss:120b", latencyMs: 600, checkedAt: "2026-09-02T00:00:00.000Z" },
 });
 check(diagnosticReceipt.containsHealthInformation === false && diagnosticReceipt.persistence === "download-only", "Browser diagnostic receipt must remain no-health-data and download-only.");
 check(diagnosticReceipt.publicToolDiscovery.complete, "Browser diagnostic receipt must verify the complete public tool set.");
+check(diagnosticReceipt.lifecycleAcceptance.state === "passed" && diagnosticReceipt.lifecycleAcceptance.checks.every((item) => item.status === "pass"), "Browser diagnostic receipt must include all passing lifecycle checks.");
+check(verifyWebMcpBrowserDiagnosticReceipt(diagnosticReceipt).ok, "Complete browser diagnostic receipt must pass the offline structural verifier.");
 check(diagnosticReceipt.cloudProbe.containsHealthInformation === false && diagnosticReceipt.cloudProbe.storesModelContent === false, "Browser diagnostic receipt must not store cloud-probe content.");
 
 const inspectorOutcomes = Object.fromEntries(webMcpInspectorAcceptanceCases.map((item) => [item.id, "pass"])) as Record<(typeof webMcpInspectorAcceptanceCases)[number]["id"], "pass">;
@@ -167,6 +178,13 @@ check(declarative.includes('addEventListener("toolcanceled"') && declarative.inc
 const compatibility = readFileSync("lib/webmcp/compatibility.ts", "utf8");
 check(compatibility.includes("executeTool(tool, {})") && compatibility.includes("executeTool(tool, JSON.stringify({}))"), "Safe live execution must try the upstream object input before the current Chrome serialized-input fallback.");
 check(compatibility.includes('tool.name !== "trialbridge_method"') && compatibility.includes("readOnlyHint !== true"), "Execution compatibility retries must remain restricted to the safe read-only method tool.");
+
+const runtimeAcceptanceSource = readFileSync("lib/webmcp/runtimeAcceptance.ts", "utf8");
+check(webMcpRuntimeAcceptanceChecks.length === 6, "Live runtime acceptance must keep six lifecycle checks.");
+for (const marker of ["registerTool", "getTools", "executeTool", 'addEventListener("toolchange"', "registrationController.abort()", "probe_cleanup"]) {
+  check(runtimeAcceptanceSource.includes(marker), `Live runtime acceptance is missing ${marker}.`);
+}
+check(!/fetch\(|rawText|maskedText|ConfirmedProfile|TrialMatch/.test(runtimeAcceptanceSource), "Live runtime acceptance must remain no-network and independent of medical workflow state.");
 
 const proofPage = readFileSync("app/webmcp/page.tsx", "utf8");
 for (const marker of ["Standards alignment", "Declarative API", "Imperative API", "Lifecycle compatibility", "Origin security", "Compatibility profile audited", "Critical user journey", "webMcpCriticalJourney.steps", "user-journey guidance"]) {
@@ -260,6 +278,8 @@ check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_ga
 check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
+check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
+check(webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.networkRequests === false, "Judge runtime suite profile must remain no-PHI and no-network.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
 check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
 
@@ -280,6 +300,7 @@ if (findings.length > 0) {
     receiptLimitEvents: maxWebMcpReceiptEvents,
     criticalJourneySteps: webMcpCriticalJourney.steps.length,
     browserDiagnosticReceipt: "download-only-no-health-data",
+    runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     cloudProbeTimeoutMs,
     cloudProbeRateLimit: "3/10m",
     cloudProbeEvidence: "metadata-only-no-health-data",

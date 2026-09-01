@@ -1,3 +1,5 @@
+import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName, type WebMcpRuntimeAcceptanceResult } from "./runtimeAcceptance.ts";
+
 export type WebMcpDiagnosticState = "unsupported" | "ready" | "error";
 export type WebMcpSelfTestState = "idle" | "running" | "passed" | "failed";
 
@@ -10,6 +12,10 @@ export function createWebMcpDiagnosticReceipt(input: {
   securityHeaders: { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
   safeExecutionAvailable: boolean;
   safeSelfTestState: WebMcpSelfTestState;
+  runtimeAcceptance: {
+    state: "idle" | "running" | "passed" | "failed";
+    result?: WebMcpRuntimeAcceptanceResult;
+  };
   cloudProbe: {
     state: "not-run" | "running" | "ready" | "failed" | "cancelled";
     requestedModel?: string;
@@ -20,8 +26,9 @@ export function createWebMcpDiagnosticReceipt(input: {
 }) {
   const expected = [...new Set(input.expectedToolNames)].sort((left, right) => left.localeCompare(right));
   const discovered = [...new Set(input.discoveredToolNames)].filter((name) => expected.includes(name)).sort((left, right) => left.localeCompare(right));
+  const runtimeOutcomes = new Map(input.runtimeAcceptance.result?.checks.map((check) => [check.id, check.status]));
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     generatedAt: input.generatedAt,
     origin: input.origin,
     persistence: "download-only",
@@ -37,6 +44,14 @@ export function createWebMcpDiagnosticReceipt(input: {
       available: input.safeExecutionAvailable,
       state: input.safeSelfTestState,
       authority: "trialbridge_method only; read-only and no input",
+    },
+    lifecycleAcceptance: {
+      state: input.runtimeAcceptance.state,
+      probeToolName: webMcpRuntimeProbeName,
+      checks: webMcpRuntimeAcceptanceChecks.map((check) => ({ id: check.id, status: runtimeOutcomes.get(check.id) ?? "not_run" })),
+      toolchangeEvents: Math.min(99, Math.max(0, Math.round(input.runtimeAcceptance.result?.toolchangeEvents ?? 0))),
+      containsHealthInformation: false,
+      storesToolPayloads: false,
     },
     cloudProbe: {
       state: input.cloudProbe.state,

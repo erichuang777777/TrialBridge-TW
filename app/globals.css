@@ -598,7 +598,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .diagnostic-ready { border-color: var(--success-line); color: var(--success-ink); background: var(--success-surface); }
 .diagnostic-error { border-color: var(--match-different); color: #812f2a; background: #fbe3e1; }
 .diagnostic-check-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.diagnostic-check { min-width: 0; display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 8px; align-content: start; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.diagnostic-check { min-width: 0; min-height: 100px; display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 8px; align-content: start; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .diagnostic-check > span { width: 10px; height: 10px; margin-top: 6px; border: 2px solid var(--surface); border-radius: 50%; background: var(--match-missing); box-shadow: 0 0 0 1px var(--match-missing); }
 .diagnostic-check > div { min-width: 0; }
 .diagnostic-check strong, .diagnostic-check small { display: block; overflow-wrap: anywhere; }
@@ -609,15 +609,33 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .check-pass b { color: var(--success-ink); }
 .check-pending > span { background: var(--match-uncertain); box-shadow: 0 0 0 1px var(--match-uncertain); }
 .diagnostic-console > .diagnostic-error { margin: 18px 0 0; padding: 11px 13px; border-left: 3px solid var(--match-different); }
-.self-test-panel { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
-.self-test-panel p { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.86rem; }
-.self-test-panel .primary-action { flex: 0 0 auto; }
+.runtime-acceptance-panel { display: grid; gap: 12px; margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 10px; background: var(--paper); }
+.runtime-acceptance-passed { border-left-color: var(--match-aligned); background: var(--success-surface); }
+.runtime-acceptance-failed { border-left-color: var(--match-different); background: var(--warning); }
+.runtime-acceptance-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.runtime-acceptance-heading p { max-width: 760px; margin: 4px 0 0; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.5; }
+.runtime-acceptance-heading > span { flex: 0 0 auto; padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); background: var(--surface); font-size: 0.68rem; font-weight: 900; text-transform: uppercase; }
+.runtime-acceptance-panel > .primary-action { min-height: 44px; justify-self: start; }
+.runtime-acceptance-status { margin: 0; color: var(--ink); font-size: 0.8rem; line-height: 1.5; }
+.runtime-acceptance-results { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.runtime-acceptance-results summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 12px; color: var(--ink); font-size: 0.78rem; font-weight: 900; cursor: pointer; }
+.runtime-acceptance-results summary span { color: var(--primary-strong); font-size: 0.7rem; }
+.runtime-acceptance-results ol { display: grid; gap: 0; margin: 0; padding: 0 12px 10px; list-style: none; }
+.runtime-acceptance-results li { min-width: 0; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.runtime-acceptance-results li > i { width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--match-different); box-shadow: 0 0 0 1px var(--match-different); }
+.runtime-acceptance-results li.runtime-check-pass > i { background: var(--match-aligned); box-shadow: 0 0 0 1px var(--match-aligned); }
+.runtime-acceptance-results li > div { min-width: 0; }
+.runtime-acceptance-results strong, .runtime-acceptance-results small { display: block; overflow-wrap: anywhere; }
+.runtime-acceptance-results strong { font-size: 0.76rem; }
+.runtime-acceptance-results small { margin-top: 2px; color: var(--ink-soft); font-size: 0.7rem; line-height: 1.4; }
+.runtime-acceptance-results b { color: var(--ink); font-size: 0.65rem; text-transform: uppercase; }
+.runtime-acceptance-results .runtime-check-pass b { color: var(--success-ink); }
+.runtime-acceptance-boundary { padding-top: 10px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.72rem; line-height: 1.5; }
+.diagnostic-execution-guidance { min-height: 1.5em; }
 .diagnostic-receipt-panel { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .diagnostic-receipt-panel p { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.5; }
 .diagnostic-receipt-panel button { flex: 0 0 auto; min-height: 44px; padding: 8px 14px; border: 1px solid var(--primary); border-radius: 999px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.78rem; font-weight: 900; cursor: pointer; }
 .diagnostic-receipt-panel button:disabled { border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
-.diagnostic-output { max-height: 320px; margin: 18px 0 0; padding: 16px; overflow: auto; border: 1px solid var(--line); border-left: 4px solid var(--match-aligned); border-radius: 9px; color: var(--ink); background: #f3f8f7; font-size: 0.78rem; white-space: pre-wrap; }
-.diagnostic-output-failed { border-left-color: var(--match-different); background: #fff4f3; }
 .cloud-probe-panel { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 10px; background: var(--paper); }
 .cloud-probe-ready { border-left-color: var(--match-aligned); background: var(--success-surface); }
 .cloud-probe-failed { border-left-color: var(--match-different); background: var(--warning); }
@@ -951,14 +969,14 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .source-stack { justify-items: start; }
   .proof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .preflight-heading, .diagnostic-heading, .self-test-panel, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading { align-items: stretch; flex-direction: column; }
+  .preflight-heading, .diagnostic-heading, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading, .runtime-acceptance-heading { align-items: stretch; flex-direction: column; }
   .preflight-heading > span { align-self: flex-start; }
   .preflight-results { grid-template-columns: 1fr; }
   .diagnostic-status { max-width: none; align-self: flex-start; text-align: left; }
   .diagnostic-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cloud-probe-receipt { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .journey-contract { grid-template-columns: 1fr; }
-  .self-test-panel .primary-action { width: 100%; }
+  .runtime-acceptance-panel > .primary-action { width: 100%; }
   .standards-receipt, .selection-evidence-heading, .selection-receipt, .implementation-boundary, .inspector-kit-heading, .inspector-kit-download, .tool-contract-heading, .tool-contract-download, .capability-state-heading { align-items: stretch; flex-direction: column; }
   .inspector-kit-progress { width: 150px; min-height: 96px; flex-basis: auto; }
   .inspector-setup-note { grid-template-columns: 1fr; }

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
-import { executeSafeMethodToolCompat } from "@/lib/webmcp/compatibility";
 import { createWebMcpDiagnosticReceipt } from "@/lib/webmcp/diagnosticReceipt";
+import { runWebMcpRuntimeAcceptance, webMcpRuntimeAcceptanceChecks, type WebMcpRuntimeAcceptanceResult } from "@/lib/webmcp/runtimeAcceptance";
 
 type DiagnosticState = "checking" | "unsupported" | "ready" | "error";
 type HeaderChecks = { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
 type CloudProbeResult = { status: "ready"; requestedModel: string; reportedModel: string; transport: "localhost_ollama_proxy"; inference: "remote-cloud-only"; latencyMs: number; checkedAt: string; timeoutMs: number; persisted: false; containsHealthInformation: false; storesModelContent: false };
 type CloudProbeView = { state: "not-run" | "running" | "ready" | "failed" | "cancelled"; result?: CloudProbeResult; error?: string };
+type RuntimeAcceptanceView = { state: "idle" | "running" | "passed" | "failed"; result?: WebMcpRuntimeAcceptanceResult; error?: string };
 
 const publicToolNames = ["trialbridge_method", "search_public_cancer_trials"];
 
@@ -18,7 +19,7 @@ export function WebMcpDiagnostics() {
   const [headers, setHeaders] = useState<HeaderChecks>({ permissionsPolicy: false, openerPolicy: false, noSniff: false });
   const [executionAvailable, setExecutionAvailable] = useState(false);
   const [error, setError] = useState("");
-  const [selfTest, setSelfTest] = useState<{ state: "idle" | "running" | "passed" | "failed"; output?: string }>({ state: "idle" });
+  const [runtimeAcceptance, setRuntimeAcceptance] = useState<RuntimeAcceptanceView>({ state: "idle" });
   const [receiptDownloaded, setReceiptDownloaded] = useState(false);
   const [cloudProbe, setCloudProbe] = useState<CloudProbeView>({ state: "not-run" });
   const [cloudProbeElapsed, setCloudProbeElapsed] = useState(0);
@@ -79,19 +80,15 @@ export function WebMcpDiagnostics() {
 
   useEffect(() => () => cloudProbeController.current?.abort(), []);
 
-  async function runSafeSelfTest() {
+  async function runRuntimeAcceptance() {
     const modelContext = document.modelContext;
     if (!modelContext || typeof modelContext.executeTool !== "function") return;
-    setSelfTest({ state: "running" });
+    setRuntimeAcceptance({ state: "running" });
     try {
-      const tools = await modelContext.getTools({ fromOrigins: [location.origin] });
-      const methodTool = tools.find((tool) => tool.name === "trialbridge_method");
-      if (!methodTool) throw new Error("trialbridge_method is not discoverable on this page.");
-      const result = await executeSafeMethodToolCompat(modelContext, methodTool);
-      const output = typeof result === "string" ? result : JSON.stringify(result, null, 2);
-      setSelfTest({ state: "passed", output: output.length > 1_500 ? `${output.slice(0, 1_450)}\n…` : output });
-    } catch (selfTestError) {
-      setSelfTest({ state: "failed", output: selfTestError instanceof Error ? selfTestError.message : "Safe tool execution failed." });
+      const result = await runWebMcpRuntimeAcceptance(modelContext, location.origin);
+      setRuntimeAcceptance({ state: result.state, result });
+    } catch {
+      setRuntimeAcceptance({ state: "failed", error: "The runtime suite stopped unexpectedly after attempting probe cleanup." });
     }
   }
 
@@ -126,6 +123,7 @@ export function WebMcpDiagnostics() {
   function downloadDiagnosticReceipt() {
     if (state === "checking") return;
     const generatedAt = new Date().toISOString();
+    const publicExecution = runtimeAcceptance.result?.checks.find((check) => check.id === "public_execution");
     const receipt = createWebMcpDiagnosticReceipt({
       generatedAt,
       origin: location.origin,
@@ -134,7 +132,11 @@ export function WebMcpDiagnostics() {
       discoveredToolNames: discoveredNames,
       securityHeaders: headers,
       safeExecutionAvailable: executionAvailable,
-      safeSelfTestState: selfTest.state,
+      safeSelfTestState: runtimeAcceptance.state === "running" ? "running" : publicExecution?.status === "pass" ? "passed" : runtimeAcceptance.state === "failed" ? "failed" : "idle",
+      runtimeAcceptance: {
+        state: runtimeAcceptance.state,
+        result: runtimeAcceptance.result,
+      },
       cloudProbe: {
         state: cloudProbe.state,
         requestedModel: cloudProbe.result?.requestedModel,
@@ -160,6 +162,11 @@ export function WebMcpDiagnostics() {
     error: "WebMCP needs attention",
   }[state];
   const canExecute = state === "ready" && executionAvailable;
+  const runtimePassed = runtimeAcceptance.result?.checks.filter((check) => check.status === "pass").length ?? 0;
+  const runtimeStatus = runtimeAcceptance.state === "idle" ? "Not run. No temporary diagnostic tool has been registered."
+    : runtimeAcceptance.state === "running" ? `Running ${webMcpRuntimeAcceptanceChecks.length} current-browser lifecycle checks. The temporary probe will be removed automatically.`
+      : runtimeAcceptance.state === "passed" ? `${runtimePassed} of ${webMcpRuntimeAcceptanceChecks.length} runtime checks passed. The temporary probe was removed.`
+        : `${runtimePassed} of ${webMcpRuntimeAcceptanceChecks.length} runtime checks passed. ${runtimeAcceptance.error ?? "Review the failed checks; probe cleanup was attempted."}`;
   const cloudProbeStatus = cloudProbe.state === "not-run" ? "Not run. No cloud request has been sent."
     : cloudProbe.state === "running" ? "Checking gpt-oss:120b-cloud with fixed synthetic text. This stops after 30 seconds."
       : cloudProbe.state === "ready" && cloudProbe.result ? `Cloud model responded in ${cloudProbe.result.latencyMs} ms. No health information was sent or stored.`
@@ -182,12 +189,19 @@ export function WebMcpDiagnostics() {
 
     {error && <p className="diagnostic-error" role="alert">{error}</p>}
 
-    <div className="self-test-panel">
-      <div><strong>Safe execution check</strong><p>Runs only <code>trialbridge_method</code>. It uses no medical context, registry call, or write action.</p></div>
-      <button className="primary-action" type="button" disabled={!canExecute || selfTest.state === "running"} onClick={() => void runSafeSelfTest()}>{selfTest.state === "running" ? "Running…" : "Run safe live check"}</button>
-    </div>
-    {!canExecute && state !== "checking" && <p className="field-helper">Live execution requires a browser implementation that exposes <code>document.modelContext.executeTool</code>. Static conformance and the human workflow remain available.</p>}
-    {selfTest.output && <pre className={`diagnostic-output diagnostic-output-${selfTest.state}`} aria-label="Safe WebMCP execution output">{selfTest.output}</pre>}
+    <section className={`runtime-acceptance-panel runtime-acceptance-${runtimeAcceptance.state}`} aria-labelledby="runtime-acceptance-title">
+      <div className="runtime-acceptance-heading"><div><strong id="runtime-acceptance-title">One-click WebMCP lifecycle acceptance</strong><p>Exercises <code>registerTool</code>, same-origin <code>getTools</code>, bounded <code>executeTool</code>, execution cancellation, <code>toolchange</code>, and registration cleanup.</p></div><span>{runtimeAcceptance.state === "idle" ? "Optional" : runtimeAcceptance.state}</span></div>
+      <button className="primary-action" type="button" disabled={!canExecute || runtimeAcceptance.state === "running"} onClick={() => void runRuntimeAcceptance()}>{runtimeAcceptance.state === "running" ? "Running 6 checks…" : runtimeAcceptance.state === "idle" ? "Run lifecycle suite" : "Run again"}</button>
+      <p className="runtime-acceptance-status" role="status" aria-atomic="true">{runtimeStatus}</p>
+      {runtimeAcceptance.result && <details className="runtime-acceptance-results">
+        <summary>{runtimePassed}/{webMcpRuntimeAcceptanceChecks.length} checks passed <span>Inspect metadata</span></summary>
+        <ol>{runtimeAcceptance.result.checks.map((check) => <li key={check.id} className={`runtime-check-${check.status}`}><i aria-hidden="true" /><div><strong>{check.label}</strong><small>{check.detail}</small></div><b>{check.status}</b></li>)}</ol>
+      </details>}
+      <small className="runtime-acceptance-boundary">The probe is fixed, read-only, no-network, and no-PHI. It briefly appears as <code>trialbridge_runtime_probe</code> only during this explicit check and is unregistered before the result is shown.</small>
+    </section>
+    <p className="field-helper diagnostic-execution-guidance">{state === "checking" ? "Checking whether this browser exposes live WebMCP execution."
+      : canExecute ? "Live lifecycle execution is available. The temporary probe is created only after you run the suite."
+        : <>Live execution requires a browser implementation that exposes <code>document.modelContext.executeTool</code>. Static conformance and the human workflow remain available.</>}</p>
     <section className={`cloud-probe-panel cloud-probe-${cloudProbe.state}`} aria-labelledby="cloud-probe-title">
       <div className="cloud-probe-heading"><div><strong id="cloud-probe-title">Live cloud model smoke test</strong><p>Explicitly sends one fixed synthetic prompt through the localhost proxy. It never reads the note, profile, results, or chat.</p></div><span>{cloudProbe.state === "not-run" ? "Optional" : cloudProbe.state}</span></div>
       {cloudProbe.state === "running" && <div className="cloud-probe-progress" aria-hidden="true"><div className="progress-track"><span /></div><p>Elapsed {cloudProbeElapsed}s · automatic stop in {Math.max(0, 30 - cloudProbeElapsed)}s</p></div>}
@@ -196,7 +210,7 @@ export function WebMcpDiagnostics() {
       <div className="cloud-probe-actions">{cloudProbe.state === "running" ? <button type="button" onClick={cancelCloudProbe}>Cancel probe</button> : <button className="primary-action" type="button" onClick={() => void runCloudProbe()}>{cloudProbe.state === "not-run" ? "Run cloud smoke test" : "Run again"}</button>}<small>Maximum 3 checks per 10 minutes · no request body · 30-second hard limit</small></div>
     </section>
     <div className="diagnostic-receipt-panel">
-      <div><strong>Download this browser&apos;s diagnostic receipt</strong><p>Contains support state, public tool names, header checks, safe-test status, and cloud-probe metadata only. No prompts, arguments, outputs, or health information.</p></div>
+      <div><strong>Download this browser&apos;s diagnostic receipt</strong><p>Contains support state, public tool names, header checks, lifecycle check outcomes, and cloud-probe metadata only. No prompts, arguments, outputs, or health information.</p></div>
       <button type="button" disabled={state === "checking"} onClick={downloadDiagnosticReceipt}>{receiptDownloaded ? "Downloaded" : "Download JSON"}</button>
     </div>
     <p className="download-status" role="status" aria-atomic="true">{receiptDownloaded ? "Browser diagnostic receipt downloaded to this device." : ""}</p>
