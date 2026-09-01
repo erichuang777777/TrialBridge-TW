@@ -73,6 +73,10 @@ export interface TrialAdapterResult {
   retrievedAt: string;
   sourceVersion?: string;
   warning?: string;
+  dataState: {
+    mode: "live" | "fresh_cache" | "stale_cache";
+    loadedAt: string;
+  };
 }
 
 export interface TrialRegistryAdapter {

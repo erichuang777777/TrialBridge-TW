@@ -2,6 +2,7 @@ import { strFromU8, unzipSync } from "fflate";
 import { z } from "zod";
 import { normalizedTrialSchema } from "../schema.ts";
 import { cleanText, containsCjk, normalizeIdentifier, uniqueText } from "../text.ts";
+import { StaleWhileRevalidateSnapshot, type SnapshotRead } from "../snapshotCache.ts";
 import type {
   NormalizedTrial,
   RecruitmentCategory,
@@ -116,8 +117,9 @@ async function loadOfficialRecords(fetcher: typeof fetch): Promise<TfdaRecord[]>
   );
 }
 
-let cache: { expiresAt: number; records: TfdaRecord[] } | undefined;
-let pendingLoad: Promise<TfdaRecord[]> | undefined;
+const TFDA_FRESH_MS = 24 * 60 * 60 * 1000;
+const TFDA_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+let officialSnapshot: StaleWhileRevalidateSnapshot<TfdaRecord[]> | undefined;
 
 export class TfdaAdapter implements TrialRegistryAdapter {
   readonly registry = "TFDA" as const;
@@ -129,24 +131,21 @@ export class TfdaAdapter implements TrialRegistryAdapter {
     this.recordLoader = recordLoader;
   }
 
-  private async records(): Promise<TfdaRecord[]> {
-    if (this.recordLoader) return this.recordLoader();
-    if (cache && cache.expiresAt > Date.now()) return cache.records;
-    pendingLoad ??= loadOfficialRecords(this.fetcher);
-    try {
-      const records = await pendingLoad;
-      cache = { records, expiresAt: Date.now() + 24 * 60 * 60 * 1000 };
-      return records;
-    } finally {
-      pendingLoad = undefined;
-    }
+  private async records(retrievedAt: string): Promise<SnapshotRead<TfdaRecord[]>> {
+    if (this.recordLoader) return { value: await this.recordLoader(), mode: "live", loadedAt: retrievedAt };
+    officialSnapshot ??= new StaleWhileRevalidateSnapshot({
+      load: () => loadOfficialRecords(this.fetcher),
+      freshForMs: TFDA_FRESH_MS,
+      maxAgeMs: TFDA_MAX_AGE_MS,
+    });
+    return officialSnapshot.read();
   }
 
   async search(input: TrialSearchInput): Promise<TrialAdapterResult> {
     const retrievedAt = new Date().toISOString();
     const query = input.condition.toLocaleLowerCase("zh-Hant").trim();
-    const records = await this.records();
-    const trials = records
+    const snapshot = await this.records(retrievedAt);
+    const trials = snapshot.value
       .filter((record) => recordMatches(record, query))
       .map((record) => normalizeTfdaRecord(record, retrievedAt))
       .filter((trial) => input.includeNotOpen || trial.recruitment.acceptingNewParticipants)
@@ -156,7 +155,8 @@ export class TfdaAdapter implements TrialRegistryAdapter {
       retrievedAt,
       sourceVersion: trials.map((trial) => trial.sources[0].lastUpdated ?? "").sort().at(-1),
       trials,
-      warning: "TFDA records identify approved Taiwan trials; recruitment status and sites must be reconfirmed with the study team.",
+      dataState: { mode: snapshot.mode, loadedAt: snapshot.loadedAt },
+      warning: `TFDA records identify approved Taiwan trials; recruitment status and sites must be reconfirmed with the study team.${snapshot.mode === "stale_cache" ? " A bounded stale snapshot is shown and a background refresh was requested; it is never used beyond seven days." : ""}`,
     };
   }
 }

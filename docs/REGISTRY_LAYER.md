@@ -9,7 +9,7 @@
 
 The server accepts `POST /api/trials/search` so a cancer term is not copied into browser history or ordinary query-string logs. The request is bounded to 2–120 characters and 1–100 results per source. Response caching is disabled.
 
-Both adapters run independently. One registry failure is returned as an explicit source failure and does not erase verified results from the other source.
+Both adapters run independently. One registry failure is returned as an explicit source failure and does not erase verified results from the other source. Every successful source receipt identifies whether its data came from a live load, a fresh process-local snapshot, or a bounded stale snapshot, plus the actual snapshot load time; the visible search and WebMCP output preserve that state.
 
 ## Bilingual query bridge
 
@@ -36,4 +36,4 @@ Within a tier, trials accepting new participants precede closed trials, then mor
 
 ## Known limitation
 
-The official TFDA resource is a large zipped JSON export. The local server loads and caches it for 24 hours with archive and decompressed-size limits. A production deployment should run a scheduled, validated snapshot job rather than decompressing the full source inside a request.
+The official TFDA resource is a large zipped JSON export. A cold server process downloads, validates, and decompresses it with archive and decompressed-size limits. The resulting process-local snapshot is fresh for 24 hours. From 24 hours through seven days, a request immediately receives the last successful snapshot with an explicit `stale_cache` receipt while a single shared refresh runs; concurrent requests do not duplicate the download. A refresh failure never erases the last bounded snapshot, but data older than seven days is rejected rather than silently served. A production deployment still needs a scheduled, validated snapshot job in shared durable storage instead of relying on request-time cold loading or per-process memory.

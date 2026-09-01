@@ -63,6 +63,8 @@ After adding the fixed `/?demo=synthetic#private-chat` judge entry, Lighthouse l
 
 These final three audits connected Lighthouse to an explicitly managed Chrome 152 remote-debugging port and exited zero, avoiding the Windows temporary-profile cleanup error described below. One trace-only `NO_NAVSTART` attempt produced no valid report and was discarded before the successful landscape rerun.
 
+After adding explicit `live`, `fresh cache`, and bounded `stale cache` registry receipts with the true snapshot load time, a production audit of `/trials?condition=胃癌` recorded Performance 98, Accessibility 100, Best Practices 100, FCP 0.9 s, LCP 2.2 s, TBT 120 ms, CLS 0, zero console errors, and zero non-composited-animation findings. The audit connected to the same explicitly managed Chrome 152 remote-debugging boundary and exited zero.
+
 Command shape:
 
 ```powershell

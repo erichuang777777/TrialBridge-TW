@@ -9,7 +9,7 @@ import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput
 type SearchResponse = {
   trials?: NormalizedTrial[];
   queryPlan?: RegistryQueryPlan;
-  sources?: Array<{ registry: string; count: number; retrievedAt: string; warning?: string }>;
+  sources?: Array<{ registry: string; count: number; retrievedAt: string; warning?: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
   failures?: Array<{ registry: string; message: string }>;
   disclaimer?: string;
   error?: string;
@@ -31,6 +31,14 @@ const regions: Array<{ value: "all" | RegionTier; label: string }> = [
 
 function regionLabel(region: RegionTier) {
   return { taiwan: "Taiwan", asia: "Asia", world: "Worldwide", unknown: "Location unknown" }[region];
+}
+
+function sourceStateLabel(source: NonNullable<SearchResponse["sources"]>[number]) {
+  if (!source.dataState) return `queried ${new Date(source.retrievedAt).toLocaleDateString("en-CA")}`;
+  const date = new Date(source.dataState.loadedAt).toLocaleDateString("en-CA");
+  if (source.dataState.mode === "fresh_cache") return `fresh cache · snapshot ${date}`;
+  if (source.dataState.mode === "stale_cache") return `stale cache · snapshot ${date} · refresh requested`;
+  return `live source · loaded ${date}`;
 }
 
 export function TrialDatabase() {
@@ -173,7 +181,7 @@ export function TrialDatabase() {
             <dl><div><dt>TFDA</dt><dd lang="zh-Hant">{result.queryPlan.registryConditions.TFDA}</dd></div><div><dt>ClinicalTrials.gov</dt><dd lang="en">{result.queryPlan.registryConditions["ClinicalTrials.gov"]}</dd></div></dl>
             <p>{result.queryPlan.limitation} <small>Lexicon {result.queryPlan.dictionaryVersion}{result.queryPlan.canonicalGroup ? ` · ${result.queryPlan.canonicalGroup}` : ""}</small></p>
           </section>}
-          {(result.sources?.length ?? 0) > 0 && <div className="registry-receipts">{result.sources!.map((source) => <span key={source.registry}><strong>{source.registry}</strong> {source.count} · retrieved {new Date(source.retrievedAt).toLocaleDateString("en-CA")}</span>)}</div>}
+          {(result.sources?.length ?? 0) > 0 && <div className="registry-receipts">{result.sources!.map((source) => <span className={`receipt-${source.dataState?.mode ?? "live"}`} key={source.registry}><strong>{source.registry}</strong> {source.count}<small>{sourceStateLabel(source)}</small></span>)}</div>}
           {(result.failures?.length ?? 0) > 0 && <div className="notice">Some sources were unavailable: {result.failures!.map((failure) => `${failure.registry} — ${failure.message}`).join("; ")}</div>}
 
           {visibleTrials.length === 0 ? <div className="empty-results"><h3>No records in this view</h3><p>Try another cancer term, include closed records, or switch to All regions.</p></div> : <div className="trial-grid">{visibleTrials.map((trial) => <article className="trial-card" key={trial.canonicalId}>

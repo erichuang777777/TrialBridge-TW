@@ -19,12 +19,12 @@ test("bounded public search preserves structured bilingual provenance before dro
     query: "胃癌",
     queryPlan: createRegistryQueryPlan("胃癌"),
     trials,
-    sources: [{ registry: "TFDA", count: trials.length, retrievedAt: "2026-09-02T00:00:00.000Z" }],
+    sources: [{ registry: "TFDA", count: trials.length, retrievedAt: "2026-09-02T00:00:00.000Z", dataState: { mode: "fresh_cache", loadedAt: "2026-09-01T12:00:00.000Z" } }],
     failures: [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }],
     limitation: "Synthetic output-boundary test.",
   }) as {
     queryPlan: { registryConditions: Record<string, string> };
-    sourceStatus: { completed: Array<{ registry: string; count: number }>; failed: Array<{ registry: string; message: string }> };
+    sourceStatus: { completed: Array<{ registry: string; count: number; dataState?: { mode: string; loadedAt: string } }>; failed: Array<{ registry: string; message: string }> };
     records: unknown[];
     omittedRecords: number;
     content?: string;
@@ -33,6 +33,7 @@ test("bounded public search preserves structured bilingual provenance before dro
   assert.equal(output.content, undefined);
   assert.deepEqual(output.queryPlan.registryConditions, { TFDA: "胃癌", "ClinicalTrials.gov": "gastric cancer" });
   assert.deepEqual(output.sourceStatus.completed.map(({ registry, count }) => ({ registry, count })), [{ registry: "TFDA", count: trials.length }]);
+  assert.deepEqual(output.sourceStatus.completed[0].dataState, { mode: "fresh_cache", loadedAt: "2026-09-01T12:00:00.000Z" });
   assert.deepEqual(output.sourceStatus.failed, [{ registry: "ClinicalTrials.gov", message: "Registry temporarily unavailable" }]);
   assert.equal(output.records.length < trials.length, true);
   assert.equal(output.records.length + output.omittedRecords, trials.length);

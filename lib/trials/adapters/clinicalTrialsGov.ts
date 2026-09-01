@@ -179,6 +179,7 @@ export class ClinicalTrialsGovAdapter implements TrialRegistryAdapter {
       registry: this.registry,
       retrievedAt,
       sourceVersion,
+      dataState: { mode: "live", loadedAt: retrievedAt },
       trials: payload.studies.map((study) => normalizeClinicalTrialsGovStudy(study, retrievedAt)),
     };
   }

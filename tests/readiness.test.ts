@@ -81,6 +81,9 @@ test("the public database exposes a deterministic bilingual registry query bridg
   assert.match(database, /跨語言試驗搜尋橋/);
   assert.match(database, /queryPlan\.registryConditions\.TFDA/);
   assert.match(database, /queryPlan\.registryConditions\["ClinicalTrials\.gov"\]/);
+  assert.match(database, /fresh cache · snapshot/);
+  assert.match(database, /stale cache · snapshot/);
+  assert.match(database, /refresh requested/);
   assert.match(database, /role="status" aria-atomic="true"/);
   assert.doesNotMatch(database, /database-results" aria-live/);
   assert.match(route, /createRegistryQueryPlan/);

@@ -7,7 +7,7 @@
 - Browser masking fixtures plus server-side identifier rejection.
 - Exact `gpt-oss:120b-cloud` allowlist, loopback-only proxy, and prohibition on local GPU or CPU inference.
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
-- Live TFDA zipped JSON parsing and ClinicalTrials.gov API v2 retrieval.
+- Live TFDA zipped JSON parsing with bounded 24-hour fresh/seven-day stale-while-revalidate snapshot state, plus ClinicalTrials.gov API v2 retrieval. Visible and WebMCP source receipts distinguish live, fresh-cache, and stale-cache reads with the true snapshot time.
 - A visible, versioned bilingual query plan covering all 19 declared cancer groups, with exact-term mapping and non-inferential pass-through for unrecognized detail.
 - Taiwan-to-Asia-to-world ranking, explicit-ID deduplication, and source traces.
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
@@ -27,7 +27,7 @@
 - The 19-group bilingual query lexicon is an engineering navigation aid and has not been adjudicated by an oncology terminologist; its visible mapping is not a clinical translation claim.
 - Deterministic masking cannot guarantee removal of every name or contextual identifier.
 - Provider retention, data-processing location, terms, outage behavior, and production latency for cloud extraction are not yet accepted.
-- TFDA's full archive is currently decompressed on first request; production needs a scheduled validated snapshot.
+- A cold process still downloads and decompresses TFDA's full archive inside its first request. The bounded process-local snapshot improves availability but production still needs scheduled validation and shared durable snapshot storage.
 - Eligibility criteria beyond structured condition, recruitment, age, sex, and region are not yet atomically assessed.
 - No oncologist/research-nurse adjudicated gold set, false-eligible measurement, calibration, or subgroup fairness evaluation exists.
 - Taiwan privacy-law review, clinical governance, threat-model review, incident response, data-processing records, abuse controls, and user research are incomplete.

@@ -17,6 +17,10 @@ export interface FederatedTrialSearchResult {
     retrievedAt: string;
     sourceVersion?: string;
     warning?: string;
+    dataState: {
+      mode: "live" | "fresh_cache" | "stale_cache";
+      loadedAt: string;
+    };
   }>;
   failures: RegistrySearchFailure[];
 }
@@ -52,6 +56,7 @@ export async function searchTrialRegistries(
       retrievedAt: result.value.retrievedAt,
       sourceVersion: result.value.sourceVersion,
       warning: result.value.warning,
+      dataState: result.value.dataState,
     });
   });
 

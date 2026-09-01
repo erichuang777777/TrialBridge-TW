@@ -13,7 +13,7 @@ export function createBoundedPublicSearchOutput({
   query: string;
   queryPlan?: RegistryQueryPlan;
   trials: NormalizedTrial[];
-  sources?: Array<{ registry: string; count: number; retrievedAt: string }>;
+  sources?: Array<{ registry: string; count: number; retrievedAt: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
   failures?: Array<{ registry: string; message: string }>;
   limitation?: string;
 }): unknown {
@@ -37,7 +37,7 @@ export function createBoundedPublicSearchOutput({
     queryPlan: compactPlan,
     recordCount: trials.length,
     sourceStatus: {
-      completed: sources.map((source) => ({ registry: source.registry, count: source.count, retrievedAt: source.retrievedAt })),
+      completed: sources.map((source) => ({ registry: source.registry, count: source.count, retrievedAt: source.retrievedAt, ...(source.dataState ? { dataState: source.dataState } : {}) })),
       failed: failures,
     },
     records,
