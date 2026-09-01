@@ -25,6 +25,7 @@
 | Stale or conflicting registries | Preserve source records, timestamps, and conflicts; never silently overwrite disagreement |
 | Bilingual query bridge invents clinical detail | Use exact aliases from a versioned 19-group navigation lexicon; expose both outgoing registry terms and the mapping strategy; pass unrecognized detail through unchanged; never infer subtype, stage, biomarker, histology, or eligibility |
 | Search deep link leaks detailed medical context | Persist only a curated broad cancer condition and open-record flag; execute detailed pass-through searches without writing them to the URL; warn that public search links may remain in browser history or infrastructure URL logs |
+| Competition preflight becomes an unbounded cloud or registry proxy | Accept no request body; use only repository-owned fixed synthetic/cloud and broad public-registry inputs; share the cloud-probe rate limit; propagate cancellation and source deadlines; return metadata and bounded failure codes without trial records, provider content, or health information |
 
 ## Deployment gates
 

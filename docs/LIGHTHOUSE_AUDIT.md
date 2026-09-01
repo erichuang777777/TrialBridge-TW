@@ -113,6 +113,8 @@ Two fragment-targeted visual runs are also retained rather than hidden: explicit
 
 After adding the volatile cloud-extraction receipt and explicit failure recovery metadata, the production home-page regression recorded Performance 97, Accessibility 100, Best Practices 100, FCP 1.0 s, LCP 2.5 s, TBT 110 ms, CLS 0, and zero console errors. The fixed synthetic extraction was also exercised through the live localhost proxy: the route returned `gpt-oss:120b-cloud`, provider-reported `gpt-oss:120b`, 6,577 ms server latency, 11 draft facts, `trialBridgePersisted: false`, and `providerRetention: not_assessed`. Original-size development-stage screenshots at 1440×1000 and 375×812 showed the receipt as four compact columns and one mobile column respectively, with no horizontal overflow; those synthetic shortcuts are development-only and do not replace the protected competition flow.
 
+After adding the body-free competition preflight, Lighthouse targeted `/webmcp#competition-preflight-title` on a separate production server and recorded Performance 97, Accessibility 100, Best Practices 100, FCP 1.3 s, LCP 2.4 s, TBT 120 ms, CLS 0, and zero console errors. The audit covered the no-request initial state; it did not spend a provider allowance. The live action was exercised separately and returned overall ready in 5,528 ms with source-level metadata only. Original-size ready-state screenshots at 1440×1000 and 375×812 showed three aligned dependency cards becoming one mobile column, one contextual status announcement, full-width mobile retry, and no horizontal overflow. A production request containing `{}` was independently rejected as `PREFLIGHT_INPUT_FORBIDDEN` before consuming the shared cloud allowance.
+
 Command shape:
 
 ```powershell

@@ -335,6 +335,31 @@ test("judge cloud smoke test is explicit, body-free, bounded, cancellable, and m
   assert.match(css, /cloud-probe-receipt \{ grid-template-columns: 1fr/);
 });
 
+test("competition preflight is body-free, metadata-only, cancellable, and visibly partial", async () => {
+  const [page, component, route, service, css] = await Promise.all([
+    readFile(path.join(process.cwd(), "app/webmcp/page.tsx"), "utf8"),
+    readFile(path.join(process.cwd(), "app/webmcp/_components/CompetitionPreflight.tsx"), "utf8"),
+    readFile(path.join(process.cwd(), "app/api/demo/preflight/route.ts"), "utf8"),
+    readFile(path.join(process.cwd(), "lib/demo/preflight.ts"), "utf8"),
+    readFile(path.join(process.cwd(), "app/globals.css"), "utf8"),
+  ]);
+  assert.match(page, /<CompetitionPreflight \/>/);
+  assert.match(component, /Run demo preflight/);
+  assert.match(component, /partial/);
+  assert.match(component, /Cancel preflight/);
+  assert.match(component, /returnsTrialRecords === false/);
+  assert.match(route, /hasDeclaredRequestBody/);
+  assert.match(route, /bucket: "cloud-probe"/);
+  assert.match(route, /request\.signal/);
+  assert.match(service, /Promise\.allSettled/);
+  assert.match(service, /returnsTrialRecords: false/);
+  assert.match(service, /containsHealthInformation: false/);
+  assert.match(service, /storesModelContent: false/);
+  assert.doesNotMatch(service, /trials\.map|trial\.title|trial\.summary/);
+  assert.match(css, /\.preflight-results/);
+  assert.match(css, /grid-template-columns:\s*repeat\(3/);
+});
+
 test("competition evidence separates source-reported WebMCP implementations from local verification", async () => {
   const root = process.cwd();
   const page = await readFile(path.join(root, "app", "webmcp", "page.tsx"), "utf8");

@@ -558,6 +558,39 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .judge-runbook li p { margin: 7px 0 16px; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.55; }
 .judge-runbook li a { min-height: 44px; display: inline-flex; align-items: center; margin-top: auto; color: var(--primary-strong); font-size: 0.8rem; font-weight: 900; }
 .judge-runbook-boundary { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.8rem; }
+.competition-preflight { margin-bottom: 28px; padding: 24px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: var(--radius); background: var(--surface); }
+.preflight-ready { border-left-color: var(--match-aligned); }
+.preflight-partial { border-left-color: var(--match-uncertain); }
+.preflight-unavailable { border-left-color: var(--match-different); }
+.preflight-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.preflight-heading h2 { max-width: 720px; font-size: clamp(1.4rem, 2.6vw, 2rem); }
+.preflight-heading p:last-child { max-width: 78ch; margin: 8px 0 0; color: var(--ink-soft); font-size: 0.84rem; line-height: 1.6; }
+.preflight-heading > span { flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
+.preflight-progress { margin-top: 18px; }
+.preflight-progress .progress-track { max-width: 520px; }
+.preflight-progress p { margin: 6px 0 0; color: var(--ink-soft); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.preflight-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+.preflight-result { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.preflight-result > div:first-child { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.preflight-result > div:first-child > span { width: 9px; height: 9px; border-radius: 50%; background: var(--match-missing); }
+.preflight-result > div:first-child strong { min-width: 0; font-size: 0.84rem; overflow-wrap: anywhere; }
+.preflight-result > div:first-child b { color: var(--ink-soft); font-size: 0.65rem; text-transform: uppercase; }
+.preflight-result.result-ready > div:first-child > span { background: var(--match-aligned); }
+.preflight-result.result-ready > div:first-child b { color: var(--success-ink); }
+.preflight-result.result-unavailable > div:first-child > span { background: var(--match-different); }
+.preflight-result.result-unavailable > div:first-child b { color: var(--match-different); }
+.preflight-result dl { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0 0; }
+.preflight-result dt { color: var(--ink-soft); font-size: 0.62rem; font-weight: 900; text-transform: uppercase; }
+.preflight-result dd { margin: 2px 0 0; font-size: 0.74rem; font-weight: 900; overflow-wrap: anywhere; }
+.preflight-result > p { margin: 12px 0 0; color: var(--match-different); font-family: ui-monospace, "Cascadia Mono", monospace; font-size: 0.7rem; font-weight: 800; overflow-wrap: anywhere; }
+.preflight-receipt-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--paper); font-size: 0.72rem; }
+.preflight-receipt-line span { color: var(--ink-soft); text-align: right; }
+.preflight-status { min-height: 1.5em; margin: 13px 0 0; color: var(--primary-strong); font-size: 0.82rem; font-weight: 900; }
+.preflight-actions { display: flex; align-items: center; gap: 12px 18px; margin-top: 10px; }
+.preflight-actions button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--primary-strong); background: var(--surface); font: inherit; font-size: 0.78rem; font-weight: 900; cursor: pointer; }
+.preflight-actions .primary-action { border-color: var(--primary); color: var(--surface); background: var(--primary); }
+.preflight-actions small { color: var(--ink-soft); font-size: 0.7rem; }
+.preflight-boundary { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.76rem; line-height: 1.55; }
 .diagnostic-console { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .diagnostic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .diagnostic-heading h2 { font-size: clamp(1.55rem, 3vw, 2.25rem); }
@@ -775,7 +808,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .source-stack { justify-items: start; }
   .proof-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .diagnostic-heading, .self-test-panel, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading { align-items: stretch; flex-direction: column; }
+  .preflight-heading, .diagnostic-heading, .self-test-panel, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading { align-items: stretch; flex-direction: column; }
+  .preflight-heading > span { align-self: flex-start; }
+  .preflight-results { grid-template-columns: 1fr; }
   .diagnostic-status { max-width: none; align-self: flex-start; text-align: left; }
   .diagnostic-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cloud-probe-receipt { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -850,6 +885,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .webmcp-session-receipt li { grid-template-columns: 1fr; gap: 4px; }
   .proof-summary { grid-template-columns: 1fr; }
   .judge-runbook { padding: 20px; }
+  .competition-preflight { padding: 20px; }
   .judge-runbook-heading { flex-direction: column; }
   .judge-runbook ol { grid-template-columns: 1fr; }
   .proof-summary span { min-height: 78px; }
@@ -858,6 +894,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .cloud-probe-receipt { grid-template-columns: 1fr; }
   .cloud-probe-actions { align-items: stretch; flex-direction: column; }
   .cloud-probe-actions button { width: 100%; }
+  .preflight-receipt-line, .preflight-actions { align-items: stretch; flex-direction: column; }
+  .preflight-receipt-line span { text-align: left; }
+  .preflight-actions button { width: 100%; }
   .standards-grid, .selection-intent-grid, .selection-boundaries, .journey-contract, .critical-journey-steps { grid-template-columns: 1fr; }
   .selection-score { width: 100%; }
 }

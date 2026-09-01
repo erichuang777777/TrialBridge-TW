@@ -6,6 +6,7 @@ import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
 import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandscape";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBundle";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
+import { CompetitionPreflight } from "./_components/CompetitionPreflight";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 export const metadata: Metadata = createPageMetadata({
@@ -70,6 +71,8 @@ export default function WebMcpProofPage() {
       </ol>
       <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. Step 4 remains a manual Chrome Model Context Tool Inspector gate and is never inferred from static tests.</p>
     </section>
+
+    <CompetitionPreflight />
 
     <WebMcpDiagnostics />
 
