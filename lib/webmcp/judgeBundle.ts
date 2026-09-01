@@ -2,6 +2,7 @@ import selectionBaseline from "../../evals/webmcp-selection-baseline.json" with 
 import { webMcpCapabilityInventory } from "./capabilityInventory.ts";
 import { webMcpCriticalJourney } from "./criticalJourney.ts";
 import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
+import { webMcpInspectorAcceptanceCases } from "./inspectorAcceptance.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -75,8 +76,8 @@ export const webMcpConformanceMatrix = [
     evidenceClass: "manual_gate",
     evidenceLabel: "Manual Inspector gate",
     requirement: "Browser natural-language selection",
-    implementation: "Chrome Model Context Tool Inspector must still verify discovery, selection, permission transitions, cancellation, and cleanup.",
-    evidence: ["https://developer.chrome.com/docs/ai/webmcp", "docs/WEBMCP_VERIFICATION.md"],
+    implementation: "The in-product six-check kit standardizes discovery, selection, permission, cancellation, and cleanup evidence, but Chrome Model Context Tool Inspector must still verify every outcome.",
+    evidence: ["app/webmcp/_components/InspectorAcceptanceKit.tsx", "https://developer.chrome.com/docs/ai/webmcp", "docs/WEBMCP_VERIFICATION.md"],
   },
 ] as const satisfies ReadonlyArray<{
   id: string;
@@ -115,6 +116,7 @@ export const webMcpJudgeBundle = {
     writeOrEnrollmentTools: 0,
     criticalJourneySteps: webMcpCriticalJourney.steps.length,
     conformanceItems: webMcpConformanceMatrix.length,
+    manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,

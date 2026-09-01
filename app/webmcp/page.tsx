@@ -7,6 +7,7 @@ import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandsc
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBundle";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import { CompetitionPreflight } from "./_components/CompetitionPreflight";
+import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 export const metadata: Metadata = createPageMetadata({
@@ -75,6 +76,8 @@ export default function WebMcpProofPage() {
     <CompetitionPreflight />
 
     <WebMcpDiagnostics />
+
+    <InspectorAcceptanceKit />
 
     <section className="proof-section journey-evidence" aria-labelledby="critical-journey-title">
       <div className="proof-section-heading"><p className="eyebrow">Critical user journey</p><h2 id="critical-journey-title">The conversation changes tools and the visible page together.</h2><p>Mapped to Chrome&apos;s current WebMCP user-journey framework: define the user goal, establish the initial state, role-play each tool and UI reaction, then make every invalid state recoverable.</p></div>

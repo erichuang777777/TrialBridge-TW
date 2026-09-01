@@ -17,6 +17,7 @@
 | Prompt injection in registry text | Treat registry content as untrusted data; never execute embedded instructions; separate system policy from evidence |
 | WebMCP over-disclosure | Tool schemas accept confirmed profile references, minimized facts, or registry-derived pending questions only; sensitive tools require active consent and visible user action; lifecycle status contains only tool name and state |
 | WebMCP receipt becomes a shadow health log | Keep at most 20 events in current-tab memory; record only UTC time, tool names, verified capability changes, and lifecycle state; exclude prompts, arguments, outputs, detailed errors, profile facts, and trial results; download only after visible user action; never upload |
+| Manual Inspector checklist is mistaken for automatic browser proof | Label the artifact self-attested and not cryptographically verified; store case IDs/outcomes only; keep runtime and Inspector evidence classes separate; require every case to pass in the offline verifier; retain the explicit non-proof boundary |
 | Agent silently chooses preferred trials | Shortlist membership can change only through visible result-card controls; the comparison tool accepts language only, reads at most three current IDs from page state, and is unregistered below two selections |
 | Agent sends or enrolls | No send, submit, enroll, book, consent, or treatment-change tools |
 | False certainty | Unknown is first-class; source and update date shown; final eligibility reserved for study team |

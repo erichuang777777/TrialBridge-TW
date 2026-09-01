@@ -15,6 +15,8 @@ import { cloudProbeTimeoutMs } from "../lib/llm/cloudProbe.ts";
 import { webMcpImplementationLandscape } from "../lib/webmcp/implementationLandscape.ts";
 import { webMcpCapabilityInventory } from "../lib/webmcp/capabilityInventory.ts";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "../lib/webmcp/judgeBundle.ts";
+import { createWebMcpInspectorAcceptanceReceipt, webMcpInspectorAcceptanceCases } from "../lib/webmcp/inspectorAcceptance.ts";
+import { verifyWebMcpInspectorAcceptanceReceipt } from "../lib/webmcp/receiptVerification.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -98,6 +100,13 @@ check(diagnosticReceipt.containsHealthInformation === false && diagnosticReceipt
 check(diagnosticReceipt.publicToolDiscovery.complete, "Browser diagnostic receipt must verify the complete public tool set.");
 check(diagnosticReceipt.cloudProbe.containsHealthInformation === false && diagnosticReceipt.cloudProbe.storesModelContent === false, "Browser diagnostic receipt must not store cloud-probe content.");
 
+const inspectorOutcomes = Object.fromEntries(webMcpInspectorAcceptanceCases.map((item) => [item.id, "pass"])) as Record<(typeof webMcpInspectorAcceptanceCases)[number]["id"], "pass">;
+const inspectorReceipt = createWebMcpInspectorAcceptanceReceipt({ generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", chromeMajor: 152, outcomes: inspectorOutcomes });
+check(webMcpInspectorAcceptanceCases.length === 6, "Manual Inspector kit must keep its six acceptance cases.");
+check(inspectorReceipt.selfAttested === true && inspectorReceipt.cryptographicallyVerified === false, "Manual Inspector receipt must not claim automatic or cryptographic verification.");
+check(inspectorReceipt.containsHealthInformation === false && inspectorReceipt.storesPromptContent === false, "Manual Inspector receipt must exclude health information and prompts.");
+check(verifyWebMcpInspectorAcceptanceReceipt(inspectorReceipt).ok, "Complete manual Inspector receipt must pass the offline structural verifier.");
+
 const knownToolNames = new Set(["search_public_trial_form", ...names]);
 check(webMcpJourneyCases.length >= 10, "At least ten WebMCP journey eval cases are required.");
 check(webMcpJourneyCases.some((item) => item.intent === "ambiguous"), "Journey evals must include ambiguous prompts.");
@@ -163,6 +172,11 @@ for (const marker of ["createWebMcpDiagnosticReceipt", "Download this browser&ap
   check(diagnosticSurface.includes(marker), `Browser diagnostic surface is missing ${marker}.`);
 }
 
+const inspectorSurface = readFileSync("app/webmcp/_components/InspectorAcceptanceKit.tsx", "utf8");
+for (const marker of ["Manual Chrome gate", "Copy prompt", "Needs attention", "Download manual JSON", "self-attested—not automatic proof"]) {
+  check(inspectorSurface.includes(marker), `Inspector acceptance surface is missing ${marker}.`);
+}
+
 const cloudProbeService = readFileSync("lib/llm/cloudProbe.ts", "utf8");
 const cloudProbeRoute = readFileSync("app/api/cloud/probe/route.ts", "utf8");
 const requestBodyGuard = readFileSync("lib/security/requestBody.ts", "utf8");
@@ -226,6 +240,7 @@ check(webMcpCapabilityInventory.filter((tool) => tool.kind === "Imperative").map
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "repository_verified").length === 7, "Judge matrix must expose seven repository-verified conformance items.");
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_model_eval").length === 1, "Judge matrix must distinguish the recorded model evaluation.");
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length === 1, "Judge matrix must retain the manual Inspector gate.");
+check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
 check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
 
@@ -256,6 +271,8 @@ if (findings.length > 0) {
     implementationLandscapeAudit: webMcpImplementationLandscape.auditedAt,
     judgeConformanceItems: webMcpConformanceMatrix.length,
     judgeBundle: "static-json-no-health-data",
+    manualInspectorCases: webMcpInspectorAcceptanceCases.length,
+    manualInspectorReceipt: "self-attested-no-health-data",
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

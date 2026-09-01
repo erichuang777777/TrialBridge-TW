@@ -12,6 +12,7 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.summary.declarativeTools, 1);
   assert.equal(webMcpJudgeBundle.summary.imperativeTools, 7);
   assert.equal(webMcpJudgeBundle.summary.writeOrEnrollmentTools, 0);
+  assert.equal(webMcpJudgeBundle.summary.manualInspectorCases, 6);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.passed, 55);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.failed, 0);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.containsPatientData, false);

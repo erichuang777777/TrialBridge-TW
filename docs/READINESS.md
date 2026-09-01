@@ -19,6 +19,7 @@
 - Deterministic WebMCP conformance verification and GitHub CI gates for tests, types, clean-room boundaries, dependency audit, and production build.
 - A built-in `/webmcp` competition-evidence page that reports current-browser support, public tool discovery, same-origin security headers, safe method execution, and the remaining Inspector boundary.
 - A five-stage critical-user-journey contract that maps goal, initial state, available tools, visible page reactions, and recovery, plus a filtered download-only browser diagnostic receipt with no health information or tool payloads.
+- A six-check manual Chrome Inspector acceptance kit covering discovery/schema parsing, safe invocation, bilingual selection, forbidden abstention, permission transitions, and cancellation/cleanup. Its volatile outcomes and download-only receipt exclude prompts and payloads, remain explicitly self-attested, and have a deterministic offline verifier.
 - An explicit no-input cloud availability probe for judges: fixed synthetic prompt, exact cloud-model allowlist, 30-second hard limit, cancel/retry states, three checks per 10 minutes, and metadata-only output/receipt with no model content.
 - A body-free, one-click competition preflight that checks the fixed cloud probe and both public registries in parallel, preserves source-level ready/partial/unavailable states, shares the cloud-probe rate limit, and returns no trial records, model content, or health information.
 - Live competition-preflight evidence on 2026-09-02: overall ready in 5,528 ms; `gpt-oss:120b-cloud` provider response in 647 ms, TFDA live response in 5,524 ms, and ClinicalTrials.gov live response in 394 ms. TFDA returned zero matching records while remaining operational, which is shown as a source response rather than a fabricated match.
@@ -42,7 +43,7 @@
 - Eligibility criteria beyond structured condition, recruitment, age, sex, and region are not yet atomically assessed.
 - No oncologist/research-nurse adjudicated gold set, false-eligible measurement, calibration, or subgroup fairness evaluation exists.
 - Taiwan privacy-law review, clinical governance, threat-model review, incident response, data-processing records, abuse controls, and user research are incomplete.
-- Chrome Model Context Tool Inspector was not run because the installed browser-control runtime is incomplete. The separate 55-sample Ollama tool-calling baseline does not verify browser registration, execution, or permission transitions.
+- Chrome Model Context Tool Inspector was not run because the installed browser-control runtime is incomplete. The six-check kit and receipt verifier standardize the remaining acceptance work but do not prove it occurred; the separate 55-sample Ollama tool-calling baseline likewise does not verify browser registration, execution, or permission transitions.
 - Manual large-text, keyboard-only, and screen-reader acceptance has not been run in a real browser. Automated production Lighthouse now covers 375×667 and 844×390 landscape with Accessibility 100, zero console errors, and no non-composited animation finding; this is not equivalent to assistive-technology testing.
 
 TrialBridge TW is therefore an engineering MVP for controlled local development, not a public clinical service.

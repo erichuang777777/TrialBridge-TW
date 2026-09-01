@@ -37,7 +37,17 @@ Set `NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN` to emit the Chrome origin-trial meta
 
 Before public release, use Chrome Model Context Tool Inspector to verify discovery, schemas, manual invocation, natural-language selection, untrusted-content annotations, consent-driven tool addition/removal, cancellation, output limits, and absence of sensitive tools after reset.
 
-This repository has unit, type, build, HTTP, cancellation-chain, and `npm run verify:webmcp` validation, plus eleven deterministic journey contracts. A separate no-PHI baseline sent those journeys to `gpt-oss:120b-cloud` five times and recorded 55/55 expected tool calls or safe abstentions in one uninterrupted run. Shortlist comparison passed 5/5 and all ten forbidden requests safely abstained. See [`WEBMCP_SELECTION_EVAL.md`](WEBMCP_SELECTION_EVAL.md). This finite, single-turn Ollama tool-calling result does not execute WebMCP or prove Chrome behavior. Inspector validation is currently not claimed because the installed browser-control package is incomplete and cannot initialize its Chrome control session.
+The `/webmcp` page standardizes this gate as six ordered checks: public discovery/schema parsing, safe method invocation, Traditional Chinese search selection, forbidden enrollment abstention, permission-driven capability changes, and cancellation/cleanup. Each item includes fixed setup/action/expected copy, and the two language-model cases use repository-owned no-PHI prompts. A reviewer may record `Pass` or `Needs attention` in volatile tab state and download a metadata-only receipt. That artifact is explicitly `manual_inspector_self_attestation`, `cryptographicallyVerified: false`, and contains only case IDs, outcomes, counts, origin, and Chrome major version—not prompts or tool payloads.
+
+After downloading the runtime diagnostic and optional manual receipt, validate their structure against the current repository contract:
+
+```bash
+npm run verify:webmcp:receipts -- path/to/browser-diagnostic.json path/to/manual-inspector.json
+```
+
+The CLI requires the runtime receipt to show both public tools, all three security-header checks, and a passed safe execution. It requires all six manual cases to pass, but deliberately reports that second artifact as manual self-attestation rather than Chrome-generated or cryptographic evidence.
+
+This repository has unit, type, build, HTTP, cancellation-chain, and `npm run verify:webmcp` validation, plus eleven deterministic journey contracts. A separate no-PHI baseline sent those journeys to `gpt-oss:120b-cloud` five times and recorded 55/55 expected tool calls or safe abstentions in one uninterrupted run. Shortlist comparison passed 5/5 and all ten forbidden requests safely abstained. See [`WEBMCP_SELECTION_EVAL.md`](WEBMCP_SELECTION_EVAL.md). This finite, single-turn Ollama tool-calling result does not execute WebMCP or prove Chrome behavior. Inspector validation is currently not claimed because the installed browser-control package is incomplete and cannot initialize its Chrome control session. The acceptance kit and receipt verifier make that remaining work reproducible; they do not erase the boundary.
 
 ## In-product evidence page
 
