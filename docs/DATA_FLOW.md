@@ -7,9 +7,11 @@ raw free text
   -> explicit cloud-transfer consent
   -> localhost Ollama proxy -> gpt-oss:120b-cloud extraction
   -> draft profile with uncertainty
-  -> patient or caregiver review
+  -> patient or caregiver reviews masked note and draft facts together
   -> patient-confirmed de-identified profile
-     -> registry query minimizer -> TFDA and ClinicalTrials.gov
+     -> registry query minimizer -> TFDA and ClinicalTrials.gov candidate discovery
+     -> source-derived missing-field questions -> confirmed profile update or explicit unknown
+     -> grouped, source-traceable comparison
      -> optional localhost proxy -> gpt-oss:120b-cloud conversation
      -> consent-gated WebMCP tools
 ```

@@ -77,3 +77,22 @@ test("development shortcuts are explicitly gated and use only a synthetic fixtur
   assert.match(component, /Synthetic data only/);
   assert.match(component, /syntheticDevDraft/);
 });
+
+test("review, clarification, grouped result views, and dedicated result chat remain visible product concepts", async () => {
+  const root = process.cwd();
+  const review = await readFile(path.join(root, "app", "components", "SummaryConfirmation.tsx"), "utf8");
+  const clarification = await readFile(path.join(root, "app", "components", "ClarificationPanel.tsx"), "utf8");
+  const chat = await readFile(path.join(root, "app", "components", "TrialBridgeChat.tsx"), "utf8");
+  const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
+  assert.match(review, /Masked note sent to cloud/);
+  assert.match(review, /Confirm all/);
+  assert.match(clarification, /Before showing results/);
+  assert.match(clarification, /I don't know/);
+  assert.match(chat, /No known public-record difference/);
+  assert.match(chat, /More information needed/);
+  assert.match(chat, /Public-record differences found/);
+  assert.match(chat, /Chat about the results/);
+  assert.match(chat, /aria-pressed/);
+  assert.match(css, /grid-template-rows:\s*subgrid/);
+  assert.match(css, /result-chat-panel/);
+});

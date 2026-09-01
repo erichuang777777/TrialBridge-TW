@@ -45,7 +45,9 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
     case "MASK_COMPLETE":
       return state.stage === "capture" ? { ...state, maskResult: event.result, stage: "mask_review" } : state;
     case "BACK_TO_CAPTURE":
-      return state.stage === "mask_review" ? { ...state, stage: "capture", maskResult: undefined } : state;
+      return state.stage === "mask_review" || state.stage === "confirmation"
+        ? { ...state, stage: "capture", rawText: state.stage === "confirmation" ? state.maskResult?.maskedText ?? "" : state.rawText, maskResult: undefined, draft: undefined }
+        : state;
     case "EXTRACTION_START":
       return state.stage === "mask_review" && state.maskResult
         ? { ...state, stage: "extracting", rawText: "", error: undefined }

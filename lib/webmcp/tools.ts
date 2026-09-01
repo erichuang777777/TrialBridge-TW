@@ -45,7 +45,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     description: "Read the current page's patient-confirmed, de-identified match explanations. Requires visible in-page consent; raw notes are unavailable.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
-    execute: () => capped(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, sources: match.trial.sources }))),
+    execute: () => capped(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
   }, {
     name: "draft_trial_outreach", title: "Draft trial outreach",
     description: "Create but never send an outreach draft for one current match using only confirmed, de-identified facts.",

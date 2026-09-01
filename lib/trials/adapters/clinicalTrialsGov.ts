@@ -2,6 +2,7 @@ import { z } from "zod";
 import { normalizedTrialSchema } from "../schema.ts";
 import { regionTierForCountries } from "../regions.ts";
 import { cleanText, normalizeIdentifier, uniqueText } from "../text.ts";
+import { splitEligibilityCriteria } from "../eligibility.ts";
 import type {
   NormalizedTrial,
   RecruitmentCategory,
@@ -108,6 +109,7 @@ export function normalizeClinicalTrialsGovStudy(raw: RawStudy, retrievedAt: stri
     identification.orgStudyIdInfo?.id,
     ...(identification.secondaryIdInfos ?? []).map((identifier) => identifier.id),
   ]).map(normalizeIdentifier);
+  const eligibility = splitEligibilityCriteria(section.eligibilityModule?.eligibilityCriteria);
 
   return normalizedTrialSchema.parse({
     canonicalId: `ctgov:${nctId.toLocaleLowerCase("en")}`,
@@ -135,7 +137,7 @@ export function normalizeClinicalTrialsGovStudy(raw: RawStudy, retrievedAt: stri
       acceptingNewParticipants: OPEN_STATUSES.includes(status),
     },
     eligibility: {
-      combined: cleanText(section.eligibilityModule?.eligibilityCriteria),
+      ...eligibility,
       minimumAge: cleanText(section.eligibilityModule?.minimumAge),
       maximumAge: cleanText(section.eligibilityModule?.maximumAge),
       sex: cleanText(section.eligibilityModule?.sex),

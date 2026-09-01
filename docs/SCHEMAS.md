@@ -21,4 +21,6 @@ A normalized trial preserves source-specific identifiers and raw-source provenan
 
 ## Match explanation
 
-Each criterion is classified `possibly_met`, `possibly_not_met`, or `unknown`, with links to both the exact confirmed profile fact and the exact registry source field. Overall output is `discuss`, `needs_information`, or `unlikely_based_on_public_record`; it is never `eligible`.
+Each criterion is classified `possibly_met`, `possibly_not_met`, `unknown`, or `missing`, with links to both the exact confirmed profile fact and the exact registry source field. Overall output is `discuss`, `needs_review`, `needs_information`, or `unlikely_based_on_public_record`; it is never `eligible`.
+
+A potential intervention exclusion signal contains the confirmed treatment fact ID and value, matched public exclusion terms, registry field, and a bounded public excerpt. It is a review flag rather than a final eligibility decision.

@@ -49,6 +49,17 @@ test("a cancelled extraction returns to the masked review", () => {
   assert.equal(state.maskResult?.maskedText, "synthetic medical text long enough");
 });
 
+test("summary confirmation can return to the masked note on the same review flow", () => {
+  const confirmation = {
+    stage: "confirmation" as const, language: "en" as const, subjectRole: "patient" as const, rawText: "",
+    maskResult: { maskedText: "masked synthetic note", findings: [] }, draft,
+  };
+  const capture = chatReducer(confirmation, { type: "BACK_TO_CAPTURE" });
+  assert.equal(capture.stage, "capture");
+  assert.equal(capture.rawText, "masked synthetic note");
+  assert.equal(capture.draft, undefined);
+});
+
 test("reset clears anonymous session data but keeps language preference in memory", () => {
   const english = chatReducer(initialChatState, { type: "SET_LANGUAGE", language: "en" });
   const role = chatReducer(english, { type: "SELECT_ROLE", role: "caregiver" });
