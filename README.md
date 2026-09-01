@@ -15,6 +15,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, a downloadable tab-local capability receipt, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (55/55 recorded pass; all forbidden and shortlist cases passed).
 - The `/webmcp` evidence page adds a five-stage critical-user-journey map aligned with Chrome's current goal/state/role-play/recovery framework, an explicit body-free `gpt-oss:120b-cloud` smoke test using fixed synthetic text, and a one-click browser diagnostic JSON receipt containing metadata only and no health information.
 - The same page includes a six-check Chrome Inspector acceptance kit with fixed no-PHI prompts, explicit expected boundaries, Pass/Needs attention recording, and a download-only manual self-attestation receipt. It never presents that receipt as automatic or cryptographic Chrome evidence.
+- The `/webmcp` Tool Contract Explorer exposes all eight canonical contracts with searchable availability filters, exact JSON Schemas, security hints, input/output budgets, human-control boundaries, and recovery paths. `/webmcp/contracts.json` serves the same static no-health-data catalog; runtime tools and the visible declarative form import the same canonical definitions so judge evidence cannot drift from execution.
 - Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
 - Overseas-site outreach is prepared as a draft and is never sent automatically.
 - After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.
@@ -34,7 +35,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 
 The independently verifiable milestones are defined in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md). Product, security, data-flow, schema, chat-state, and WebMCP contracts live under `docs/`.
 
-For evaluation, open the built-in [`/webmcp`](http://localhost:3000/webmcp) evidence page, then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [recorded cloud-model selection baseline](docs/WEBMCP_SELECTION_EVAL.md), the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The home page includes a WebMCP Live registration surface and a fictional, non-skipping competition case.
+For evaluation, open the built-in [`/webmcp`](http://localhost:3000/webmcp) evidence page and its static [`/webmcp/contracts.json`](http://localhost:3000/webmcp/contracts.json) contract artifact, then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [recorded cloud-model selection baseline](docs/WEBMCP_SELECTION_EVAL.md), the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The home page includes a WebMCP Live registration surface and a fictional, non-skipping competition case.
 
 ## Local development
 

@@ -79,8 +79,12 @@ test("the public trial database is directly linked from the English-first home p
 });
 
 test("the visible public database form is also a declarative WebMCP tool", async () => {
-  const database = await readFile(path.join(process.cwd(), "app", "components", "TrialDatabase.tsx"), "utf8");
-  assert.match(database, /const declarativeToolName = "search_public_trial_form"/);
+  const root = process.cwd();
+  const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
+  const contracts = await readFile(path.join(root, "lib", "webmcp", "toolContractCore.ts"), "utf8");
+  assert.match(database, /const declarativeToolName = publicTrialFormContractCore\.name/);
+  assert.match(contracts, /name: "search_public_trial_form"/);
+  assert.match(database, /publicTrialFormContractCore\.description/);
   assert.match(database, /toolname=\{declarativeToolName\}/);
   assert.match(database, /tooldescription=/);
   assert.match(database, /toolautosubmit=/);
@@ -119,8 +123,11 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const root = process.cwd();
   const page = await readFile(path.join(root, "app", "webmcp", "page.tsx"), "utf8");
   const inventory = await readFile(path.join(root, "lib", "webmcp", "capabilityInventory.ts"), "utf8");
+  const contractCatalog = await readFile(path.join(root, "lib", "webmcp", "toolContractCatalog.ts"), "utf8");
   const judgeBundle = await readFile(path.join(root, "lib", "webmcp", "judgeBundle.ts"), "utf8");
   const evidenceRoute = await readFile(path.join(root, "app", "webmcp", "evidence.json", "route.ts"), "utf8");
+  const contractRoute = await readFile(path.join(root, "app", "webmcp", "contracts.json", "route.ts"), "utf8");
+  const contractExplorer = await readFile(path.join(root, "app", "webmcp", "_components", "ToolContractExplorer.tsx"), "utf8");
   const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
   const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
   const searchUrl = await readFile(path.join(root, "lib", "trials", "searchUrl.ts"), "utf8");
@@ -129,16 +136,22 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(home, /href="\/webmcp"/);
   assert.match(page, /WebMCP, visible and testable/);
   assert.match(page, /Model Context Tool Inspector/);
-  assert.match(inventory, /search_public_trial_form/);
+  assert.match(inventory, /webMcpToolContractCatalog/);
+  assert.match(page, /ToolContractExplorer/);
+  assert.match(contractExplorer, /Canonical tool contracts/);
+  assert.match(contractExplorer, /Copy JSON Schema/);
+  assert.match(contractExplorer, /Download contracts JSON/);
+  assert.match(contractExplorer, /role="status" aria-atomic="true"/);
+  assert.match(contractRoute, /dynamic = "force-static"/);
   assert.match(page, /baselineJourneyCount/);
   assert.match(page, /Recorded cloud-model baseline/);
   assert.match(page, /selectionBaseline\.summary\.passed/);
   assert.match(page, /What remains separate/);
   assert.match(page, /Chrome Inspector and clinical validation/);
   assert.match(page, /webmcp-selection-baseline\.json/);
-  assert.match(inventory, /review_trial_followups/);
-  assert.match(inventory, /draft_trial_discussion_brief/);
-  assert.match(inventory, /compare_shortlisted_trials/);
+  assert.match(contractCatalog, /review_trial_followups/);
+  assert.match(contractCatalog, /draft_trial_discussion_brief/);
+  assert.match(contractCatalog, /compare_shortlisted_trials/);
   assert.match(page, /19<\/strong> bilingual cancer groups/);
   assert.match(page, /Capability changes leave a payload-free session receipt/);
   assert.match(page, /latest 20 lifecycle events/);

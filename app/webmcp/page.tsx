@@ -8,6 +8,7 @@ import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBu
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import { CompetitionPreflight } from "./_components/CompetitionPreflight";
 import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
+import { ToolContractExplorer } from "./_components/ToolContractExplorer";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 export const metadata: Metadata = createPageMetadata({
@@ -95,6 +96,8 @@ export default function WebMcpProofPage() {
       <div className="standards-grid" role="list">{standardsProfile.map((item) => <article key={item.label} role="listitem"><div><span>Implemented</span><small>{item.label}</small></div><h3>{item.title}</h3><code>{item.code}</code><p>{item.detail}</p></article>)}</div>
       <div className="standards-receipt"><p><strong>Compatibility profile audited <time dateTime="2026-09-02">2026-09-02</time></strong><span><code>webmcp-types@0.1.5</code> · upstream draft and Chromium main checked separately</span></p><div><a href="https://webmachinelearning.github.io/webmcp/" target="_blank" rel="noreferrer">WebMCP draft</a><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Chrome guide</a><a href="https://developer.chrome.com/docs/ai/webmcp/secure-tools" target="_blank" rel="noreferrer">Security guide</a></div></div>
     </section>
+
+    <ToolContractExplorer />
 
     <section className="proof-section conformance-evidence" aria-labelledby="conformance-title">
       <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, the recorded cloud-model eval, and the remaining manual Inspector gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>

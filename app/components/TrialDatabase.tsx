@@ -6,6 +6,7 @@ import type { RegistryQueryPlan } from "@/lib/trials/queryBridge";
 import { formatRegistryDuration, registrySourceTimeoutMs } from "@/lib/trials/reliability";
 import { createPublicTrialSearchPath, defaultPublicTrialCondition, normalizePublicTrialCondition, normalizeShareablePublicTrialCondition, parsePublicTrialSearchParams } from "@/lib/trials/searchUrl";
 import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput";
+import { publicTrialFormContractCore } from "@/lib/webmcp/toolContractCore";
 
 type SearchResponse = {
   trials?: NormalizedTrial[];
@@ -22,7 +23,7 @@ const suggestions = [
   { condition: "胃癌", label: "胃癌 · Gastric cancer" },
   { condition: "colorectal cancer", label: "Colorectal cancer" },
 ];
-const declarativeToolName = "search_public_trial_form";
+const declarativeToolName = publicTrialFormContractCore.name;
 const regions: Array<{ value: "all" | RegionTier; label: string }> = [
   { value: "all", label: "All regions" },
   { value: "taiwan", label: "Taiwan" },
@@ -161,7 +162,7 @@ export function TrialDatabase() {
 
   return (
     <section className="database-shell" aria-labelledby="database-search-title">
-      <form className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription="Search public TFDA and ClinicalTrials.gov cancer trial records by an English or Traditional Chinese general condition. Shows the bilingual registry query plan and results visibly." toolautosubmit="" onSubmit={submitSearch}>
+      <form className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription={publicTrialFormContractCore.description} toolautosubmit="" onSubmit={submitSearch}>
         <div className="search-heading">
           <div><p className="eyebrow">Direct registry search</p><h2 id="database-search-title">What condition are you looking for?</h2></div>
           <div className="source-stack"><span className="source-pill">TFDA + ClinicalTrials.gov</span><span className="webmcp-form-pill">Declarative WebMCP</span></div>
@@ -170,13 +171,13 @@ export function TrialDatabase() {
         {urlNotice && <p className="agent-form-notice" role="status" aria-atomic="true">{urlNotice}</p>}
         <label htmlFor="trial-condition">Cancer type or condition</label>
         <div className="search-row">
-          <input id="trial-condition" name="condition" type="search" value={query} onChange={(event) => setQuery(event.target.value)} minLength={2} maxLength={120} required toolparamdescription="General non-sensitive cancer condition; never paste a medical record or identifier." />
+          <input id="trial-condition" name="condition" type="search" value={query} onChange={(event) => setQuery(event.target.value)} minLength={2} maxLength={120} required toolparamdescription={publicTrialFormContractCore.inputSchema.properties.condition.description} />
           <button className="primary-action" disabled={loading || query.trim().length < 2}>{loading ? "Searching…" : "Search trials"}</button>
         </div>
         <div className="suggestion-row" aria-label="Suggested searches">
           {suggestions.map((suggestion) => <button type="button" key={suggestion.condition} onClick={() => { setQuery(suggestion.condition); void search(suggestion.condition); }}>{suggestion.label}</button>)}
         </div>
-        <label className="confirm-check"><input name="includeNotOpen" type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} toolparamdescription="Include public records that are not currently accepting participants." />Include records that are not currently open</label>
+        <label className="confirm-check"><input name="includeNotOpen" type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} toolparamdescription={publicTrialFormContractCore.inputSchema.properties.includeNotOpen.description} />Include records that are not currently open</label>
         <p className="field-helper">English and Traditional Chinese cancer terms are supported. Use only a general condition here; do not paste medical records or identifying information.</p>
       </form>
 

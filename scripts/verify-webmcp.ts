@@ -17,6 +17,8 @@ import { webMcpCapabilityInventory } from "../lib/webmcp/capabilityInventory.ts"
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "../lib/webmcp/judgeBundle.ts";
 import { createWebMcpInspectorAcceptanceReceipt, webMcpInspectorAcceptanceCases } from "../lib/webmcp/inspectorAcceptance.ts";
 import { verifyWebMcpInspectorAcceptanceReceipt } from "../lib/webmcp/receiptVerification.ts";
+import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webmcp/toolContractCatalog.ts";
+import { publicTrialFormContractCore } from "../lib/webmcp/toolContractCore.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -152,7 +154,7 @@ check(shortlistSamples.every((sample) => sample.passed && sample.selectedTools.l
 check(shortlistSamples.every((sample) => Object.keys(sample.arguments[0]?.values ?? {}).length === 1 && sample.arguments[0]?.values.language === "en"), "Shortlist selection samples must supply language only.");
 
 const declarative = readFileSync("app/components/TrialDatabase.tsx", "utf8");
-for (const marker of ["const declarativeToolName = \"search_public_trial_form\"", "toolname={declarativeToolName}", "tooldescription=", "toolautosubmit=", "toolparamdescription=", "agentInvoked", "respondWith(searchPromise)"]) {
+for (const marker of ["const declarativeToolName = publicTrialFormContractCore.name", "toolname={declarativeToolName}", "publicTrialFormContractCore.description", "toolautosubmit=", "toolparamdescription=", "agentInvoked", "respondWith(searchPromise)"]) {
   check(declarative.includes(marker), `Declarative search form is missing ${marker}.`);
 }
 check((declarative.match(/toolname=/g) ?? []).length === 1, "The public database must expose one visible declarative form tool.");
@@ -176,6 +178,17 @@ const inspectorSurface = readFileSync("app/webmcp/_components/InspectorAcceptanc
 for (const marker of ["Manual Chrome gate", "Copy prompt", "Needs attention", "Download manual JSON", "self-attested—not automatic proof"]) {
   check(inspectorSurface.includes(marker), `Inspector acceptance surface is missing ${marker}.`);
 }
+
+const contractSurface = readFileSync("app/webmcp/_components/ToolContractExplorer.tsx", "utf8");
+const contractRoute = readFileSync("app/webmcp/contracts.json/route.ts", "utf8");
+for (const marker of ["Canonical tool contracts", "Copy JSON Schema", "Download contracts JSON", 'role="status" aria-atomic="true"']) {
+  check(contractSurface.includes(marker), `Tool contract explorer is missing ${marker}.`);
+}
+check(contractRoute.includes('dynamic = "force-static"') && contractRoute.includes("webMcpToolContractBundle"), "Tool contract artifact must remain static and canonical.");
+check(webMcpToolContractCatalog.length === 8 && webMcpToolContractBundle.summary.withinChromeGuidance === 8, "All eight tool contracts must remain inside Chrome character guidance.");
+check(webMcpToolContractBundle.summary.writeAuthority === 0 && webMcpToolContractBundle.summary.readOnlyBehavior === 8, "Tool catalog must expose eight read-only behaviors and zero write authority.");
+check(webMcpToolContractBundle.privacyBoundary.containsHealthInformation === false && webMcpToolContractBundle.privacyBoundary.readsMedicalWorkflowState === false, "Tool contract artifact must remain static and no-health-data.");
+check(webMcpToolContractCatalog[0]?.name === publicTrialFormContractCore.name, "Declarative form contract must lead the canonical catalog.");
 
 const cloudProbeService = readFileSync("lib/llm/cloudProbe.ts", "utf8");
 const cloudProbeRoute = readFileSync("app/api/cloud/probe/route.ts", "utf8");
@@ -241,6 +254,7 @@ check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "repositor
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_model_eval").length === 1, "Judge matrix must distinguish the recorded model evaluation.");
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length === 1, "Judge matrix must retain the manual Inspector gate.");
 check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
+check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
 check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
 
@@ -273,6 +287,7 @@ if (findings.length > 0) {
     judgeBundle: "static-json-no-health-data",
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     manualInspectorReceipt: "self-attested-no-health-data",
+    toolContractCatalog: `${webMcpToolContractBundle.summary.withinChromeGuidance}/${webMcpToolContractBundle.summary.tools}-within-guidance`,
     bilingualQueryGroups: bilingualCancerQueryLexicon.length,
     outputLimitCharacters: maxWebMcpOutputChars,
     findings: 0,

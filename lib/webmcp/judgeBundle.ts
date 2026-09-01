@@ -3,6 +3,7 @@ import { webMcpCapabilityInventory } from "./capabilityInventory.ts";
 import { webMcpCriticalJourney } from "./criticalJourney.ts";
 import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
 import { webMcpInspectorAcceptanceCases } from "./inspectorAcceptance.ts";
+import { webMcpToolContractBundle } from "./toolContractCatalog.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -117,9 +118,17 @@ export const webMcpJudgeBundle = {
     criticalJourneySteps: webMcpCriticalJourney.steps.length,
     conformanceItems: webMcpConformanceMatrix.length,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
+    toolContracts: webMcpToolContractBundle.summary.tools,
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,
+  toolContractCatalog: {
+    route: "/webmcp/contracts.json",
+    contractVersion: webMcpToolContractBundle.contractVersion,
+    tools: webMcpToolContractBundle.summary.tools,
+    withinChromeGuidance: webMcpToolContractBundle.summary.withinChromeGuidance,
+    containsHealthInformation: webMcpToolContractBundle.privacyBoundary.containsHealthInformation,
+  },
   conformance: webMcpConformanceMatrix,
   recordedSelectionEval: {
     evaluatedAt: selectionBaseline.evaluatedAt,

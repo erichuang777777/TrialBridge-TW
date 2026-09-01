@@ -9,6 +9,7 @@ import type { ConfirmedProfile } from "../profile/schema.ts";
 import type { RegistryQueryPlan } from "../trials/queryBridge.ts";
 import { capWebMcpOutput } from "./output.ts";
 import { createBoundedPublicSearchOutput } from "./publicSearchOutput.ts";
+import { webMcpImperativeContractCore } from "./toolContractCore.ts";
 
 export type WebMcpActivityState = "running" | "completed" | "failed" | "cancelled";
 
@@ -50,17 +51,11 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   const fetcher = context.fetcher ?? fetch;
   const tools: WebMCP.ModelContextTool[] = [
     {
-      name: "trialbridge_method", title: "Explain TrialBridge TW method",
-      description: "Use for any request to explain how TrialBridge TW searches for trials, prioritizes Taiwan then Asia then worldwide, protects information, chooses registry sources, or describes limitations. Call this tool to retrieve the site's authoritative method instead of answering from the description alone. No input or patient context is required.",
-      inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      annotations: { readOnlyHint: true },
+      ...webMcpImperativeContractCore.trialbridge_method,
       execute: () => ({ searchOrder: ["Taiwan", "Asia", "worldwide"], sources: ["TFDA", "ClinicalTrials.gov"], privacy: "Raw medical text is never available to WebMCP.", limitation: "Registry records are research plans, not proof of benefit or final eligibility." }),
     },
     {
-      name: "search_public_cancer_trials", title: "Search public cancer trials",
-      description: "Search public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic. Returns at most five source-linked records.",
-      inputSchema: { type: "object", properties: { condition: { type: "string", description: "General non-sensitive cancer condition; never include a medical record.", minLength: 2, maxLength: 120 } }, required: ["condition"], additionalProperties: false },
-      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      ...webMcpImperativeContractCore.search_public_cancer_trials,
       execute: async (input, options) => {
         const condition = typeof input.condition === "string" ? input.condition.trim() : "";
         if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
@@ -73,10 +68,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   ];
   if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => withVisibleActivity(tool, context.onActivity));
   tools.push({
-    name: "review_trial_followups", title: "Review pending trial questions",
-    description: "Call when results are waiting for more information. Lists current registry-derived questions for the visible form; never records or confirms answers.",
-    inputSchema: { type: "object", properties: { language: { type: "string", description: "Language for the pending questions and recovery guidance.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
-    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    ...webMcpImperativeContractCore.review_trial_followups,
     execute: (input) => {
       if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
       const questions = (context.pendingQuestions ?? []).slice(0, 6);
@@ -94,16 +86,10 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       });
     },
   }, {
-    name: "explain_confirmed_matches", title: "Explain confirmed-profile trial matches",
-    description: "Call when a user asks why current trials are grouped or how current results compare. Returns confirmed, de-identified match explanations; raw notes are unavailable.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    ...webMcpImperativeContractCore.explain_confirmed_matches,
     execute: () => capWebMcpOutput(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
   }, {
-    name: "draft_trial_outreach", title: "Draft trial outreach",
-    description: "Call only to draft a message to a study team about one specific current trial. Never use for a doctor or care-team summary; creates but never sends.",
-    inputSchema: { type: "object", properties: { trialId: { type: "string", description: "Canonical ID of one currently displayed trial match.", minLength: 1, maxLength: 120 }, language: { type: "string", description: "Language for the editable, unsent draft.", enum: ["zh-Hant", "en"] } }, required: ["trialId", "language"], additionalProperties: false },
-    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    ...webMcpImperativeContractCore.draft_trial_outreach,
     execute: (input) => {
       const match = context.matches.find((candidate) => candidate.trial.canonicalId === input.trialId);
       if (!match) throw new Error("trialId is not in the current results; use explain_confirmed_matches to review current trial IDs, then call again");
@@ -111,10 +97,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       return capWebMcpOutput(createOutreachDraft(context.profile!, match.trial, input.language));
     },
   }, {
-    name: "draft_trial_discussion_brief", title: "Draft a care-team trial discussion brief",
-    description: "Call when a user wants to organize current results for their doctor or care team. Uses all current matches; input is language only, never trialId. Not a study-team message.",
-    inputSchema: { type: "object", properties: { language: { type: "string", description: "Output language only; the brief already uses all current matches.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
-    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    ...webMcpImperativeContractCore.draft_trial_discussion_brief,
     execute: (input) => {
       if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
       return capWebMcpOutput(createTrialDiscussionBrief(context.profile!, context.matches, input.language));
@@ -122,10 +105,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
   });
   const shortlistedTrialIds = [...new Set(context.shortlistedTrialIds ?? [])].slice(0, maxShortlistTrials);
   if (shortlistedTrialIds.length >= 2) tools.push({
-    name: "compare_shortlisted_trials", title: "Compare the visible trial shortlist",
-    description: "Call only when a user asks to compare trials they already added to the visible shortlist. Reads two or three user-selected trials; never chooses or changes the shortlist.",
-    inputSchema: { type: "object", properties: { language: { type: "string", description: "Output language only; trial IDs come from the visible user-controlled shortlist.", enum: ["zh-Hant", "en"] } }, required: ["language"], additionalProperties: false },
-    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    ...webMcpImperativeContractCore.compare_shortlisted_trials,
     execute: (input) => {
       if (input.language !== "zh-Hant" && input.language !== "en") throw new Error("language must be zh-Hant or en; call this tool again with one supported language");
       const selected = resolveShortlistedMatches(context.matches, shortlistedTrialIds);
