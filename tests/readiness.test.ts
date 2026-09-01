@@ -88,6 +88,7 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   const review = await readFile(path.join(root, "app", "components", "SummaryConfirmation.tsx"), "utf8");
   const clarification = await readFile(path.join(root, "app", "components", "ClarificationPanel.tsx"), "utf8");
   const chat = await readFile(path.join(root, "app", "components", "TrialBridgeChat.tsx"), "utf8");
+  const webmcp = await readFile(path.join(root, "app", "components", "WebMcpBridge.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
   assert.match(review, /Masked note/);
   assert.match(review, /Confirm all/);
@@ -105,6 +106,9 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(chat, /Agent mode/);
   assert.match(chat, /Manual mode/);
   assert.match(chat, /Chat is the main interface/);
+  assert.match(chat, /Try a synthetic case/);
+  assert.match(chat, /START_SYNTHETIC_DEMO/);
+  assert.match(chat, /No real patient data/);
   assert.match(chat, /\/api\/cloud\/intake/);
   assert.doesNotMatch(chat, /I am the patient/);
   assert.doesNotMatch(chat, /I am a caregiver/);
@@ -114,8 +118,15 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(chat, /Public-record differences found/);
   assert.match(chat, /Ask about the results/);
   assert.match(chat, /aria-pressed/);
+  assert.match(webmcp, /WebMCP Live/);
+  assert.match(webmcp, /getTools/);
+  assert.match(webmcp, /role="status"/);
+  assert.match(webmcp, /Judge prompts/);
+  assert.match(webmcp, /explain_confirmed_matches/);
+  assert.doesNotMatch(webmcp, /catch\(\(\) => undefined\)/);
   assert.match(css, /grid-template-rows:\s*subgrid/);
   assert.match(css, /persistent-chat-panel/);
+  assert.match(css, /webmcp-live-panel/);
   assert.match(css, /criterion-tooltip/);
   assert.match(css, /patient-fact-strip/);
 });

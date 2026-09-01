@@ -1,11 +1,14 @@
 import { confirmedProfileSchema } from "@/lib/profile/schema";
 import { matchConfirmedProfile } from "@/lib/matching/engine";
 import { z } from "zod";
+import { consumeRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 const requestSchema = z.object({ profile: confirmedProfileSchema }).strict();
 
 export async function POST(request: Request) {
+  const limit = consumeRateLimit(request, { bucket: "matches", limit: 20, windowMs: 5 * 60_000 });
+  if (!limit.allowed) return rateLimitResponse(limit);
   let body: unknown;
   try { body = await request.json(); } catch { return Response.json({ error: "Request body must be valid JSON." }, { status: 400 }); }
   const parsed = requestSchema.safeParse(body);

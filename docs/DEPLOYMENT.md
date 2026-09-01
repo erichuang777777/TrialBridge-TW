@@ -14,6 +14,10 @@ In `npm run dev`, a clearly marked shortcut bar can open the note, masking, summ
 
 The server-side localhost proxy reaches the server machine, not a visitor's computer, and it does not make cloud inference local. Public deployment requires a reviewed proxy architecture, provider data-processing terms, explicit consent records, and a Taiwan privacy-law review.
 
-Before release, resolve every item in `READINESS.md`, host TFDA snapshots outside request-time decompression, configure rate limits and monitoring without medical payloads, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
+The MVP applies fixed-window, per-process limits before parsing bodies on cloud extraction, guided intake, result dialogue, matching, and public registry search. It hashes the trusted proxy address and never uses medical payloads as a key. A public multi-instance deployment must replace this process-local map with a shared store and configure the edge or trusted proxy to overwrite forwarded-address headers. Keep monitoring metadata-only.
+
+`GET /api/health` exposes only service/version and configuration-class checks. It does not call the model, reveal the loopback URL or token, or include patient data. A `200` proves configuration shape, not live provider availability; a `503` means the allowlisted cloud model or loopback proxy setting is invalid.
+
+Before release, resolve every item in `READINESS.md`, host TFDA snapshots outside request-time decompression, replace process-local limits with distributed rate limiting and payload-free monitoring, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
 
 No deployment may enable automated outreach, enrollment, booking, consent, or treatment recommendations.

@@ -1,9 +1,12 @@
 import { cloudExtractionRequestSchema, CloudExtractionError, extractProfileInCloud } from "@/lib/llm/extraction";
 import { hasDirectIdentifiers } from "@/lib/privacy/mask";
+import { consumeRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const limit = consumeRateLimit(request, { bucket: "cloud-extract", limit: 8, windowMs: 10 * 60_000 });
+  if (!limit.allowed) return rateLimitResponse(limit);
   let body: unknown;
   try {
     body = await request.json();

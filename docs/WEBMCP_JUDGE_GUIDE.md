@@ -25,6 +25,12 @@ This is not a generic chatbot wrapper. WebMCP lets the site remain the authority
 | `explain_confirmed_matches` | Confirmed profile plus visible WebMCP permission | The tool follows live patient-confirmed page state and never receives the raw note. |
 | `draft_trial_outreach` | Confirmed profile plus visible WebMCP permission | The agent can prepare an editable draft, but the product deliberately provides no send or enrollment capability. |
 
+## In-product WebMCP Live proof
+
+The collapsed **WebMCP Live** bar is always visible below the workflow heading. It reports the browser API lifecycle (`checking`, `registering`, `ready`, `unsupported`, or `error`) instead of silently swallowing registration failures. When ready, the count comes from `document.modelContext.getTools()`, filtered to TrialBridge TW's expected tools on the current origin.
+
+Expand it to inspect public and confirmed-context tool names, permission-locked states, the read-only and untrusted-content boundary, and copyable Model Context Tool Inspector prompts. An unsupported browser receives setup guidance while the human workflow remains available as progressive enhancement.
+
 ## Why this is a strong WebMCP health-care example
 
 1. **Progressive enhancement:** the full workflow remains usable by a person when WebMCP is unavailable.
@@ -37,10 +43,10 @@ This is not a generic chatbot wrapper. WebMCP lets the site remain the authority
 
 ## Five-minute judge demonstration
 
-1. Open the page in a compatible Chrome build and inspect registered tools before entering patient information. Show the two public tools.
+1. Open the page in a compatible Chrome build. Expand **WebMCP Live** and show that the two public tools are verified while the two confirmed-context tools are locked.
 2. Invoke `search_public_cancer_trials` with a non-sensitive cancer topic. Show structured TFDA or ClinicalTrials.gov source links and bounded output.
-3. Complete the synthetic development flow and show that patient-context tools are still absent while WebMCP permission is off.
-4. Enable the visible WebMCP permission. Show `explain_confirmed_matches` and `draft_trial_outreach` appearing without a reload.
+3. Select **Try a synthetic case**. The fictional note still passes through the visible privacy notice, real browser masking, `gpt-oss:120b-cloud` extraction, human fact confirmation, pre-match questions, and public-registry matching. Show that confirmed-context tools remain locked while WebMCP permission is off.
+4. Enable the visible WebMCP permission. Show `explain_confirmed_matches` and `draft_trial_outreach` changing to active without a reload; confirm the live count changes from 2/2 to 4/4.
 5. Invoke the match explanation and point out confirmed facts, unresolved criteria, potential exclusion signals, and source traces.
 6. Disable permission or reset the session. Show the sensitive tools being unregistered.
 7. Ask the agent to enroll or send the outreach. Show that no such tool exists and the draft remains `sent: false`.

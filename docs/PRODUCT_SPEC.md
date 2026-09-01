@@ -7,6 +7,7 @@ TrialBridge TW helps people affected by cancer reduce the work of finding and di
 ## MVP journey
 
 1. The person selects English or Traditional Chinese, then Agent mode or Manual mode. Patient/caregiver identity is not requested; the same workflow begins immediately for everyone.
+   A clearly labelled synthetic competition case can prefill fictional data, but it cannot skip privacy, masking, cloud extraction, confirmation, clarification, or matching.
 2. Agent mode collects the situation through persistent chat; Manual mode accepts a pasted or typed note. Both update one shared, volatile intake note.
 3. The browser masks direct identifiers before any model request.
 4. After the person reviews the masked note and selects the visible cloud-organization action, `gpt-oss:120b-cloud` proposes structured facts through the localhost Ollama proxy, with provenance, uncertainty, and missing fields.

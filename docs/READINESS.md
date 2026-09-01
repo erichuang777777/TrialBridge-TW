@@ -12,6 +12,7 @@
 - Live synthetic `gpt-oss:120b-cloud` extraction, confirmed-profile matching, and separately consented cloud dialogue.
 - Read-only WebMCP tool definitions, output limits, untrusted-content annotations, and consent-driven sensitive tool registration.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.
+- A payload-free configuration health endpoint and pre-body, process-local rate limits with machine-readable `429`/`Retry-After` responses.
 
 ## Not yet proven and required before public clinical use
 

@@ -1,9 +1,12 @@
 import { trialSearchRequestSchema } from "@/lib/trials/schema";
 import { searchTrialRegistries } from "@/lib/trials/search";
+import { consumeRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const limit = consumeRateLimit(request, { bucket: "trial-search", limit: 60, windowMs: 5 * 60_000 });
+  if (!limit.allowed) return rateLimitResponse(limit);
   let body: unknown;
   try {
     body = await request.json();

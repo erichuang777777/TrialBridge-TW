@@ -17,6 +17,7 @@ export interface ChatState {
 export type ChatEvent =
   | { type: "SET_LANGUAGE"; language: ChatState["language"] }
   | { type: "START_INTAKE" }
+  | { type: "START_SYNTHETIC_DEMO" }
   | { type: "ACCEPT_PRIVACY" }
   | { type: "SET_RAW_TEXT"; value: string }
   | { type: "MASK_COMPLETE"; result: MaskResult }
@@ -31,6 +32,7 @@ export type ChatEvent =
   | { type: "RESET" };
 
 export const initialChatState: ChatState = { stage: "mode", language: "en", subjectRole: "patient", rawText: "" };
+export const syntheticCompetitionNote = "Synthetic competition case — no real patient data. A 62-year-old person with stage IV gastric adenocarcinoma, HER2-negative, PD-L1 CPS 10, previously received FOLFOX; last treatment 8 weeks ago. ECOG 1. Can travel within Taiwan and Asia.";
 
 export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
   switch (event.type) {
@@ -38,6 +40,8 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
       return state.stage === "mode" ? { ...state, language: event.language } : state;
     case "START_INTAKE":
       return state.stage === "mode" ? { ...state, stage: "privacy" } : state;
+    case "START_SYNTHETIC_DEMO":
+      return state.stage === "mode" ? { ...state, stage: "privacy", rawText: syntheticCompetitionNote } : state;
     case "ACCEPT_PRIVACY":
       return state.stage === "privacy" ? { ...state, stage: "capture" } : state;
     case "SET_RAW_TEXT":

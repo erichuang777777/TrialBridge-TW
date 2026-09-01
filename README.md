@@ -19,7 +19,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 
 The independently verifiable milestones are defined in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md). Product, security, data-flow, schema, chat-state, and WebMCP contracts live under `docs/`.
 
-For evaluation, see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md) and the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration).
+For evaluation, see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The home page includes a WebMCP Live registration surface and a fictional, non-skipping competition case.
 
 ## Local development
 
@@ -36,7 +36,10 @@ Open `http://localhost:3000`. Guided matching is on the home page; `/trials` pro
 npm test
 npm run typecheck
 npm run build
+npm run verify:http
 ```
+
+`GET /api/health` provides a payload-free configuration check. Public and model-backed routes have process-local request limits for the MVP; a multi-instance deployment must use the shared-store and trusted-proxy gates in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## License
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chatReducer, initialChatState } from "../lib/chat/state.ts";
+import { chatReducer, initialChatState, syntheticCompetitionNote } from "../lib/chat/state.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 
 const draft = profileDraftSchema.parse({
@@ -64,6 +64,14 @@ test("starting intake uses a neutral default without a patient-caregiver questio
   const state = chatReducer(initialChatState, { type: "START_INTAKE" });
   assert.equal(state.stage, "privacy");
   assert.equal(state.subjectRole, "patient");
+});
+
+test("synthetic competition entry prefills fiction but cannot bypass the protected workflow", () => {
+  const privacy = chatReducer(initialChatState, { type: "START_SYNTHETIC_DEMO" });
+  assert.equal(privacy.stage, "privacy");
+  assert.equal(privacy.rawText, syntheticCompetitionNote);
+  assert.match(privacy.rawText, /no real patient data/i);
+  assert.equal(chatReducer(privacy, { type: "EXTRACTION_START" }).stage, "privacy");
 });
 
 test("reset clears anonymous session data but keeps language preference in memory", () => {
