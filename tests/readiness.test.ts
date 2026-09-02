@@ -349,6 +349,8 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(webmcp, /explain_confirmed_matches/);
   assert.match(webmcp, /review_trial_followups/);
   assert.match(webmcp, /webmcp-agent-activity/);
+  assert.match(webmcp, /Cancel active agent tool/);
+  assert.match(webmcp, /onExecutionControl/);
   assert.match(webmcp, /draft_trial_discussion_brief/);
   assert.match(webmcp, /compare_shortlisted_trials/);
   assert.match(webmcp, /Select 2 trials to activate/);
@@ -371,6 +373,7 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(css, /grid-template-rows:\s*subgrid/);
   assert.match(css, /persistent-chat-panel/);
   assert.match(css, /webmcp-live-panel/);
+  assert.match(css, /\.webmcp-agent-cancel \{ min-height: 44px/);
   assert.match(css, /criterion-tooltip/);
   assert.match(css, /patient-fact-strip/);
 });

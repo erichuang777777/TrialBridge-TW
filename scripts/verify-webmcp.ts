@@ -372,6 +372,9 @@ const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
 for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt"]) {
   check(bridge.includes(marker), `Imperative bridge is missing ${marker}.`);
 }
+for (const marker of ["onExecutionControl", "Cancel active agent tool", "cancelActiveExecutions", 'role="status" aria-atomic="true"']) {
+  check(bridge.includes(marker), `Visible human cancellation is missing ${marker}.`);
+}
 
 const headers = readFileSync("next.config.ts", "utf8");
 check(headers.includes("tools=(self)"), "Permissions-Policy must restrict WebMCP tools to this origin.");
@@ -480,7 +483,7 @@ if (findings.length > 0) {
     cloudProbeEvidence: "metadata-only-no-health-data",
     executionCompatibilityProfiles: 2,
     registrySourceDeadlineMs: 20_000,
-    executionCancellation: "agent-to-registry",
+    executionCancellation: "agent-or-visible-human-to-registry",
     implementationLandscape: webMcpImplementationLandscape.entries.length,
     implementationLandscapeAudit: webMcpImplementationLandscape.auditedAt,
     specificationCrosswalk: `${webMcpSpecCrosswalkBundle.summary.implemented}+${webMcpSpecCrosswalkBundle.summary.explainerAligned}/${webMcpSpecCrosswalkBundle.summary.clauses}`,

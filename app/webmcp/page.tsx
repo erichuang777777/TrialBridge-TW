@@ -98,7 +98,7 @@ export default function WebMcpProofPage() {
         <li><span>03</span><h3>Walk the protected flow</h3><p>Open the fictional case directly; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/match?demo=synthetic#private-chat">Open synthetic workflow</Link></li>
         <li><span>04</span><h3>Finish in Inspector</h3><p>Verify natural-language selection, manual calls, permission transitions, and cleanup.</p><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Inspector guide</a></li>
       </ol>
-      <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. A recorded stock Inspector run now covers discovery, one fixed safe call, and the fictional permission transition; natural-language and cancellation checks remain manual Chrome gates.</p>
+      <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. A recorded stock Inspector run covers discovery, one fixed safe call, and the fictional permission transition. TrialBridge also exposes human cancellation for running tools; stock agent cancellation and natural-language checks remain separate Chrome gates.</p>
     </section>
 
     <CompetitionPreflight />
@@ -120,10 +120,10 @@ export default function WebMcpProofPage() {
         <li className="recorded-inspector-pass"><strong>Pass</strong><span>Two public tools discovered and both schemas parsed</span></li>
         <li className="recorded-inspector-pass"><strong>Pass</strong><span><code>trialbridge_method</code> completed with fixed empty input</span></li>
         <li className="recorded-inspector-pass"><strong>Pass</strong><span>Permission lifecycle observed as <code>2 → 2 → 6 → 2</code></span></li>
-        <li className="recorded-inspector-pending"><strong>Not run</strong><span>Two natural-language checks and cancellation/cleanup</span></li>
+        <li className="recorded-inspector-pending"><strong>Not run</strong><span>Two natural-language checks; stock 1.9.14 has no agent cancel control</span></li>
       </ul>
       <div className="recorded-inspector-boundary">
-        <p><strong>No Gemini call · no health information.</strong> The stock natural-language path requires a Gemini key, so it was not invoked under the <code>gpt-oss:120b-cloud</code>-only policy. Three remaining checks stay in the manual kit below; production Origin Trial validation remains separate.</p>
+        <p><strong>No Gemini call · no health information.</strong> The stock natural-language path requires a Gemini key, while its execution path passes no cancellation signal. TrialBridge adds a visible human stop that reaches the actual request, but does not count it as an Inspector pass. Three checks and production Origin Trial validation remain separate.</p>
         <div><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-inspector-extension-runtime.json" target="_blank" rel="noreferrer">Inspect metadata receipt</a><a href={webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.repository} target="_blank" rel="noreferrer">Open pinned Inspector source</a></div>
       </div>
     </aside>
@@ -221,6 +221,6 @@ export default function WebMcpProofPage() {
       <Link className="secondary-action action-link" href="/match#private-chat">Open the guided workflow receipt</Link>
     </section>
 
-    <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation, current-browser lifecycle, and one recorded fictional permission transition. Natural-language selection, cancellation/cleanup, and production Origin Trial behavior still require Chrome validation.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
+    <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation, human-controlled execution cancellation, current-browser lifecycle, and one recorded fictional permission transition. Stock agent cancellation, natural-language selection, and production Origin Trial behavior still require external Chrome validation.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
   </main>;
 }

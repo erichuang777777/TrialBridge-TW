@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
-import type { WebMcpActivity } from "@/lib/webmcp/tools";
+import type { WebMcpActivity, WebMcpExecutionControl, WebMcpExecutionControlEvent } from "@/lib/webmcp/tools";
 import { appendCapabilitySet, appendRuntimeState, appendToolExecution, createWebMcpSessionReceipt } from "@/lib/webmcp/receipt";
 import type { WebMcpReceiptEvent } from "@/lib/webmcp/receipt";
 import type { TrialMatch } from "@/lib/matching/engine";
@@ -42,20 +42,44 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
   const [unsupportedReason, setUnsupportedReason] = useState<"preview" | "insecure">("preview");
   const [receiptDownloaded, setReceiptDownloaded] = useState(false);
   const [lastActivity, setLastActivity] = useState<WebMcpActivity>();
+  const [activeExecutions, setActiveExecutions] = useState<WebMcpExecutionControl[]>([]);
+  const [cancellingExecutionIds, setCancellingExecutionIds] = useState<number[]>([]);
   const [receiptEvents, setReceiptEvents] = useState<WebMcpReceiptEvent[]>([]);
   const receiptSequence = useRef(0);
+  const executionControls = useRef(new Map<number, WebMcpExecutionControl>());
+  const mounted = useRef(true);
   const nextReceiptMetadata = useCallback(() => ({ id: ++receiptSequence.current, occurredAt: new Date().toISOString() }), []);
   const recordActivity = useCallback((activity: WebMcpActivity) => {
+    if (!mounted.current) return;
     setLastActivity(activity);
     const metadata = nextReceiptMetadata();
     setReceiptEvents((current) => appendToolExecution(current, activity.toolName, activity.state, metadata.occurredAt, metadata.id));
   }, [nextReceiptMetadata]);
-  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, onActivity: recordActivity }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, recordActivity]);
+  const recordExecutionControl = useCallback((event: WebMcpExecutionControlEvent) => {
+    if (!mounted.current) return;
+    if (event.type === "available") executionControls.current.set(event.control.executionId, event.control);
+    else executionControls.current.delete(event.executionId);
+    setActiveExecutions([...executionControls.current.values()]);
+    if (event.type === "cleared") setCancellingExecutionIds((current) => current.filter((id) => id !== event.executionId));
+  }, []);
+  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, onActivity: recordActivity, onExecutionControl: recordExecutionControl }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, recordActivity, recordExecutionControl]);
   const contextualUnlocked = Boolean(profile && sensitiveConsent);
 
   useEffect(() => {
     if (!contextualUnlocked) setLastActivity(undefined);
   }, [contextualUnlocked]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => () => {
+    for (const control of executionControls.current.values()) control.cancel();
+    executionControls.current.clear();
+  }, [tools]);
 
   useEffect(() => {
     let active = true;
@@ -140,6 +164,9 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     copySetup: "Copy setup address",
     setupCopied: "Address copied",
     method: "Why WebMCP matters",
+    cancelActive: "Cancel active agent tool",
+    cancelActiveMany: (count: number) => `Cancel ${count} active agent tools`,
+    cancelling: "Cancelling agent tool",
     activity: {
       running: "Agent tool is running",
       completed: "Agent tool completed · continue in the visible workflow",
@@ -180,6 +207,9 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     copySetup: "複製設定位址",
     setupCopied: "已複製位址",
     method: "為什麼 WebMCP 很重要",
+    cancelActive: "取消執行中的 Agent 工具",
+    cancelActiveMany: (count: number) => `取消 ${count} 項執行中的 Agent 工具`,
+    cancelling: "正在取消 Agent 工具",
     activity: {
       running: "Agent 工具執行中",
       completed: "Agent 工具已完成 · 請在可見流程中繼續",
@@ -230,11 +260,24 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     return { label: copy.state[registrationState], className: "tool-pending" };
   }
 
+  function cancelActiveExecutions() {
+    const controls = [...executionControls.current.values()];
+    setCancellingExecutionIds(controls.map((control) => control.executionId));
+    for (const control of controls) control.cancel();
+  }
+
+  const visibleActivity = activeExecutions.length > 0
+    ? { toolName: activeExecutions.at(-1)!.toolName, state: "running" as const }
+    : lastActivity;
+  const allActiveExecutionsCancelling = activeExecutions.length > 0 && activeExecutions.every((execution) => cancellingExecutionIds.includes(execution.executionId));
+  const cancelLabel = activeExecutions.length > 1 ? copy.cancelActiveMany(activeExecutions.length) : copy.cancelActive;
+
   if (compact) return <aside className={`webmcp-landing-entry webmcp-${registrationState}`} aria-label={language === "en" ? "WebMCP quick start for AI agents" : "AI Agent 的 WebMCP 快速入口"}>
     <span className="webmcp-live-mark" aria-hidden="true" />
     <span><strong>{language === "en" ? "For AI agents · WebMCP" : "提供 AI Agent 使用 · WebMCP"}</strong><small>{language === "en" ? "Call trialbridge_method first, then search_public_cancer_trials." : "先呼叫 trialbridge_method，再使用 search_public_cancer_trials。"}</small></span>
     <a href="/webmcp">{language === "en" ? "Usage & proof" : "使用方法與證據"}</a>
-    <em role="status" aria-atomic="true">{lastActivity ? copy.activity[lastActivity.state] : copy.state[registrationState]}</em>
+    <em role="status" aria-atomic="true">{visibleActivity ? (allActiveExecutionsCancelling ? copy.cancelling : copy.activity[visibleActivity.state]) : copy.state[registrationState]}</em>
+    {activeExecutions.length > 0 && <button className="webmcp-agent-cancel" type="button" disabled={allActiveExecutionsCancelling} onClick={cancelActiveExecutions}>{allActiveExecutionsCancelling ? copy.cancelling : cancelLabel}</button>}
   </aside>;
 
   return <><details className={`webmcp-live-panel webmcp-${registrationState}`}>
@@ -261,7 +304,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
       <SessionCapabilityReceipt events={receiptEvents} language={language} activityCopy={copy.activity} title={copy.receiptTitle} subtitle={copy.receiptSubtitle} privacy={copy.receiptPrivacy} empty={copy.receiptEmpty} downloadLabel={receiptDownloaded ? copy.receiptDownloaded : copy.receiptDownload} onDownload={downloadSessionReceipt} />
       <div className="webmcp-live-links"><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">{copy.setup}</a><a href="/method">{copy.method}</a></div>
     </div>
-  </details>{lastActivity && <p className={`webmcp-agent-activity activity-${lastActivity.state}`} role="status" aria-atomic="true"><strong>{lastActivity.toolName}</strong><span>{copy.activity[lastActivity.state]}</span></p>}</>;
+  </details>{visibleActivity && <div className={`webmcp-agent-activity activity-${visibleActivity.state}`}><p role="status" aria-atomic="true"><strong>{visibleActivity.toolName}</strong><span>{allActiveExecutionsCancelling ? copy.cancelling : copy.activity[visibleActivity.state]}</span></p>{activeExecutions.length > 0 && <button className="webmcp-agent-cancel" type="button" disabled={allActiveExecutionsCancelling} onClick={cancelActiveExecutions}>{allActiveExecutionsCancelling ? copy.cancelling : cancelLabel}</button>}</div>}</>;
 }
 
 function ToolGroup({ title, names, getState }: { title: string; names: string[]; getState: (name: string) => { label: string; className: string } }) {

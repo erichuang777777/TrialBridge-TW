@@ -60,7 +60,7 @@
       {
         "id": "inspector-cancellation-cleanup",
         "status": "not_run",
-        "reason": "This check requires interactive agent cancellation and navigation observation."
+        "reason": "Stock Inspector 1.9.14 exposes no agent cancel control and calls document.modelContext.executeTool without an AbortSignal. TrialBridge now provides a visible human cancellation control, but that product safety layer does not satisfy this agent-initiated Inspector case."
       }
     ],
     "publicToolNames": [
@@ -138,6 +138,19 @@
     "manualPathPolicyCompatible": true,
     "reason": "Only stock discovery and manual fixed execution were used; the Gemini-backed natural-language path was not invoked."
   },
+  "sourceCapabilityAudit": {
+    "auditedLocalDate": "2026-09-02",
+    "commit": "f164a9aa5c3f6083f5976ccae308257bdf86cb99",
+    "manualExecutePassesAbortSignal": false,
+    "naturalLanguageExecutePassesAbortSignal": false,
+    "agentCancelControlAvailable": false,
+    "resetCancelsExecution": false,
+    "toolCancelEventIsObservationOnly": true,
+    "sourceLinks": [
+      "https://github.com/beaufortfrancois/model-context-tool-inspector/blob/f164a9aa5c3f6083f5976ccae308257bdf86cb99/sidebar.js",
+      "https://github.com/beaufortfrancois/model-context-tool-inspector/blob/f164a9aa5c3f6083f5976ccae308257bdf86cb99/content.js"
+    ]
+  },
   "privacyBoundary": {
     "containsHealthInformation": false,
     "storesInvocationInputs": false,
@@ -146,5 +159,5 @@
     "storesRawSchemas": false,
     "persistence": "repository metadata only"
   },
-  "evidenceBoundary": "Actual stock extension background/content-script discovery, fixed manual execution, and fictional permission transition through isolated Chrome for Testing. The stock sidebar document was loaded in an extension tab with the upstream headless test's target-tab query shim because a real side-panel opening requires a user gesture. This partial artifact does not prove natural-language selection, cancellation/cleanup, production Origin Trial deployment, or clinical validity."
+  "evidenceBoundary": "Actual stock extension background/content-script discovery, fixed manual execution, and fictional permission transition through isolated Chrome for Testing. The stock sidebar document was loaded in an extension tab with the upstream headless test's target-tab query shim because a real side-panel opening requires a user gesture. A pinned-source audit confirms that stock version 1.9.14 cannot initiate execution cancellation. TrialBridge's visible human cancellation is a separate repository-verified safety layer. This partial artifact does not prove natural-language selection, agent cancellation/cleanup, production Origin Trial deployment, or clinical validity."
 }

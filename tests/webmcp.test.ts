@@ -4,7 +4,7 @@ import test from "node:test";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { capWebMcpOutput, maxWebMcpOutputChars } from "../lib/webmcp/output.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
-import type { WebMcpActivity } from "../lib/webmcp/tools.ts";
+import type { WebMcpActivity, WebMcpExecutionControlEvent } from "../lib/webmcp/tools.ts";
 import type { CriterionAssessment, TrialMatch } from "../lib/matching/engine.ts";
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [{ id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Draft only." });
@@ -108,6 +108,59 @@ test("public WebMCP cancellation reaches fetch and records a cancelled activity"
     { toolName: "search_public_cancer_trials", state: "running" },
     { toolName: "search_public_cancer_trials", state: "cancelled" },
   ]);
+});
+
+test("visible human cancellation aborts the active WebMCP fetch and clears its control", async () => {
+  const activities: WebMcpActivity[] = [];
+  const controlEvents: WebMcpExecutionControlEvent[] = [];
+  let observedSignal: AbortSignal | null | undefined;
+  const fetcher = ((async (_input: string | URL | Request, init?: RequestInit) => {
+    observedSignal = init?.signal;
+    return await new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    });
+  }) as unknown) as typeof fetch;
+  const agentController = new AbortController();
+  const tool = buildTrialBridgeTools({
+    matches: [],
+    sensitiveConsent: false,
+    fetcher,
+    onActivity: (activity) => activities.push(activity),
+    onExecutionControl: (event) => controlEvents.push(event),
+  }).find((candidate) => candidate.name === "search_public_cancer_trials");
+  assert.ok(tool);
+  const pending = Promise.resolve(tool.execute({ condition: "gastric cancer" }, { signal: agentController.signal }));
+  await new Promise((resolve) => setImmediate(resolve));
+  const available = controlEvents.find((event) => event.type === "available");
+  assert.ok(available);
+  available.control.cancel();
+  await assert.rejects(pending, (error: unknown) => error instanceof DOMException && error.name === "AbortError");
+  assert.notEqual(observedSignal, agentController.signal);
+  assert.equal(observedSignal?.aborted, true);
+  assert.equal(agentController.signal.aborted, false);
+  assert.deepEqual(activities, [
+    { toolName: "search_public_cancer_trials", state: "running" },
+    { toolName: "search_public_cancer_trials", state: "cancelled" },
+  ]);
+  assert.deepEqual(controlEvents.map((event) => event.type), ["available", "cleared"]);
+  const cleared = controlEvents.at(-1);
+  assert.ok(cleared?.type === "cleared");
+  assert.equal(cleared.executionId, available.control.executionId);
+});
+
+test("completed WebMCP execution clears the visible cancellation control", async () => {
+  const controlEvents: WebMcpExecutionControlEvent[] = [];
+  const tool = buildTrialBridgeTools({
+    matches: [],
+    sensitiveConsent: false,
+    onExecutionControl: (event) => controlEvents.push(event),
+  }).find((candidate) => candidate.name === "trialbridge_method");
+  assert.ok(tool);
+  await tool.execute({}, { signal: new AbortController().signal });
+  assert.deepEqual(controlEvents.map((event) => event.type), ["available", "cleared"]);
+  const available = controlEvents[0];
+  const cleared = controlEvents[1];
+  assert.equal(available.type === "available" && cleared.type === "cleared" && available.control.executionId, cleared.type === "cleared" ? cleared.executionId : -1);
 });
 
 test("sensitive WebMCP tools register only with confirmed-profile consent", () => {

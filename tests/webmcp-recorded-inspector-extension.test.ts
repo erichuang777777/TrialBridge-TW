@@ -23,6 +23,7 @@ test("recorded stock Inspector evidence is three-of-six, metadata-only, and prov
       permissionTransition: { sequence: Array<{ phase: string; toolCount: number }>; addedToolNames: string[]; removedToolNames: string[]; apiKeyConfigured: boolean; containsHealthInformation: boolean };
     };
     providerBoundary: { apiKeyConfigured: boolean; naturalLanguagePathInvoked: boolean; requiredCredential: string; projectAllowedCloudModel: string; manualPathPolicyCompatible: boolean };
+    sourceCapabilityAudit: { commit: string; manualExecutePassesAbortSignal: boolean; naturalLanguageExecutePassesAbortSignal: boolean; agentCancelControlAvailable: boolean; resetCancelsExecution: boolean; toolCancelEventIsObservationOnly: boolean; sourceLinks: string[] };
     privacyBoundary: Record<string, boolean | string>;
     evidenceBoundary: string;
   };
@@ -66,6 +67,25 @@ test("recorded stock Inspector evidence is three-of-six, metadata-only, and prov
     { apiKeyConfigured: artifact.providerBoundary.apiKeyConfigured, naturalLanguagePathInvoked: artifact.providerBoundary.naturalLanguagePathInvoked, requiredCredential: artifact.providerBoundary.requiredCredential, projectAllowedCloudModel: artifact.providerBoundary.projectAllowedCloudModel, manualPathPolicyCompatible: artifact.providerBoundary.manualPathPolicyCompatible },
     { apiKeyConfigured: false, naturalLanguagePathInvoked: false, requiredCredential: "Gemini API key", projectAllowedCloudModel: "gpt-oss:120b-cloud", manualPathPolicyCompatible: true },
   );
+  assert.deepEqual(
+    {
+      commit: artifact.sourceCapabilityAudit.commit,
+      manualExecutePassesAbortSignal: artifact.sourceCapabilityAudit.manualExecutePassesAbortSignal,
+      naturalLanguageExecutePassesAbortSignal: artifact.sourceCapabilityAudit.naturalLanguageExecutePassesAbortSignal,
+      agentCancelControlAvailable: artifact.sourceCapabilityAudit.agentCancelControlAvailable,
+      resetCancelsExecution: artifact.sourceCapabilityAudit.resetCancelsExecution,
+      toolCancelEventIsObservationOnly: artifact.sourceCapabilityAudit.toolCancelEventIsObservationOnly,
+    },
+    {
+      commit: artifact.inspector.commit,
+      manualExecutePassesAbortSignal: false,
+      naturalLanguageExecutePassesAbortSignal: false,
+      agentCancelControlAvailable: false,
+      resetCancelsExecution: false,
+      toolCancelEventIsObservationOnly: true,
+    },
+  );
+  assert.equal(artifact.sourceCapabilityAudit.sourceLinks.length, 2);
   assert.equal(artifact.privacyBoundary.containsHealthInformation, false);
   assert.equal(artifact.privacyBoundary.storesInvocationInputs, false);
   assert.equal(artifact.privacyBoundary.storesExecutionResults, false);

@@ -19,6 +19,16 @@ export interface WebMcpActivity {
   state: WebMcpActivityState;
 }
 
+export interface WebMcpExecutionControl {
+  executionId: number;
+  toolName: string;
+  cancel: () => void;
+}
+
+export type WebMcpExecutionControlEvent =
+  | { type: "available"; control: WebMcpExecutionControl }
+  | { type: "cleared"; executionId: number };
+
 export interface WebMcpToolContext {
   profile?: ConfirmedProfile;
   matches: TrialMatch[];
@@ -28,21 +38,63 @@ export interface WebMcpToolContext {
   sensitiveConsent: boolean;
   fetcher?: typeof fetch;
   onActivity?: (activity: WebMcpActivity) => void;
+  onExecutionControl?: (event: WebMcpExecutionControlEvent) => void;
 }
 
-function withVisibleActivity(tool: WebMCP.ModelContextTool, onActivity?: WebMcpToolContext["onActivity"]): WebMCP.ModelContextTool {
-  if (!onActivity) return tool;
+let nextWebMcpExecutionId = 0;
+
+function combineAbortSignals(primary: AbortSignal, secondary: AbortSignal) {
+  const controller = new AbortController();
+  const abortFrom = (source: AbortSignal) => {
+    if (!controller.signal.aborted) controller.abort(source.reason);
+  };
+  const onPrimaryAbort = () => abortFrom(primary);
+  const onSecondaryAbort = () => abortFrom(secondary);
+  if (primary.aborted) abortFrom(primary);
+  else primary.addEventListener("abort", onPrimaryAbort, { once: true });
+  if (secondary.aborted) abortFrom(secondary);
+  else secondary.addEventListener("abort", onSecondaryAbort, { once: true });
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      primary.removeEventListener("abort", onPrimaryAbort);
+      secondary.removeEventListener("abort", onSecondaryAbort);
+    },
+  };
+}
+
+function withVisibleActivity(
+  tool: WebMCP.ModelContextTool,
+  onActivity?: WebMcpToolContext["onActivity"],
+  onExecutionControl?: WebMcpToolContext["onExecutionControl"],
+): WebMCP.ModelContextTool {
+  if (!onActivity && !onExecutionControl) return tool;
   return {
     ...tool,
     execute: async (input, options) => {
-      onActivity({ toolName: tool.name, state: "running" });
+      const executionId = ++nextWebMcpExecutionId;
+      const humanController = new AbortController();
+      const combined = onExecutionControl ? combineAbortSignals(options.signal, humanController.signal) : undefined;
+      const effectiveOptions = combined ? { ...options, signal: combined.signal } : options;
+      onActivity?.({ toolName: tool.name, state: "running" });
+      onExecutionControl?.({
+        type: "available",
+        control: {
+          executionId,
+          toolName: tool.name,
+          cancel: () => humanController.abort(new DOMException("Cancelled from the visible TrialBridge page.", "AbortError")),
+        },
+      });
       try {
-        const output = await tool.execute(input, options);
-        onActivity({ toolName: tool.name, state: "completed" });
+        const output = await tool.execute(input, effectiveOptions);
+        onActivity?.({ toolName: tool.name, state: "completed" });
         return output;
       } catch (error) {
-        onActivity({ toolName: tool.name, state: options.signal.aborted ? "cancelled" : "failed" });
+        onActivity?.({ toolName: tool.name, state: effectiveOptions.signal.aborted ? "cancelled" : "failed" });
         throw error;
+      } finally {
+        combined?.cleanup();
+        onExecutionControl?.({ type: "cleared", executionId });
       }
     },
   };
@@ -67,7 +119,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       },
     },
   ];
-  if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => withVisibleActivity(tool, context.onActivity));
+  if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => withVisibleActivity(tool, context.onActivity, context.onExecutionControl));
   tools.push({
     ...webMcpImperativeContractCore.review_trial_followups,
     execute: (input) => {
@@ -128,5 +180,5 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       });
     },
   });
-  return tools.map((tool) => withVisibleActivity(tool, context.onActivity));
+  return tools.map((tool) => withVisibleActivity(tool, context.onActivity, context.onExecutionControl));
 }

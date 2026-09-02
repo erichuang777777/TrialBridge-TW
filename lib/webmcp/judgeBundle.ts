@@ -96,7 +96,7 @@ export const webMcpConformanceMatrix = [
     evidenceClass: "manual_gate",
     evidenceLabel: "Manual Inspector gate",
     requirement: "Natural-language and cancellation completion",
-    implementation: "Three checks remain not run: the two stock natural-language checks require Gemini, while judges must still verify cancellation/cleanup through manual Chrome observation. Production Origin Trial behavior remains a separate deployment gate.",
+    implementation: "Three checks remain not run: the two stock natural-language checks require Gemini, and stock Inspector 1.9.14 has no agent cancel control or executeTool AbortSignal. TrialBridge separately provides visible human cancellation; judges must still verify agent cancellation/cleanup, and production Origin Trial behavior remains an external gate.",
     evidence: ["app/webmcp/_components/InspectorAcceptanceKit.tsx", "https://developer.chrome.com/docs/ai/webmcp", "docs/WEBMCP_VERIFICATION.md"],
   },
 ] as const satisfies ReadonlyArray<{
@@ -205,6 +205,7 @@ export const webMcpJudgeBundle = {
     schemasExpected: recordedInspectorExtensionRuntime.result.schemasExpected,
     safeExecution: recordedInspectorExtensionRuntime.result.safeExecution,
     permissionTransition: recordedInspectorExtensionRuntime.result.permissionTransition,
+    sourceCapabilityAudit: recordedInspectorExtensionRuntime.sourceCapabilityAudit,
     providerBoundary: recordedInspectorExtensionRuntime.providerBoundary,
     privacyBoundary: recordedInspectorExtensionRuntime.privacyBoundary,
     evidenceBoundary: recordedInspectorExtensionRuntime.evidenceBoundary,

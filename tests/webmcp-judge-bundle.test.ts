@@ -69,6 +69,8 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checks.map((item) => item.status), ["pass", "pass", "not_run", "not_run", "pass", "not_run"]);
   assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.permissionTransition.sequence.map((item) => item.toolCount), [2, 2, 6, 2]);
   assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.permissionTransition.addedToolNames, webMcpJudgeBundle.recordedInspectorExtensionRuntime.permissionTransition.removedToolNames);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.sourceCapabilityAudit.agentCancelControlAvailable, false);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.sourceCapabilityAudit.manualExecutePassesAbortSignal, false);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.apiKeyConfigured, false);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.naturalLanguagePathInvoked, false);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.projectAllowedCloudModel, "gpt-oss:120b-cloud");
