@@ -26,6 +26,7 @@ import { getWebMcpOriginTrialDeploymentState, getWebMcpOriginTrialMetaToken, web
 import { webMcpSpecCrosswalk, webMcpSpecCrosswalkBundle } from "../lib/webmcp/specCrosswalk.ts";
 import { webMcpBrowserSetupContract, webMcpLocalTestingFlag } from "../lib/webmcp/browserSetup.ts";
 import { liveAgentRehearsalContract, liveAgentRehearsalScenarios } from "../lib/webmcp/liveRehearsalContract.ts";
+import { quickJudgeDemoContract } from "../lib/webmcp/quickJudgeDemo.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -203,8 +204,23 @@ check((declarative.match(/toolname=/g) ?? []).length === 1, "The public database
 check(declarative.includes('addEventListener("toolcanceled"') && declarative.includes('addEventListener("toolcancel"'), "Declarative cancellation must cover the upstream draft and current Chromium event names.");
 
 const compatibility = readFileSync("lib/webmcp/compatibility.ts", "utf8");
-check(compatibility.includes("executeTool(tool, {})") && compatibility.includes("executeTool(tool, JSON.stringify({}))"), "Safe live execution must try the upstream object input before the current Chrome serialized-input fallback.");
+check(compatibility.includes("executeTool(tool, {}, { signal })") && compatibility.includes("executeTool(tool, JSON.stringify({}), { signal })"), "Safe live execution must try the upstream object input before the current Chrome serialized-input fallback.");
 check(compatibility.includes('tool.name !== "trialbridge_method"') && compatibility.includes("readOnlyHint !== true"), "Execution compatibility retries must remain restricted to the safe read-only method tool.");
+check(compatibility.includes("if (signal?.aborted)"), "Safe live execution must not retry after cancellation.");
+
+const quickJudgePage = readFileSync("app/webmcp/quickstart/page.tsx", "utf8");
+const quickJudgeSurface = readFileSync("app/webmcp/quickstart/_components/QuickJudgeConsole.tsx", "utf8");
+for (const marker of ["Three-minute judge demo", "QuickJudgeConsole", "No patient data required", "/trials?condition=", "/match?demo=synthetic", "/webmcp/evidence.json"]) {
+  check(quickJudgePage.includes(marker), `Three-minute judge route is missing ${marker}.`);
+}
+for (const marker of ["buildTrialBridgeTools", "exposedTo: [location.origin]", "getTools({ fromOrigins: [location.origin] })", "executeSafeMethodToolCompat", "quickJudgeDemoContract.executionTimeoutMs", 'role="status" aria-atomic="true"']) {
+  check(quickJudgeSurface.includes(marker), `Three-minute judge console is missing ${marker}.`);
+}
+check(quickJudgeDemoContract.route === "/webmcp/quickstart" && quickJudgeDemoContract.targetMinutes === 3, "Three-minute judge route contract is invalid.");
+check(quickJudgeDemoContract.publicToolNames.join("|") === "trialbridge_method|search_public_cancer_trials", "Three-minute judge route must expose exactly the two public tools.");
+check(quickJudgeDemoContract.safeExecutionTool === "trialbridge_method" && quickJudgeDemoContract.behavior.acceptsFreeText === false && quickJudgeDemoContract.behavior.runsCloudModel === false && quickJudgeDemoContract.behavior.runsRegistrySearch === false, "Three-minute judge execution must remain fixed, no-input, no-model, and no-registry.");
+check(quickJudgeDemoContract.privacyBoundary.containsHealthInformation === false && quickJudgeDemoContract.privacyBoundary.readsPatientContext === false, "Three-minute judge route must remain no-PHI and independent of patient context.");
+check(!/<(?:input|textarea)\b/i.test(quickJudgeSurface), "Three-minute judge console must not accept free text.");
 
 const runtimeAcceptanceSource = readFileSync("lib/webmcp/runtimeAcceptance.ts", "utf8");
 check(webMcpRuntimeAcceptanceChecks.length === 6, "Live runtime acceptance must keep six lifecycle checks.");
@@ -352,6 +368,7 @@ check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must r
 check(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired === false && webMcpJudgeBundle.browserSetup.inspector.separateFromWebMcp === true, "Judge bundle must state that WebMCP requires no visitor extension and Inspector is separate.");
 check(webMcpJudgeBundle.summary.liveAgentRehearsalScenarios === 4 && webMcpJudgeBundle.liveAgentRehearsal.behavior.executesSelectedTool === false, "Judge bundle must carry the four-scenario no-execution live rehearsal contract.");
 check(webMcpJudgeBundle.summary.fixedPublicBrowserExecution === true && webMcpJudgeBundle.fixedPublicBrowserExecution.toolName === "search_public_cancer_trials", "Judge bundle must carry the separate fixed public browser-execution contract.");
+check(webMcpJudgeBundle.summary.quickJudgeRoute === quickJudgeDemoContract.route && webMcpJudgeBundle.quickJudgeDemo.targetMinutes === 3, "Judge bundle must carry the three-minute route contract.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
@@ -393,6 +410,7 @@ if (findings.length > 0) {
     webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
     liveAgentRehearsalScenarios: liveAgentRehearsalScenarios.length,
     fixedPublicBrowserExecution: `${fixedPublicExecutionContract.toolName}:${fixedPublicExecutionContract.condition}`,
+    quickJudgeRoute: quickJudgeDemoContract.route,
     judgeConformanceItems: webMcpConformanceMatrix.length,
     judgeBundle: "static-json-no-health-data",
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,

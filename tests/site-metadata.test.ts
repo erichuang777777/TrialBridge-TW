@@ -22,7 +22,7 @@ test("indexing requires an explicit non-loopback HTTPS deployment origin", () =>
 });
 
 test("every public route can declare a canonical and shareable page identity", () => {
-  assert.deepEqual(publicSiteRoutes, ["/", "/trials", "/webmcp", "/method", "/privacy"]);
+  assert.deepEqual(publicSiteRoutes, ["/", "/trials", "/webmcp/quickstart", "/webmcp", "/method", "/privacy"]);
   const metadata = createPageMetadata({ title: "WebMCP Competition Evidence", description: "Synthetic metadata test.", path: "/webmcp" });
   assert.equal(metadata.alternates?.canonical, "/webmcp");
   assert.equal(metadata.openGraph?.url, "/webmcp");

@@ -1,5 +1,11 @@
 # Why WebMCP is essential to TrialBridge TW
 
+## Three-minute entrance
+
+Open `/webmcp/quickstart` first. It keeps the judging path deliberately flat: confirm the current browser exposes `document.modelContext`, discover the two same-origin public tools, verify all three security headers, and explicitly run the fixed read-only `trialbridge_method`. The action has a ten-second cap, accepts no input, does not call the cloud model or trial registries, reads no patient context, changes no workflow state, and retains no result beyond the tab.
+
+The next three cards link to the visible public `胃癌` search, the protected fictional workflow, and the full `/webmcp` evidence lab. This route proves current-browser discovery plus one safe method only. Recorded lifecycle evidence, model selection, registry execution, Origin Trial deployment, Inspector natural-language selection, and clinical validity remain separate gates.
+
 ## One-sentence judge pitch
 
 TrialBridge TW turns a human-facing clinical-trial website into a safe, structured capability layer that a browser agent can discover and use without guessing buttons, scraping medical text, or gaining enrollment authority.

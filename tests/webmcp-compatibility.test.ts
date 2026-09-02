@@ -50,3 +50,17 @@ test("WebMCP compatibility does not retry an ordinary tool failure as a second e
   await assert.rejects(executeSafeMethodToolCompat(context, tool), /tool failed/);
   assert.equal(calls, 1);
 });
+
+test("WebMCP compatibility propagates cancellation without a serialized retry", async () => {
+  let calls = 0;
+  const controller = new AbortController();
+  const context = {
+    executeTool: async () => {
+      calls += 1;
+      controller.abort(new DOMException("Judge cancelled.", "AbortError"));
+      throw new TypeError("Origin Trial expects DOMString input");
+    },
+  } as unknown as Pick<WebMCP.ModelContext, "executeTool">;
+  await assert.rejects(executeSafeMethodToolCompat(context, tool, controller.signal), /Judge cancelled/);
+  assert.equal(calls, 1);
+});

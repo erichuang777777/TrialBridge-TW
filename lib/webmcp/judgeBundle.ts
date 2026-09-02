@@ -11,6 +11,7 @@ import { webMcpSpecCrosswalkBundle } from "./specCrosswalk.ts";
 import { webMcpBrowserSetupContract } from "./browserSetup.ts";
 import { liveAgentRehearsalContract } from "./liveRehearsalContract.ts";
 import { fixedPublicExecutionContract } from "./fixedPublicExecution.ts";
+import { quickJudgeDemoContract } from "./quickJudgeDemo.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -128,6 +129,7 @@ export const webMcpJudgeBundle = {
     webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
     liveAgentRehearsalScenarios: liveAgentRehearsalContract.fixedScenarioIds.length,
     fixedPublicBrowserExecution: fixedPublicExecutionContract.behavior.executesOnlyFixedPublicSearch,
+    quickJudgeRoute: quickJudgeDemoContract.route,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
@@ -140,6 +142,7 @@ export const webMcpJudgeBundle = {
   browserSetup: webMcpBrowserSetupContract,
   liveAgentRehearsal: liveAgentRehearsalContract,
   fixedPublicBrowserExecution: fixedPublicExecutionContract,
+  quickJudgeDemo: quickJudgeDemoContract,
   toolContractCatalog: {
     route: "/webmcp/contracts.json",
     contractVersion: webMcpToolContractBundle.contractVersion,
@@ -185,5 +188,5 @@ export const webMcpJudgeBundle = {
     containsPatientData: selectionBaseline.containsPatientData,
   },
   implementationLandscape: webMcpImplementationLandscape,
-  evidenceBoundary: "Repository checks, recorded browser lifecycle evidence, a recorded model-selection eval, and site-orchestrated fixed public execution do not replace Chrome Model Context Tool Inspector natural-language acceptance or clinical validation.",
+  evidenceBoundary: "The quick judge route is a concise current-browser discovery and safe-method check. Repository checks, recorded browser lifecycle evidence, a recorded model-selection eval, and site-orchestrated fixed public execution do not replace Chrome Model Context Tool Inspector natural-language acceptance or clinical validation.",
 } as const;

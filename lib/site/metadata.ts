@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const siteName = "TrialBridge TW 試驗橋";
 export const siteDescription = "Taiwan-first bilingual cancer clinical-trial navigation with patient-confirmed matching and browser-native WebMCP tools.";
-export const publicSiteRoutes = ["/", "/trials", "/webmcp", "/method", "/privacy"] as const;
+export const publicSiteRoutes = ["/", "/trials", "/webmcp/quickstart", "/webmcp", "/method", "/privacy"] as const;
 
 type SiteEnvironment = Partial<Record<"SITE_URL" | "SITE_INDEXING_ENABLED", string>>;
 

@@ -1,5 +1,9 @@
 # WebMCP implementation and verification
 
+## Concise judge route
+
+`/webmcp/quickstart` is a three-minute, no-PHI entry point. It constructs the same two public imperative definitions as the product, registers them with an AbortSignal and `exposedTo: [location.origin]`, discovers only from the current origin, and checks `Permissions-Policy`, opener isolation, and MIME protection. Its only executable action is `trialbridge_method`: no input, ten-second cancellation cap, no model or registry request, no patient context, no workflow mutation, and no persistence. The resulting receipt is bounded and tab-local. Deterministic tests and `npm run verify:webmcp` cover this contract; current-browser interaction and Inspector selection remain separate acceptance boundaries.
+
 ## Registered tools
 
 Visible on `/trials` through declarative WebMCP:

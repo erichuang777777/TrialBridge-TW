@@ -16,7 +16,7 @@ export default function Home() {
         </Link>
         <nav aria-label="Main navigation">
           <Link href="/trials">Trial database</Link>
-          <Link href="/webmcp">WebMCP proof</Link>
+          <Link href="/webmcp/quickstart">WebMCP demo</Link>
           <Link className="nav-optional" href="/method">How it works</Link>
           <Link href="/privacy">Privacy</Link>
         </nav>

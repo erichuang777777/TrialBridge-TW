@@ -139,7 +139,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const searchUrl = await readFile(path.join(root, "lib", "trials", "searchUrl.ts"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
   const home = await readFile(path.join(root, "app", "page.tsx"), "utf8");
-  assert.match(home, /href="\/webmcp"/);
+  assert.match(home, /href="\/webmcp\/quickstart"/);
   assert.match(page, /WebMCP, visible and testable/);
   assert.match(page, /Model Context Tool Inspector/);
   assert.match(inventory, /webMcpToolContractCatalog/);

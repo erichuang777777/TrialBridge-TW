@@ -25,6 +25,12 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.browserSetup.inspector.separateFromWebMcp, true);
   assert.equal(webMcpJudgeBundle.summary.liveAgentRehearsalScenarios, 4);
   assert.equal(webMcpJudgeBundle.summary.fixedPublicBrowserExecution, true);
+  assert.equal(webMcpJudgeBundle.summary.quickJudgeRoute, "/webmcp/quickstart");
+  assert.equal(webMcpJudgeBundle.quickJudgeDemo.targetMinutes, 3);
+  assert.equal(webMcpJudgeBundle.quickJudgeDemo.safeExecutionTool, "trialbridge_method");
+  assert.equal(webMcpJudgeBundle.quickJudgeDemo.behavior.acceptsFreeText, false);
+  assert.equal(webMcpJudgeBundle.quickJudgeDemo.behavior.runsCloudModel, false);
+  assert.equal(webMcpJudgeBundle.quickJudgeDemo.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.liveAgentRehearsal.behavior.acceptsFreeText, false);
   assert.equal(webMcpJudgeBundle.liveAgentRehearsal.behavior.executesSelectedTool, false);
   assert.equal(webMcpJudgeBundle.liveAgentRehearsal.privacyBoundary.containsHealthInformation, false);

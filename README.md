@@ -13,6 +13,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 - All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
 - The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, a downloadable tab-local capability receipt, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (55/55 recorded pass; all forbidden and shortlist cases passed).
+- `/webmcp/quickstart` is the three-minute evaluation entrance: it registers and discovers exactly the two public same-origin tools, verifies the three response headers, and lets a judge explicitly execute only the fixed no-input `trialbridge_method`. It accepts no free text, makes no model or registry call, reads no patient context, and persists no result. `/webmcp` remains the full technical appendix.
 - The `/webmcp` evidence page adds a five-stage critical-user-journey map aligned with Chrome's current goal/state/role-play/recovery framework, an explicit body-free `gpt-oss:120b-cloud` smoke test using fixed synthetic text, and a one-click browser diagnostic JSON receipt containing metadata only and no health information.
 - Its explicit live lifecycle suite briefly registers one fixed read-only, no-network probe and verifies `registerTool`, same-origin discovery, bounded public execution, execution cancellation, `toolchange`, AbortSignal unregistration, and final cleanup. The probe is removed before results appear; downloaded receipts store check outcomes only and remain separate from Inspector evidence.
 - A recorded no-PHI Chrome for Testing 153.0.8010.12 run passed all 6/6 lifecycle checks with zero console errors, left only the two expected public tools, and confirmed the temporary probe was absent after cleanup. The exact receipt is stored at `evals/webmcp-browser-runtime-acceptance.json`; this is browser API evidence, not natural-language Inspector or production Origin Trial evidence.
@@ -42,7 +43,7 @@ This repository is a clean-room rebuild. Its product language, information archi
 
 The independently verifiable milestones are defined in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md). Product, security, data-flow, schema, chat-state, and WebMCP contracts live under `docs/`.
 
-For evaluation, open the built-in [`/webmcp`](http://localhost:3000/webmcp) evidence page, the [recorded Chrome lifecycle receipt](evals/webmcp-browser-runtime-acceptance.json), and the static [`/webmcp/contracts.json`](http://localhost:3000/webmcp/contracts.json) contract artifact. Then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [recorded cloud-model selection baseline](docs/WEBMCP_SELECTION_EVAL.md), the [five-minute judge demonstration](docs/WEBMCP_JUDGE_GUIDE.md#five-minute-judge-demonstration), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The home page includes a WebMCP Live registration surface and a fictional, non-skipping competition case.
+For evaluation, start at the built-in [`/webmcp/quickstart`](http://localhost:3000/webmcp/quickstart) three-minute route, then open the full [`/webmcp`](http://localhost:3000/webmcp) evidence lab, the [recorded Chrome lifecycle receipt](evals/webmcp-browser-runtime-acceptance.json), and the static [`/webmcp/contracts.json`](http://localhost:3000/webmcp/contracts.json) contract artifact. Then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [recorded cloud-model selection baseline](docs/WEBMCP_SELECTION_EVAL.md), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The quick route is concise current-browser evidence; it does not replace the manual Inspector gate.
 
 ## Local development
 
@@ -51,7 +52,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Guided matching is on the home page; `/trials` provides direct public-registry browsing without medical intake; `/webmcp` provides live, browser-specific competition evidence.
+Open `http://localhost:3000`. Guided matching is on the home page; `/trials` provides direct public-registry browsing without medical intake; `/webmcp/quickstart` is the concise judge entrance; `/webmcp` provides the complete browser-specific competition evidence lab.
 
 ## Verification
 
