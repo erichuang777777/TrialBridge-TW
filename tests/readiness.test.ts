@@ -166,6 +166,9 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /latest 20 lifecycle events/);
   assert.match(page, /Standards alignment/);
   assert.match(page, /One product surface, both WebMCP API styles/);
+  assert.match(page, /Upstream specification crosswalk/);
+  assert.match(page, /Honest draft boundary/);
+  assert.match(page, /explainer-aligned rather than normative conformance/);
   assert.match(page, /Compatibility profile audited/);
   assert.match(page, /toolchange · register signal · execute signal/);
   assert.match(page, /Run six no-PHI lifecycle checks/);

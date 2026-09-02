@@ -7,6 +7,7 @@ import { webMcpInspectorAcceptanceCases } from "./inspectorAcceptance.ts";
 import { webMcpToolContractBundle } from "./toolContractCatalog.ts";
 import { webMcpCapabilityStateBundle } from "./capabilityStates.ts";
 import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName } from "./runtimeAcceptance.ts";
+import { webMcpSpecCrosswalkBundle } from "./specCrosswalk.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -17,7 +18,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "Visible declarative tool",
     implementation: "The public trial form is the tool and returns through the same visible submit path.",
-    evidence: ["app/trials/_components/TrialDatabaseExplorer.tsx", "tests/readiness.test.ts"],
+    evidence: ["app/components/TrialDatabase.tsx", "tests/readiness.test.ts"],
   },
   {
     id: "C-02",
@@ -65,7 +66,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "Progressive enhancement",
     implementation: "The human workflow remains complete when document.modelContext is unavailable.",
-    evidence: ["app/components/WebMcpBridge.tsx", "app/trials/_components/TrialDatabaseExplorer.tsx"],
+    evidence: ["app/components/WebMcpBridge.tsx", "app/components/TrialDatabase.tsx"],
   },
   {
     id: "C-08",
@@ -120,6 +121,7 @@ export const webMcpJudgeBundle = {
     writeOrEnrollmentTools: 0,
     criticalJourneySteps: webMcpCriticalJourney.steps.length,
     conformanceItems: webMcpConformanceMatrix.length,
+    specificationClauses: webMcpSpecCrosswalkBundle.summary.clauses,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
@@ -128,6 +130,7 @@ export const webMcpJudgeBundle = {
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,
+  specificationCrosswalk: webMcpSpecCrosswalkBundle,
   toolContractCatalog: {
     route: "/webmcp/contracts.json",
     contractVersion: webMcpToolContractBundle.contractVersion,

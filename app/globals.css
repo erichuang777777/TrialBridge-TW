@@ -854,6 +854,35 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .standards-grid h3 { margin: 13px 0 0; font-size: 1rem; }
 .standards-grid code { display: block; margin-top: 8px; overflow-wrap: anywhere; color: var(--ink); font-size: 0.76rem; font-weight: 800; }
 .standards-grid p { margin: 9px 0 0; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.6; }
+.spec-crosswalk { margin-top: 10px; border: 1px solid var(--line); border-radius: 11px; overflow: hidden; background: var(--surface); }
+.spec-crosswalk > summary { min-height: 64px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 11px 16px; cursor: pointer; list-style: none; }
+.spec-crosswalk > summary::-webkit-details-marker { display: none; }
+.spec-crosswalk > summary:hover { background: var(--paper); }
+.spec-crosswalk > summary > span { min-width: 0; display: grid; gap: 2px; }
+.spec-crosswalk > summary strong { font-size: 0.86rem; }
+.spec-crosswalk > summary small { color: var(--ink-soft); font-size: 0.7rem; }
+.spec-crosswalk > summary b { color: var(--primary-strong); font-size: 0.72rem; }
+.spec-crosswalk > summary em { color: var(--ink-soft); font-size: 0.68rem; font-style: normal; font-weight: 900; }
+.spec-crosswalk-body { border-top: 1px solid var(--line); }
+.spec-crosswalk-boundary { margin: 0; padding: 12px 16px; border-left: 4px solid var(--focus); color: var(--ink-soft); background: var(--warning); font-size: 0.76rem; line-height: 1.55; }
+.spec-crosswalk-boundary strong { color: var(--ink); }
+.spec-crosswalk-rows > article { min-width: 0; display: grid; grid-template-columns: minmax(130px, 0.55fr) minmax(220px, 1fr) minmax(260px, 1.15fr); gap: 16px; align-items: start; padding: 15px 16px; }
+.spec-crosswalk-rows > article + article { border-top: 1px solid var(--line); }
+.spec-crosswalk-state { min-width: 0; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.spec-crosswalk-state > span { width: 8px; height: 8px; border-radius: 50%; background: var(--match-good); box-shadow: 0 0 0 3px var(--success-surface); }
+.spec-crosswalk-state.spec-explainer_aligned > span { background: var(--match-uncertain); box-shadow: 0 0 0 3px var(--warning); }
+.spec-crosswalk-state strong { color: var(--success-ink); font-size: 0.7rem; }
+.spec-crosswalk-state.spec-explainer_aligned strong { color: #744b00; }
+.spec-crosswalk-state code { color: var(--ink-soft); font-size: 0.66rem; font-weight: 900; }
+.spec-crosswalk-rows h3 { margin: 0; font-size: 0.88rem; }
+.spec-crosswalk-rows article > div:nth-child(2) > small { display: block; margin-top: 3px; color: var(--primary-strong); font-size: 0.67rem; line-height: 1.45; }
+.spec-crosswalk-rows article > div:nth-child(2) > p { margin: 7px 0 0; color: var(--ink-soft); font-size: 0.75rem; line-height: 1.55; }
+.spec-crosswalk-proof { min-width: 0; display: grid; gap: 6px; }
+.spec-crosswalk-proof > span { color: var(--ink-soft); font-size: 0.68rem; font-weight: 900; }
+.spec-crosswalk-proof > div { display: flex; flex-wrap: wrap; gap: 4px 7px; }
+.spec-crosswalk-proof code { color: var(--ink); font-size: 0.64rem; overflow-wrap: anywhere; }
+.spec-crosswalk-proof > p { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; }
+.spec-crosswalk-proof a { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 900; }
 .standards-receipt { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-top: 10px; padding: 13px 16px; border-left: 3px solid var(--primary); background: var(--mint); }
 .standards-receipt p { display: grid; gap: 3px; margin: 0; font-size: 0.77rem; }
 .standards-receipt p span { color: var(--ink-soft); }
@@ -1141,6 +1170,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 @media (max-width: 1000px) {
   .webmcp-live-panel > summary { grid-template-columns: 14px minmax(0, 1fr); padding-inline: 22px; }
   .webmcp-live-status { grid-column: 2; max-width: none; justify-self: start; text-align: left; }
+  .spec-crosswalk > summary { grid-template-columns: minmax(0, 1fr) auto; }
+  .spec-crosswalk > summary em { grid-column: 1 / -1; }
+  .spec-crosswalk-rows > article { grid-template-columns: 1fr; gap: 9px; }
   .chat-workspace { grid-template-columns: 1fr; }
   .workflow-pane { border-right: 0; }
   .persistent-chat-panel { position: static; width: 100%; height: auto; min-height: 320px; border-top: 1px solid var(--line); }

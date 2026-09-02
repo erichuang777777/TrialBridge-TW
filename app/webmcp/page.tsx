@@ -5,6 +5,7 @@ import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
 import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandscape";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBundle";
 import { getWebMcpOriginTrialDeploymentState } from "@/lib/webmcp/originTrial";
+import { webMcpSpecCrosswalk, webMcpSpecCrosswalkBundle } from "@/lib/webmcp/specCrosswalk";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import { CompetitionPreflight } from "./_components/CompetitionPreflight";
 import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
@@ -115,6 +116,17 @@ export default function WebMcpProofPage() {
     <section className="proof-section standards-evidence" aria-labelledby="standards-evidence-title">
       <div className="proof-section-heading"><p className="eyebrow">Standards alignment</p><h2 id="standards-evidence-title">One product surface, both WebMCP API styles.</h2><p>TrialBridge TW follows the upstream WebMCP draft while retaining the small compatibility boundary required by Chrome&apos;s current Origin Trial implementation. The human workflow remains the source of truth in both cases.</p></div>
       <div className="standards-grid" role="list">{standardsProfile.map((item) => <article key={item.label} role="listitem"><div><span>Implemented</span><small>{item.label}</small></div><h3>{item.title}</h3><code>{item.code}</code><p>{item.detail}</p></article>)}</div>
+      <details className="spec-crosswalk">
+        <summary><span><strong>Upstream specification crosswalk</strong><small>Exact draft clauses, implementation evidence, and verification boundary</small></span><b>{webMcpSpecCrosswalkBundle.summary.implemented} implemented · {webMcpSpecCrosswalkBundle.summary.explainerAligned} explainer-aligned</b><em>Inspect {webMcpSpecCrosswalkBundle.summary.clauses} clauses</em></summary>
+        <div className="spec-crosswalk-body">
+          <p className="spec-crosswalk-boundary"><strong>Honest draft boundary:</strong> the upstream declarative section is explicitly marked TODO. TrialBridge follows its current explainer and Chrome profile, so that row is labelled explainer-aligned rather than normative conformance.</p>
+          <div className="spec-crosswalk-rows" role="list">{webMcpSpecCrosswalk.map((item) => <article key={item.id} role="listitem">
+            <div className={`spec-crosswalk-state spec-${item.status}`}><span aria-hidden="true" /><strong>{item.statusLabel}</strong><code>{item.id}</code></div>
+            <div><h3>{item.feature}</h3><small>{item.standardState}</small><p>{item.implementation}</p></div>
+            <div className="spec-crosswalk-proof"><span>{item.verification}</span><div>{item.evidence.map((entry) => <code key={entry}>{entry}</code>)}</div><p><a href={item.specUrl} target="_blank" rel="noreferrer">Open upstream clause</a>{"secondarySourceUrl" in item && <a href={item.secondarySourceUrl} target="_blank" rel="noreferrer">Open declarative explainer</a>}</p></div>
+          </article>)}</div>
+        </div>
+      </details>
       <div className="standards-receipt"><p><strong>Compatibility profile audited <time dateTime="2026-09-02">2026-09-02</time></strong><span><code>webmcp-types@0.1.5</code> · upstream draft and Chromium main checked separately</span></p><div><a href="https://webmachinelearning.github.io/webmcp/" target="_blank" rel="noreferrer">WebMCP draft</a><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Chrome guide</a><a href="https://developer.chrome.com/docs/ai/webmcp/secure-tools" target="_blank" rel="noreferrer">Security guide</a></div></div>
     </section>
 
