@@ -29,7 +29,7 @@ Registered only while the visible WebMCP consent checkbox is enabled and a confi
 - `draft_trial_discussion_brief`: creates an unsent, source-traceable care-team brief with explicit uncertainty and no raw note.
 - `compare_shortlisted_trials`: registered only after two or three current result cards are visibly selected; reads but cannot change that shortlist.
 
-Changing profile, pending questions, matching state, results, or consent aborts the previous registration before registering the current tool set. Tools are exposed only to the current origin. Tool names are at most 30 characters and output is capped at 1,500 serialized characters, following Chrome's current security guidance. No tool accepts raw or masked medical text and there are no send, submit, enroll, book, consent, or treatment-change tools. Each imperative execution emits a visible payload-free lifecycle status.
+Changing profile, pending questions, matching state, results, consent, or visible language aborts the previous registration before registering the current tool set. English and Traditional Chinese pages expose localized human-facing titles while machine names, descriptions, schemas, annotations, and authority remain unchanged. Tools are exposed only to the current origin. Tool names are at most 30 characters and output is capped at 1,500 serialized characters, following Chrome's current security guidance. No tool accepts raw or masked medical text and there are no send, submit, enroll, book, consent, or treatment-change tools. Each imperative execution emits a visible payload-free lifecycle status.
 
 ## Canonical contract catalog
 

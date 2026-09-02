@@ -10,7 +10,8 @@ import type { ConfirmedProfile } from "../profile/schema.ts";
 import type { RegistryQueryPlan } from "../trials/queryBridge.ts";
 import { capWebMcpOutput } from "./output.ts";
 import { createBoundedPublicSearchOutput } from "./publicSearchOutput.ts";
-import { webMcpImperativeContractCore } from "./toolContractCore.ts";
+import { getWebMcpToolTitle, webMcpImperativeContractCore } from "./toolContractCore.ts";
+import type { WebMcpDisplayLanguage, WebMcpImperativeToolName } from "./toolContractCore.ts";
 
 export type WebMcpActivityState = "running" | "completed" | "failed" | "cancelled";
 
@@ -36,6 +37,7 @@ export interface WebMcpToolContext {
   matching?: boolean;
   shortlistedTrialIds?: string[];
   sensitiveConsent: boolean;
+  language?: WebMcpDisplayLanguage;
   fetcher?: typeof fetch;
   onActivity?: (activity: WebMcpActivity) => void;
   onExecutionControl?: (event: WebMcpExecutionControlEvent) => void;
@@ -100,6 +102,13 @@ function withVisibleActivity(
   };
 }
 
+function prepareToolForPage(tool: WebMCP.ModelContextTool, context: WebMcpToolContext) {
+  const localizedTool = context.language === "zh-Hant"
+    ? { ...tool, title: getWebMcpToolTitle(tool.name as WebMcpImperativeToolName, context.language) }
+    : tool;
+  return withVisibleActivity(localizedTool, context.onActivity, context.onExecutionControl);
+}
+
 export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelContextTool[] {
   const fetcher = context.fetcher ?? fetch;
   const tools: WebMCP.ModelContextTool[] = [
@@ -119,7 +128,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       },
     },
   ];
-  if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => withVisibleActivity(tool, context.onActivity, context.onExecutionControl));
+  if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => prepareToolForPage(tool, context));
   tools.push({
     ...webMcpImperativeContractCore.review_trial_followups,
     execute: (input) => {
@@ -180,5 +189,5 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
       });
     },
   });
-  return tools.map((tool) => withVisibleActivity(tool, context.onActivity, context.onExecutionControl));
+  return tools.map((tool) => prepareToolForPage(tool, context));
 }

@@ -7,7 +7,7 @@ import type { TrialMatch } from "../lib/matching/engine.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webmcp/toolContractCatalog.ts";
-import { publicTrialFormContractCore, webMcpImperativeContractCore } from "../lib/webmcp/toolContractCore.ts";
+import { publicTrialFormContractCore, webMcpImperativeContractCore, webMcpZhHantToolTitles } from "../lib/webmcp/toolContractCore.ts";
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [{ id: "fact_contract_test", domain: "cancer_type", value: "synthetic cancer", displayZhHant: "虛構癌症", displayEn: "Synthetic cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Synthetic contract fixture." });
 const profile = confirmProfile(draft, {}, "patient", "2026-09-02T00:00:00.000Z");
@@ -26,6 +26,25 @@ test("canonical catalog covers the visible declarative form and every imperative
     assert.equal(contract.description, tool.description);
     assert.deepEqual(contract.inputSchema, tool.inputSchema);
     assert.deepEqual(contract.annotations, tool.annotations);
+  }
+});
+
+test("human-facing WebMCP titles follow the page language without changing machine contracts", () => {
+  const syntheticMatches = [{ trial: { canonicalId: "synthetic:localized-1" } }, { trial: { canonicalId: "synthetic:localized-2" } }] as TrialMatch[];
+  const localizedContext = { profile, matches: syntheticMatches, sensitiveConsent: true, shortlistedTrialIds: syntheticMatches.map((match) => match.trial.canonicalId) };
+  const english = buildTrialBridgeTools({ ...localizedContext, language: "en" });
+  const traditionalChinese = buildTrialBridgeTools({ ...localizedContext, language: "zh-Hant" });
+
+  assert.equal(english.length, 7);
+  assert.deepEqual(traditionalChinese.map((tool) => tool.name), english.map((tool) => tool.name));
+  for (let index = 0; index < english.length; index += 1) {
+    const englishTool = english[index]!;
+    const traditionalChineseTool = traditionalChinese[index]!;
+    assert.equal(traditionalChineseTool.title, webMcpZhHantToolTitles[traditionalChineseTool.name as keyof typeof webMcpZhHantToolTitles]);
+    assert.notEqual(traditionalChineseTool.title, englishTool.title);
+    assert.equal(traditionalChineseTool.description, englishTool.description);
+    assert.deepEqual(traditionalChineseTool.inputSchema, englishTool.inputSchema);
+    assert.deepEqual(traditionalChineseTool.annotations, englishTool.annotations);
   }
 });
 

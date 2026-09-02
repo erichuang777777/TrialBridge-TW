@@ -69,3 +69,18 @@ export const webMcpImperativeContractCore = {
 } as const satisfies Record<string, Omit<WebMCP.ModelContextTool, "execute">>;
 
 export type WebMcpImperativeToolName = keyof typeof webMcpImperativeContractCore;
+export type WebMcpDisplayLanguage = "en" | "zh-Hant";
+
+export const webMcpZhHantToolTitles = {
+  trialbridge_method: "說明 TrialBridge TW 方法",
+  search_public_cancer_trials: "搜尋公開癌症臨床試驗",
+  review_trial_followups: "檢視待確認的試驗問題",
+  explain_confirmed_matches: "說明已確認資料的試驗配對",
+  draft_trial_outreach: "建立試驗團隊聯絡草稿",
+  draft_trial_discussion_brief: "建立照護團隊試驗討論摘要",
+  compare_shortlisted_trials: "比較已選取的試驗清單",
+} as const satisfies Record<WebMcpImperativeToolName, string>;
+
+export function getWebMcpToolTitle(name: WebMcpImperativeToolName, language: WebMcpDisplayLanguage) {
+  return language === "zh-Hant" ? webMcpZhHantToolTitles[name] : webMcpImperativeContractCore[name].title;
+}

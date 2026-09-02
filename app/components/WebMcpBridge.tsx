@@ -62,7 +62,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     setActiveExecutions([...executionControls.current.values()]);
     if (event.type === "cleared") setCancellingExecutionIds((current) => current.filter((id) => id !== event.executionId));
   }, []);
-  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, onActivity: recordActivity, onExecutionControl: recordExecutionControl }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, recordActivity, recordExecutionControl]);
+  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language, onActivity: recordActivity, onExecutionControl: recordExecutionControl }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language, recordActivity, recordExecutionControl]);
   const contextualUnlocked = Boolean(profile && sensitiveConsent);
 
   useEffect(() => {

@@ -49,6 +49,7 @@ const draft = profileDraftSchema.parse({
 });
 const profile = confirmProfile(draft, {}, "patient", "2026-09-01T00:00:00.000Z");
 const publicTools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false });
+const zhHantPublicTools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, language: "zh-Hant" });
 const allTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
 const shortlistTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true, shortlistedTrialIds: ["synthetic:trial-001", "synthetic:trial-002"] });
 const names = shortlistTools.map((tool) => tool.name);
@@ -60,6 +61,7 @@ function check(condition: boolean, message: string) {
 
 check(new Set(names).size === names.length, "Imperative tool names must be unique.");
 check(publicTools.length === 2, "Exactly two public imperative tools must remain available without confirmed context.");
+check(zhHantPublicTools.every((tool, index) => tool.name === publicTools[index]?.name && tool.title !== publicTools[index]?.title && tool.description === publicTools[index]?.description), "Traditional Chinese human titles must localize without changing machine contracts.");
 check(allTools.length === 6, "Exactly six imperative tools must be available after confirmed-context permission.");
 check(shortlistTools.length === 7, "Exactly seven imperative tools must be available after two visible shortlist selections.");
 check(webMcpCapabilityStates.length === 4, "Capability simulator must expose four synthetic human-controlled states.");
@@ -369,7 +371,7 @@ for (const marker of ["Live cloud model smoke test", "It never reads the note, p
 check(cloudProbeVerifier.includes('method: "POST"') && !cloudProbeVerifier.includes("body:"), "Explicit cloud verifier must send a body-free POST.");
 
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
-for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt"]) {
+for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt", "sensitiveConsent, language, onActivity"]) {
   check(bridge.includes(marker), `Imperative bridge is missing ${marker}.`);
 }
 for (const marker of ["onExecutionControl", "Cancel active agent tool", "cancelActiveExecutions", 'role="status" aria-atomic="true"']) {

@@ -39,9 +39,9 @@ const standardsProfile = [
   },
   {
     label: "Imperative API",
-    title: "Typed capabilities follow page state",
+    title: "Typed capabilities follow page state and language",
     code: "registerTool() · getTools() · executeTool()",
-    detail: "Public, confirmed-context, and shortlist tools are registered and removed as visible permission and selection state changes.",
+    detail: "Public, confirmed-context, and shortlist tools follow visible permission and selection state; human titles localize while machine contracts stay stable.",
   },
   {
     label: "Lifecycle compatibility",
