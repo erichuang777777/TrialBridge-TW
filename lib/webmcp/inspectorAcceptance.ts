@@ -1,3 +1,5 @@
+import { webMcpLocalTestingFlag } from "./browserSetup.ts";
+
 export type InspectorAcceptanceOutcome = "not_run" | "pass" | "needs_attention";
 
 export interface InspectorAcceptanceCase {
@@ -18,7 +20,7 @@ export const webMcpInspectorAcceptanceCases = [
     number: "01",
     category: "Discovery",
     title: "Public tools and schemas",
-    setup: "Enable chrome://flags/#enable-webmcp-testing, relaunch Chrome, open /webmcp, then open Model Context Tool Inspector.",
+    setup: `Enable ${webMcpLocalTestingFlag}, relaunch Chrome, open /webmcp, then open the separate Model Context Tool Inspector.`,
     action: "Inspect the registered imperative tools and let Inspector parse each input schema.",
     expected: "Exactly trialbridge_method and search_public_cancer_trials are public here; both parse without a schema error.",
     prompt: undefined,

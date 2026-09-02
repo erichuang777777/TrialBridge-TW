@@ -20,7 +20,9 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.summary.runtimeAcceptanceChecks, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed, 6);
   assert.equal(webMcpJudgeBundle.summary.specificationClauses, 8);
+  assert.equal(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired, false);
   assert.equal(webMcpJudgeBundle.specificationCrosswalk.upstreamCommit, "41d12f057167ccf5954dbcf49d99502cb6c84491");
+  assert.equal(webMcpJudgeBundle.browserSetup.inspector.separateFromWebMcp, true);
   assert.deepEqual(webMcpJudgeBundle.toolContractCatalog, { route: "/webmcp/contracts.json", contractVersion: "2026-09-02.1", tools: 8, withinChromeGuidance: 8, containsHealthInformation: false });
   assert.equal(webMcpJudgeBundle.capabilityStateModel.artifactClass, "synthetic_capability_state_model_not_runtime_evidence");
   assert.deepEqual(webMcpJudgeBundle.capabilityStateModel.states.map((state) => state.activeImperativeToolNames.length), [2, 2, 6, 7]);

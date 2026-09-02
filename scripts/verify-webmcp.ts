@@ -23,6 +23,7 @@ import { webMcpCapabilityStateBundle, webMcpCapabilityStates } from "../lib/webm
 import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName, type WebMcpRuntimeAcceptanceResult } from "../lib/webmcp/runtimeAcceptance.ts";
 import { getWebMcpOriginTrialDeploymentState, getWebMcpOriginTrialMetaToken, webMcpOriginTrialEnvironmentKey } from "../lib/webmcp/originTrial.ts";
 import { webMcpSpecCrosswalk, webMcpSpecCrosswalkBundle } from "../lib/webmcp/specCrosswalk.ts";
+import { webMcpBrowserSetupContract, webMcpLocalTestingFlag } from "../lib/webmcp/browserSetup.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -216,6 +217,15 @@ for (const marker of ["Standards alignment", "Declarative API", "Imperative API"
   check(proofPage.includes(marker), `Competition evidence is missing the ${marker} standards marker.`);
 }
 
+const browserSetupSurface = readFileSync("app/webmcp/_components/WebMcpBrowserSetup.tsx", "utf8");
+for (const marker of ["WebMCP itself has nothing to install", "No extension required", "Complete only the Chrome step for local testing", "Inspector is separate and optional", 'role="status" aria-atomic="true"']) {
+  check(browserSetupSurface.includes(marker), `Browser setup surface is missing ${marker}.`);
+}
+check(webMcpLocalTestingFlag === "chrome://flags/#enable-webmcp-testing", "Canonical local-testing flag address changed unexpectedly.");
+check(webMcpBrowserSetupContract.visitorInstallRequired === false && webMcpBrowserSetupContract.inspector.separateFromWebMcp === true && webMcpBrowserSetupContract.inspector.optionalForVisitors === true, "Browser setup must keep native WebMCP separate from the optional Inspector.");
+check(webMcpBrowserSetupContract.layers.map((layer) => layer.id).join("|") === "specification|browser|trialbridge", "Browser setup must preserve the three-layer explanation.");
+check(webMcpBrowserSetupContract.privacyBoundary.containsHealthInformation === false && webMcpBrowserSetupContract.privacyBoundary.readsBrowserState === false && webMcpBrowserSetupContract.privacyBoundary.executesTools === false, "Browser setup guidance must remain static and no-health-data.");
+
 const diagnosticSurface = readFileSync("app/webmcp/_components/WebMcpDiagnostics.tsx", "utf8");
 for (const marker of ["createWebMcpDiagnosticReceipt", "Download this browser&apos;s diagnostic receipt", "Browser diagnostic receipt downloaded to this device"]) {
   check(diagnosticSurface.includes(marker), `Browser diagnostic surface is missing ${marker}.`);
@@ -326,6 +336,7 @@ for (const item of webMcpSpecCrosswalk) {
   for (const evidence of item.evidence) check(existsSync(evidence), `${item.id}: evidence path does not exist: ${evidence}`);
 }
 check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
+check(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired === false && webMcpJudgeBundle.browserSetup.inspector.separateFromWebMcp === true, "Judge bundle must state that WebMCP requires no visitor extension and Inspector is separate.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
@@ -364,6 +375,7 @@ if (findings.length > 0) {
     implementationLandscape: webMcpImplementationLandscape.entries.length,
     implementationLandscapeAudit: webMcpImplementationLandscape.auditedAt,
     specificationCrosswalk: `${webMcpSpecCrosswalkBundle.summary.implemented}+${webMcpSpecCrosswalkBundle.summary.explainerAligned}/${webMcpSpecCrosswalkBundle.summary.clauses}`,
+    webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
     judgeConformanceItems: webMcpConformanceMatrix.length,
     judgeBundle: "static-json-no-health-data",
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,

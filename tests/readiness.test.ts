@@ -131,6 +131,8 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const contractExplorer = await readFile(path.join(root, "app", "webmcp", "_components", "ToolContractExplorer.tsx"), "utf8");
   const capabilitySimulator = await readFile(path.join(root, "app", "webmcp", "_components", "CapabilityStateSimulator.tsx"), "utf8");
   const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
+  const browserSetup = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpBrowserSetup.tsx"), "utf8");
+  const browserSetupContract = await readFile(path.join(root, "lib", "webmcp", "browserSetup.ts"), "utf8");
   const bridge = await readFile(path.join(root, "app", "components", "WebMcpBridge.tsx"), "utf8");
   const runtimeAcceptance = await readFile(path.join(root, "lib", "webmcp", "runtimeAcceptance.ts"), "utf8");
   const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
@@ -205,6 +207,10 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(evidenceRoute, /Response\.json\(webMcpJudgeBundle/);
   assert.match(evidenceRoute, /Content-Disposition/);
   assert.match(diagnostic, /createWebMcpDiagnosticReceipt/);
+  assert.match(browserSetup, /WebMCP itself has nothing to install/);
+  assert.match(browserSetup, /No extension required/);
+  assert.match(browserSetup, /Complete only the Chrome step for local testing/);
+  assert.match(browserSetup, /Inspector is separate and optional/);
   assert.match(diagnostic, /Download this browser&apos;s diagnostic receipt/);
   assert.match(diagnostic, /Browser diagnostic receipt downloaded to this device/);
   assert.match(database, /parsePublicTrialSearchParams/);
@@ -226,7 +232,8 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(diagnostic, /document\.modelContext/);
   assert.match(diagnostic, /WebMCP browser preview off or unsupported/);
   assert.match(bridge, /WebMCP preview is off or unsupported · matching still works/);
-  assert.match(bridge, /chrome:\/\/flags\/#enable-webmcp-testing/);
+  assert.match(bridge, /webMcpLocalTestingFlag/);
+  assert.match(browserSetupContract, /chrome:\/\/flags\/#enable-webmcp-testing/);
   assert.doesNotMatch(bridge, /Browser API not detected/);
   assert.match(diagnostic, /getTools/);
   assert.match(diagnostic, /runWebMcpRuntimeAcceptance/);

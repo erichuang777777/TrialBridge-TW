@@ -6,6 +6,7 @@ import {
   type InspectorAcceptanceOutcome,
   webMcpInspectorAcceptanceCases,
 } from "@/lib/webmcp/inspectorAcceptance";
+import { webMcpLocalTestingFlag } from "@/lib/webmcp/browserSetup";
 
 type OutcomeMap = Partial<Record<(typeof webMcpInspectorAcceptanceCases)[number]["id"], InspectorAcceptanceOutcome>>;
 
@@ -72,7 +73,7 @@ export function InspectorAcceptanceKit() {
 
     <div className="inspector-setup-note">
       <strong>Before starting</strong>
-      <p>Chrome 149 or later · enable <code>chrome://flags/#enable-webmcp-testing</code> · relaunch · install Model Context Tool Inspector. Use only the fictional case for protected-state checks.</p>
+      <p>Chrome 149 or later · enable <code>{webMcpLocalTestingFlag}</code> · relaunch · install the separate Model Context Tool Inspector only for this manual judge gate. Use only the fictional case for protected-state checks.</p>
       <a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open official setup guide</a>
     </div>
 

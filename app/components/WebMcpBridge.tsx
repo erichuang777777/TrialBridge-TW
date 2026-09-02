@@ -8,6 +8,7 @@ import type { WebMcpReceiptEvent } from "@/lib/webmcp/receipt";
 import type { TrialMatch } from "@/lib/matching/engine";
 import type { FollowUpQuestion } from "@/lib/matching/followUp";
 import type { ConfirmedProfile } from "@/lib/profile/schema";
+import { webMcpLocalTestingFlag } from "@/lib/webmcp/browserSetup";
 
 type RegistrationState = "checking" | "unsupported" | "registering" | "ready" | "error";
 type Language = "zh-Hant" | "en";
@@ -199,7 +200,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
 
   async function copySetupAddress() {
     try {
-      await navigator.clipboard.writeText("chrome://flags/#enable-webmcp-testing");
+      await navigator.clipboard.writeText(webMcpLocalTestingFlag);
       setSetupCopied(true);
       window.setTimeout(() => setSetupCopied(false), 2_000);
     } catch {
@@ -249,7 +250,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
       </div>
       {registrationState === "unsupported" && <section className="webmcp-setup-note" aria-labelledby="webmcp-setup-title">
         <div><strong id="webmcp-setup-title">{copy.setupTitle}</strong><p>{unsupportedReason === "insecure" ? copy.setupInsecure : copy.setupPreview}</p></div>
-        {unsupportedReason === "preview" && <><p>{copy.setupSteps}</p><div><code>chrome://flags/#enable-webmcp-testing</code><button type="button" onClick={() => void copySetupAddress()}>{setupCopied ? copy.setupCopied : copy.copySetup}</button></div></>}
+        {unsupportedReason === "preview" && <><p>{copy.setupSteps}</p><div><code>{webMcpLocalTestingFlag}</code><button type="button" onClick={() => void copySetupAddress()}>{setupCopied ? copy.setupCopied : copy.copySetup}</button></div></>}
       </section>}
       {registrationState === "error" && <p className="webmcp-error" role="alert">{errorMessage}</p>}
       <p className="webmcp-safety-note">{copy.safety}</p>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
 import { createWebMcpDiagnosticReceipt } from "@/lib/webmcp/diagnosticReceipt";
 import { runWebMcpRuntimeAcceptance, webMcpRuntimeAcceptanceChecks, type WebMcpRuntimeAcceptanceResult } from "@/lib/webmcp/runtimeAcceptance";
+import { webMcpLocalTestingFlag } from "@/lib/webmcp/browserSetup";
 
 type DiagnosticState = "checking" | "unsupported" | "ready" | "error";
 type HeaderChecks = { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
@@ -180,7 +181,7 @@ export function WebMcpDiagnostics() {
     </div>
 
     <div className="diagnostic-check-grid">
-      <DiagnosticCheck label="WebMCP browser preview" passed={state === "ready"} pending={state === "checking"} detail={state === "unsupported" ? "Enable chrome://flags/#enable-webmcp-testing, relaunch Chrome, then reopen this page." : "document.modelContext"} />
+      <DiagnosticCheck label="WebMCP browser preview" passed={state === "ready"} pending={state === "checking"} detail={state === "unsupported" ? `Enable ${webMcpLocalTestingFlag}, relaunch Chrome, then reopen this page.` : "document.modelContext"} />
       <DiagnosticCheck label="Public tools" passed={state === "ready"} pending={state === "checking"} detail={state === "ready" ? discoveredNames.join(" · ") : "Origin-scoped discovery"} />
       <DiagnosticCheck label="Tool permission" passed={headers.permissionsPolicy} pending={state === "checking"} detail="Permissions-Policy: tools=(self)" />
       <DiagnosticCheck label="Origin isolation" passed={headers.openerPolicy} pending={state === "checking"} detail="Cross-Origin-Opener-Policy: same-origin" />

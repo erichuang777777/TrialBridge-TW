@@ -11,6 +11,7 @@ import { CompetitionPreflight } from "./_components/CompetitionPreflight";
 import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
 import { ToolContractExplorer } from "./_components/ToolContractExplorer";
 import { CapabilityStateSimulator } from "./_components/CapabilityStateSimulator";
+import { WebMcpBrowserSetup } from "./_components/WebMcpBrowserSetup";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 export const metadata: Metadata = createPageMetadata({
@@ -84,6 +85,8 @@ export default function WebMcpProofPage() {
         <div><p>{originTrialDetail}</p><dl><div><dt>Delivery</dt><dd>Server-rendered first-party meta</dd></div><div><dt>Token in JSON</dt><dd>Never</dd></div><div><dt>Browser validation</dt><dd>Required</dd></div></dl><p className="origin-trial-links"><a href="https://developer.chrome.com/blog/ai-webmcp-origin-trial" target="_blank" rel="noreferrer">WebMCP Origin Trial</a><a href="https://developer.chrome.com/docs/web-platform/origin-trial-troubleshooting" target="_blank" rel="noreferrer">Chrome validation guide</a></p></div>
       </details>
     </header>
+
+    <WebMcpBrowserSetup />
 
     <section className="judge-runbook" aria-labelledby="judge-runbook-title">
       <div className="judge-runbook-heading"><div><p className="eyebrow">Four-step judge path</p><h2 id="judge-runbook-title">Reach each proof without hunting through the site.</h2></div><span>About 5 minutes</span></div>
