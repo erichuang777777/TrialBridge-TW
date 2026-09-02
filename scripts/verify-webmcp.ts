@@ -15,6 +15,7 @@ import { cloudProbeTimeoutMs } from "../lib/llm/cloudProbe.ts";
 import { webMcpImplementationLandscape } from "../lib/webmcp/implementationLandscape.ts";
 import { webMcpCapabilityInventory } from "../lib/webmcp/capabilityInventory.ts";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "../lib/webmcp/judgeBundle.ts";
+import { fixedPublicExecutionContract } from "../lib/webmcp/fixedPublicExecution.ts";
 import { createWebMcpInspectorAcceptanceReceipt, webMcpInspectorAcceptanceCases } from "../lib/webmcp/inspectorAcceptance.ts";
 import { verifyWebMcpBrowserDiagnosticReceipt, verifyWebMcpInspectorAcceptanceReceipt } from "../lib/webmcp/receiptVerification.ts";
 import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webmcp/toolContractCatalog.ts";
@@ -228,12 +229,15 @@ check(webMcpBrowserSetupContract.layers.map((layer) => layer.id).join("|") === "
 check(webMcpBrowserSetupContract.privacyBoundary.containsHealthInformation === false && webMcpBrowserSetupContract.privacyBoundary.readsBrowserState === false && webMcpBrowserSetupContract.privacyBoundary.executesTools === false, "Browser setup guidance must remain static and no-health-data.");
 
 const liveRehearsalSurface = readFileSync("app/webmcp/_components/LiveAgentRehearsal.tsx", "utf8");
-for (const marker of ["Live agent rehearsal", "Watch the model choose a WebMCP capability", "No free text or patient data", "No execution", "does not execute WebMCP", 'role="status" aria-atomic="true"']) {
+for (const marker of ["Live agent rehearsal", "Watch the model choose a WebMCP capability", "No free text or patient data", "No execution", "does not execute WebMCP", "Execute the selected public capability in this browser", "site-orchestrated, fixed-input browser execution", 'role="status" aria-atomic="true"']) {
   check(liveRehearsalSurface.includes(marker), `Live agent rehearsal is missing ${marker}.`);
 }
 check(liveAgentRehearsalScenarios.length === 4 && liveAgentRehearsalScenarios.some((scenario) => scenario.intent === "forbidden" && scenario.expectedTools.length === 0), "Live rehearsal must include four fixed scenarios and one safe-abstention case.");
 check(liveAgentRehearsalContract.behavior.acceptsFreeText === false && liveAgentRehearsalContract.behavior.executesSelectedTool === false && liveAgentRehearsalContract.behavior.persistsResult === false, "Live rehearsal must remain fixed-input, no-execution, and volatile.");
 check(liveAgentRehearsalContract.privacyBoundary.containsHealthInformation === false && liveAgentRehearsalContract.privacyBoundary.sendsPatientContent === false && liveAgentRehearsalContract.privacyBoundary.storesModelContentOrThinking === false, "Live rehearsal must remain no-PHI and metadata-only.");
+check(fixedPublicExecutionContract.toolName === "search_public_cancer_trials" && fixedPublicExecutionContract.condition === "胃癌", "Fixed browser execution must remain restricted to the public gastric-cancer search.");
+check(fixedPublicExecutionContract.behavior.acceptsFreeText === false && fixedPublicExecutionContract.behavior.changesWorkflowState === false && fixedPublicExecutionContract.behavior.persistsResult === false, "Fixed browser execution must remain fixed-input, volatile, and non-mutating.");
+check(fixedPublicExecutionContract.privacyBoundary.containsHealthInformation === false && fixedPublicExecutionContract.privacyBoundary.readsPatientContext === false, "Fixed browser execution must remain no-PHI and independent of patient context.");
 
 const diagnosticSurface = readFileSync("app/webmcp/_components/WebMcpDiagnostics.tsx", "utf8");
 for (const marker of ["createWebMcpDiagnosticReceipt", "Download this browser&apos;s diagnostic receipt", "Browser diagnostic receipt downloaded to this device"]) {
@@ -347,6 +351,7 @@ for (const item of webMcpSpecCrosswalk) {
 check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
 check(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired === false && webMcpJudgeBundle.browserSetup.inspector.separateFromWebMcp === true, "Judge bundle must state that WebMCP requires no visitor extension and Inspector is separate.");
 check(webMcpJudgeBundle.summary.liveAgentRehearsalScenarios === 4 && webMcpJudgeBundle.liveAgentRehearsal.behavior.executesSelectedTool === false, "Judge bundle must carry the four-scenario no-execution live rehearsal contract.");
+check(webMcpJudgeBundle.summary.fixedPublicBrowserExecution === true && webMcpJudgeBundle.fixedPublicBrowserExecution.toolName === "search_public_cancer_trials", "Judge bundle must carry the separate fixed public browser-execution contract.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
@@ -387,6 +392,7 @@ if (findings.length > 0) {
     specificationCrosswalk: `${webMcpSpecCrosswalkBundle.summary.implemented}+${webMcpSpecCrosswalkBundle.summary.explainerAligned}/${webMcpSpecCrosswalkBundle.summary.clauses}`,
     webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
     liveAgentRehearsalScenarios: liveAgentRehearsalScenarios.length,
+    fixedPublicBrowserExecution: `${fixedPublicExecutionContract.toolName}:${fixedPublicExecutionContract.condition}`,
     judgeConformanceItems: webMcpConformanceMatrix.length,
     judgeBundle: "static-json-no-health-data",
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,

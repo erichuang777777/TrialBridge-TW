@@ -10,6 +10,7 @@ import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName } from "./runtime
 import { webMcpSpecCrosswalkBundle } from "./specCrosswalk.ts";
 import { webMcpBrowserSetupContract } from "./browserSetup.ts";
 import { liveAgentRehearsalContract } from "./liveRehearsalContract.ts";
+import { fixedPublicExecutionContract } from "./fixedPublicExecution.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -126,6 +127,7 @@ export const webMcpJudgeBundle = {
     specificationClauses: webMcpSpecCrosswalkBundle.summary.clauses,
     webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
     liveAgentRehearsalScenarios: liveAgentRehearsalContract.fixedScenarioIds.length,
+    fixedPublicBrowserExecution: fixedPublicExecutionContract.behavior.executesOnlyFixedPublicSearch,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
@@ -137,6 +139,7 @@ export const webMcpJudgeBundle = {
   specificationCrosswalk: webMcpSpecCrosswalkBundle,
   browserSetup: webMcpBrowserSetupContract,
   liveAgentRehearsal: liveAgentRehearsalContract,
+  fixedPublicBrowserExecution: fixedPublicExecutionContract,
   toolContractCatalog: {
     route: "/webmcp/contracts.json",
     contractVersion: webMcpToolContractBundle.contractVersion,
@@ -182,5 +185,5 @@ export const webMcpJudgeBundle = {
     containsPatientData: selectionBaseline.containsPatientData,
   },
   implementationLandscape: webMcpImplementationLandscape,
-  evidenceBoundary: "Repository checks, recorded browser lifecycle evidence, and a recorded model-selection eval do not replace Chrome Model Context Tool Inspector natural-language acceptance or clinical validation.",
+  evidenceBoundary: "Repository checks, recorded browser lifecycle evidence, a recorded model-selection eval, and site-orchestrated fixed public execution do not replace Chrome Model Context Tool Inspector natural-language acceptance or clinical validation.",
 } as const;

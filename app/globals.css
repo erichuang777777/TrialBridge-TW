@@ -811,6 +811,35 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .rehearsal-actions .primary-action { border-color: var(--primary); color: var(--surface); background: var(--primary); }
 .rehearsal-actions small { color: var(--ink-soft); font-size: 0.7rem; }
 .rehearsal-boundary { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.76rem; line-height: 1.55; }
+.fixed-public-execution { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 11px; background: #f8fbfb; }
+.fixed-public-execution.execution-complete { border-left-color: var(--match-aligned); }
+.fixed-public-execution.execution-partial, .fixed-public-execution.execution-timed_out { border-left-color: var(--match-uncertain); }
+.fixed-public-execution.execution-failed { border-left-color: var(--match-different); }
+.fixed-execution-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.fixed-execution-heading > div { min-width: 0; }
+.fixed-execution-heading span, .fixed-execution-heading strong { display: block; }
+.fixed-execution-heading span { color: var(--primary-strong); font-size: 0.64rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+.fixed-execution-heading strong { margin-top: 3px; font-size: 1rem; }
+.fixed-execution-heading p { max-width: 78ch; margin: 5px 0 0; color: var(--ink-soft); font-size: 0.75rem; line-height: 1.55; }
+.fixed-execution-heading > b { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.66rem; text-transform: uppercase; }
+.execution-complete .fixed-execution-heading > b { color: var(--success-ink); background: var(--success-surface); }
+.fixed-execution-receipt { margin-top: 14px; padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.fixed-execution-receipt dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.fixed-execution-receipt dl > div { min-width: 0; padding-left: 9px; border-left: 2px solid var(--mint); }
+.fixed-execution-receipt dt { color: var(--ink-soft); font-size: 0.58rem; font-weight: 900; text-transform: uppercase; }
+.fixed-execution-receipt dd { margin: 2px 0 0; font-size: 0.72rem; font-weight: 900; overflow-wrap: anywhere; }
+.fixed-execution-receipt > p { display: flex; flex-wrap: wrap; gap: 5px 12px; margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 0.68rem; }
+.fixed-execution-receipt > p span { color: var(--ink-soft); }
+.fixed-execution-receipt ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 11px 0 0; padding: 0; list-style: none; }
+.fixed-execution-receipt li { min-width: 0; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 2px 7px; align-content: start; padding: 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); }
+.fixed-execution-receipt li > span { grid-row: 1 / span 2; color: var(--primary); font-family: var(--font-mono); font-size: 0.64rem; font-weight: 900; }
+.fixed-execution-receipt li strong { font-size: 0.68rem; line-height: 1.35; }
+.fixed-execution-receipt li small { color: var(--ink-soft); font-size: 0.6rem; }
+.fixed-execution-status { min-height: 1.5em; margin: 12px 0 0; color: var(--primary-strong); font-size: 0.76rem; font-weight: 900; }
+.fixed-execution-actions { display: flex; align-items: center; gap: 12px 18px; margin-top: 9px; }
+.fixed-execution-actions button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--primary); border-radius: 999px; color: var(--surface); background: var(--primary); font: inherit; font-size: 0.76rem; font-weight: 900; }
+.fixed-execution-actions small { color: var(--ink-soft); font-size: 0.68rem; }
+.fixed-execution-boundary { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.7rem; line-height: 1.5; }
 .diagnostic-console { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .diagnostic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .diagnostic-heading h2 { font-size: clamp(1.55rem, 3vw, 2.25rem); }
@@ -1232,7 +1261,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .webmcp-browser-setup ol { grid-template-columns: 1fr; }
   .webmcp-browser-setup aside a { align-self: flex-start; }
   .judge-runbook ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .preflight-heading, .rehearsal-heading, .diagnostic-heading, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading, .runtime-acceptance-heading { align-items: stretch; flex-direction: column; }
+  .preflight-heading, .rehearsal-heading, .fixed-execution-heading, .diagnostic-heading, .diagnostic-receipt-panel, .journey-guidance-link, .cloud-probe-heading, .runtime-acceptance-heading { align-items: stretch; flex-direction: column; }
   .preflight-heading > span, .rehearsal-heading > span { align-self: flex-start; }
   .preflight-results { grid-template-columns: 1fr; }
   .rehearsal-layout { grid-template-columns: 1fr; }
@@ -1240,6 +1269,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .rehearsal-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rehearsal-prompt dl { grid-template-columns: 1fr; }
   .rehearsal-receipt { grid-template-columns: 1fr; }
+  .fixed-execution-heading > b { align-self: flex-start; }
+  .fixed-execution-receipt ol { grid-template-columns: 1fr; }
   .diagnostic-status { max-width: none; align-self: flex-start; text-align: left; }
   .diagnostic-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cloud-probe-receipt { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1345,6 +1376,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .rehearsal-scenarios, .rehearsal-flow, .rehearsal-receipt dl { grid-template-columns: 1fr; }
   .rehearsal-actions { align-items: stretch; flex-direction: column; }
   .rehearsal-actions button { width: 100%; }
+  .fixed-execution-receipt dl { grid-template-columns: 1fr; }
+  .fixed-execution-actions { align-items: stretch; flex-direction: column; }
+  .fixed-execution-actions button { width: 100%; }
   .judge-runbook-heading { flex-direction: column; }
   .judge-runbook ol { grid-template-columns: 1fr; }
   .proof-summary span { min-height: 78px; }

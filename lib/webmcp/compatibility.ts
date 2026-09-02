@@ -7,7 +7,8 @@ export async function executeSafeMethodToolCompat(
   }
   try {
     return await modelContext.executeTool(tool, {});
-  } catch {
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
     return modelContext.executeTool(tool, JSON.stringify({}));
   }
 }

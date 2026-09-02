@@ -38,3 +38,15 @@ test("WebMCP compatibility refuses any tool that is not the safe read-only metho
   const unsafe = { name: "draft_trial_outreach", annotations: { readOnlyHint: true } } as WebMCP.RegisteredTool;
   await assert.rejects(executeSafeMethodToolCompat(context, unsafe), /restricted to the read-only public method tool/);
 });
+
+test("WebMCP compatibility does not retry an ordinary tool failure as a second execution", async () => {
+  let calls = 0;
+  const context = {
+    executeTool: async () => {
+      calls += 1;
+      throw new Error("tool failed");
+    },
+  } as unknown as Pick<WebMCP.ModelContext, "executeTool">;
+  await assert.rejects(executeSafeMethodToolCompat(context, tool), /tool failed/);
+  assert.equal(calls, 1);
+});

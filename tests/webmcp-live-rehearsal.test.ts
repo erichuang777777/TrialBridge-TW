@@ -94,9 +94,16 @@ test("rehearsal API and UI keep fixed-input, rate-limit, cancellation, and evide
   assert.match(component, /No free text or patient data/);
   assert.match(component, /No execution/);
   assert.match(component, /does not execute WebMCP/);
+  assert.match(component, /Execute the selected public capability in this browser/);
+  assert.match(component, /document\.modelContext\.executeTool\(\)/);
+  assert.match(component, /fixed public condition/);
+  assert.match(component, /automatic stop in/);
+  assert.match(component, /site-orchestrated, fixed-input browser execution/);
   assert.match(component, /role="status" aria-atomic="true"/);
   assert.match(component, /controllerRef\.current\?\.abort/);
   assert.match(page, /<LiveAgentRehearsal \/>/);
   assert.match(css, /\.rehearsal-scenarios button \{ min-height: 58px/);
+  assert.match(css, /\.fixed-public-execution \{/);
+  assert.match(css, /\.fixed-execution-actions button \{ min-height: 44px/);
   assert.match(css, /\.rehearsal-scenarios, \.rehearsal-flow, \.rehearsal-receipt dl \{ grid-template-columns: 1fr/);
 });
