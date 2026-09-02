@@ -8,13 +8,13 @@ import { buildTrialBridgeTools } from "./tools.ts";
 
 const syntheticTrialId = "synthetic:trial-001";
 const syntheticShortlistIds = [syntheticTrialId, "synthetic:trial-002"];
-const toolCallSchema = z.object({ function: z.object({ name: z.string().min(1), arguments: z.record(z.string(), z.unknown()).default({}) }) });
+const toolCallSchema = z.object({ function: z.object({ name: z.string().min(1).max(100), arguments: z.record(z.string(), z.unknown()).default({}) }) });
 const ollamaSelectionResponseSchema = z.object({
-  model: z.string().min(1),
+  model: z.string().min(1).max(200),
   message: z.object({
-    content: z.string().default(""),
-    thinking: z.string().optional(),
-    tool_calls: z.array(toolCallSchema).optional().default([]),
+    content: z.string().max(2_000).default(""),
+    thinking: z.string().max(8_000).optional(),
+    tool_calls: z.array(toolCallSchema).max(2).optional().default([]),
   }),
   done: z.boolean().optional(),
   done_reason: z.string().optional(),
@@ -145,6 +145,7 @@ export async function runWebMcpSelectionEval(options: {
   timeoutMs?: number;
   fetcher?: typeof fetch;
   now?: () => Date;
+  signal?: AbortSignal;
   onProgress?: (sample: WebMcpSelectionSample, completed: number, total: number) => void;
 } = {}): Promise<WebMcpSelectionBaseline> {
   const cases = options.cases ?? webMcpJourneyCases;
@@ -162,10 +163,12 @@ export async function runWebMcpSelectionEval(options: {
       const startedAt = performance.now();
       let sample: WebMcpSelectionSample;
       try {
+        const timeoutSignal = AbortSignal.timeout(timeoutMs);
+        const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
         const response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(timeoutMs),
+          signal,
           body: JSON.stringify({
             model: requestedModel,
             stream: false,
@@ -207,6 +210,7 @@ export async function runWebMcpSelectionEval(options: {
           failures,
         };
       } catch (error) {
+        if (options.signal?.aborted) throw options.signal.reason;
         sample = {
           caseId: item.id,
           repetition,

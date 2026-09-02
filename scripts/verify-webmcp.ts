@@ -24,6 +24,7 @@ import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName, type WebMcpRunti
 import { getWebMcpOriginTrialDeploymentState, getWebMcpOriginTrialMetaToken, webMcpOriginTrialEnvironmentKey } from "../lib/webmcp/originTrial.ts";
 import { webMcpSpecCrosswalk, webMcpSpecCrosswalkBundle } from "../lib/webmcp/specCrosswalk.ts";
 import { webMcpBrowserSetupContract, webMcpLocalTestingFlag } from "../lib/webmcp/browserSetup.ts";
+import { liveAgentRehearsalContract, liveAgentRehearsalScenarios } from "../lib/webmcp/liveRehearsalContract.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -226,6 +227,14 @@ check(webMcpBrowserSetupContract.visitorInstallRequired === false && webMcpBrows
 check(webMcpBrowserSetupContract.layers.map((layer) => layer.id).join("|") === "specification|browser|trialbridge", "Browser setup must preserve the three-layer explanation.");
 check(webMcpBrowserSetupContract.privacyBoundary.containsHealthInformation === false && webMcpBrowserSetupContract.privacyBoundary.readsBrowserState === false && webMcpBrowserSetupContract.privacyBoundary.executesTools === false, "Browser setup guidance must remain static and no-health-data.");
 
+const liveRehearsalSurface = readFileSync("app/webmcp/_components/LiveAgentRehearsal.tsx", "utf8");
+for (const marker of ["Live agent rehearsal", "Watch the model choose a WebMCP capability", "No free text or patient data", "No execution", "does not execute WebMCP", 'role="status" aria-atomic="true"']) {
+  check(liveRehearsalSurface.includes(marker), `Live agent rehearsal is missing ${marker}.`);
+}
+check(liveAgentRehearsalScenarios.length === 4 && liveAgentRehearsalScenarios.some((scenario) => scenario.intent === "forbidden" && scenario.expectedTools.length === 0), "Live rehearsal must include four fixed scenarios and one safe-abstention case.");
+check(liveAgentRehearsalContract.behavior.acceptsFreeText === false && liveAgentRehearsalContract.behavior.executesSelectedTool === false && liveAgentRehearsalContract.behavior.persistsResult === false, "Live rehearsal must remain fixed-input, no-execution, and volatile.");
+check(liveAgentRehearsalContract.privacyBoundary.containsHealthInformation === false && liveAgentRehearsalContract.privacyBoundary.sendsPatientContent === false && liveAgentRehearsalContract.privacyBoundary.storesModelContentOrThinking === false, "Live rehearsal must remain no-PHI and metadata-only.");
+
 const diagnosticSurface = readFileSync("app/webmcp/_components/WebMcpDiagnostics.tsx", "utf8");
 for (const marker of ["createWebMcpDiagnosticReceipt", "Download this browser&apos;s diagnostic receipt", "Browser diagnostic receipt downloaded to this device"]) {
   check(diagnosticSurface.includes(marker), `Browser diagnostic surface is missing ${marker}.`);
@@ -337,6 +346,7 @@ for (const item of webMcpSpecCrosswalk) {
 }
 check(webMcpJudgeBundle.summary.manualInspectorCases === 6, "Judge bundle must report the six manual Inspector cases.");
 check(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired === false && webMcpJudgeBundle.browserSetup.inspector.separateFromWebMcp === true, "Judge bundle must state that WebMCP requires no visitor extension and Inspector is separate.");
+check(webMcpJudgeBundle.summary.liveAgentRehearsalScenarios === 4 && webMcpJudgeBundle.liveAgentRehearsal.behavior.executesSelectedTool === false, "Judge bundle must carry the four-scenario no-execution live rehearsal contract.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
@@ -376,6 +386,7 @@ if (findings.length > 0) {
     implementationLandscapeAudit: webMcpImplementationLandscape.auditedAt,
     specificationCrosswalk: `${webMcpSpecCrosswalkBundle.summary.implemented}+${webMcpSpecCrosswalkBundle.summary.explainerAligned}/${webMcpSpecCrosswalkBundle.summary.clauses}`,
     webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
+    liveAgentRehearsalScenarios: liveAgentRehearsalScenarios.length,
     judgeConformanceItems: webMcpConformanceMatrix.length,
     judgeBundle: "static-json-no-health-data",
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,

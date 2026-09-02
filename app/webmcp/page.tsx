@@ -12,6 +12,7 @@ import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
 import { ToolContractExplorer } from "./_components/ToolContractExplorer";
 import { CapabilityStateSimulator } from "./_components/CapabilityStateSimulator";
 import { WebMcpBrowserSetup } from "./_components/WebMcpBrowserSetup";
+import { LiveAgentRehearsal } from "./_components/LiveAgentRehearsal";
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json";
 
 export const metadata: Metadata = createPageMetadata({
@@ -100,6 +101,8 @@ export default function WebMcpProofPage() {
     </section>
 
     <CompetitionPreflight />
+
+    <LiveAgentRehearsal />
 
     <WebMcpDiagnostics />
 

@@ -9,6 +9,7 @@ import { webMcpCapabilityStateBundle } from "./capabilityStates.ts";
 import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName } from "./runtimeAcceptance.ts";
 import { webMcpSpecCrosswalkBundle } from "./specCrosswalk.ts";
 import { webMcpBrowserSetupContract } from "./browserSetup.ts";
+import { liveAgentRehearsalContract } from "./liveRehearsalContract.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -124,6 +125,7 @@ export const webMcpJudgeBundle = {
     conformanceItems: webMcpConformanceMatrix.length,
     specificationClauses: webMcpSpecCrosswalkBundle.summary.clauses,
     webMcpVisitorInstallRequired: webMcpBrowserSetupContract.visitorInstallRequired,
+    liveAgentRehearsalScenarios: liveAgentRehearsalContract.fixedScenarioIds.length,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
@@ -134,6 +136,7 @@ export const webMcpJudgeBundle = {
   capabilities: webMcpCapabilityInventory,
   specificationCrosswalk: webMcpSpecCrosswalkBundle,
   browserSetup: webMcpBrowserSetupContract,
+  liveAgentRehearsal: liveAgentRehearsalContract,
   toolContractCatalog: {
     route: "/webmcp/contracts.json",
     contractVersion: webMcpToolContractBundle.contractVersion,
