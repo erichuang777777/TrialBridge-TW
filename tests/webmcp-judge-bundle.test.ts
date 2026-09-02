@@ -19,7 +19,7 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.summary.capabilityStates, 4);
   assert.equal(webMcpJudgeBundle.summary.runtimeAcceptanceChecks, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed, 6);
-  assert.equal(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksPassed, 2);
+  assert.equal(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksPassed, 3);
   assert.equal(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksTotal, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedAgenticPagesPassed, 2);
   assert.equal(webMcpJudgeBundle.summary.specificationClauses, 8);
@@ -64,9 +64,11 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.stockSourceModified, false);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.browser.version, "153.0.8010.12");
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.status, "partial");
-  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed, 2);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed, 3);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksTotal, 6);
-  assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checks.map((item) => item.status), ["pass", "pass", "not_run", "not_run", "not_run", "not_run"]);
+  assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checks.map((item) => item.status), ["pass", "pass", "not_run", "not_run", "pass", "not_run"]);
+  assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.permissionTransition.sequence.map((item) => item.toolCount), [2, 2, 6, 2]);
+  assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.permissionTransition.addedToolNames, webMcpJudgeBundle.recordedInspectorExtensionRuntime.permissionTransition.removedToolNames);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.apiKeyConfigured, false);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.naturalLanguagePathInvoked, false);
   assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.projectAllowedCloudModel, "gpt-oss:120b-cloud");

@@ -1014,7 +1014,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .recorded-inspector-copy { max-width: 880px; margin-top: 12px; }
 .recorded-inspector-copy h2 { margin: 0; font-size: clamp(1.25rem, 2.4vw, 1.75rem); text-wrap: balance; }
 .recorded-inspector-copy p { margin: 7px 0 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.6; }
-.recorded-inspector-proof ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 16px 0 0; padding: 0; list-style: none; }
+.recorded-inspector-proof ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 9px; margin: 16px 0 0; padding: 0; list-style: none; }
 .recorded-inspector-proof li { min-width: 0; display: grid; gap: 5px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
 .recorded-inspector-proof li strong { width: fit-content; padding: 3px 7px; border-radius: 999px; font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .recorded-inspector-proof li span { color: var(--ink-soft); font-size: 0.76rem; line-height: 1.5; }

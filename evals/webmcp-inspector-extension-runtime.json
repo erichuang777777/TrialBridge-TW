@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "artifactClass": "recorded_stock_inspector_extension_runtime_partial",
-  "recordedAt": "2026-09-02T04:33:47.904Z",
+  "recordedAt": "2026-09-02T05:07:16.790Z",
   "auditedLocalDate": "2026-09-02",
   "inspector": {
     "name": "WebMCP - Model Context Tool Inspector",
@@ -24,11 +24,12 @@
   "target": {
     "origin": "http://localhost:3001",
     "route": "/webmcp",
+    "permissionTransitionRoute": "/match?demo=synthetic#private-chat",
     "secureContext": true
   },
   "result": {
     "status": "partial",
-    "checksPassed": 2,
+    "checksPassed": 3,
     "checksTotal": 6,
     "checks": [
       {
@@ -53,8 +54,8 @@
       },
       {
         "id": "inspector-permission-transition",
-        "status": "not_run",
-        "reason": "This check requires the interactive fictional protected workflow while Inspector remains open."
+        "status": "pass",
+        "evidence": "With the fictional development fixture visible, the stock extension sidebar observed 2 public tools, 2 tools after confirmation with permission off, 6 tools after permission on, and 2 tools after permission revocation."
       },
       {
         "id": "inspector-cancellation-cleanup",
@@ -89,6 +90,43 @@
         "privacy",
         "limitation"
       ]
+    },
+    "permissionTransition": {
+      "fixture": "fictional development workflow",
+      "stockSidebarUsed": true,
+      "headlessSidebarBinding": "stock sidebar.html loaded in an extension tab with the same target-tab query shim used by the upstream headless end-to-end test",
+      "sequence": [
+        {
+          "phase": "public_initial",
+          "toolCount": 2
+        },
+        {
+          "phase": "confirmed_permission_off",
+          "toolCount": 2
+        },
+        {
+          "phase": "permission_on",
+          "toolCount": 6
+        },
+        {
+          "phase": "permission_revoked",
+          "toolCount": 2
+        }
+      ],
+      "addedToolNames": [
+        "draft_trial_discussion_brief",
+        "draft_trial_outreach",
+        "explain_confirmed_matches",
+        "review_trial_followups"
+      ],
+      "removedToolNames": [
+        "draft_trial_discussion_brief",
+        "draft_trial_outreach",
+        "explain_confirmed_matches",
+        "review_trial_followups"
+      ],
+      "apiKeyConfigured": false,
+      "containsHealthInformation": false
     }
   },
   "providerBoundary": {
@@ -108,5 +146,5 @@
     "storesRawSchemas": false,
     "persistence": "repository metadata only"
   },
-  "evidenceBoundary": "Actual stock extension background/content-script discovery and fixed manual execution through isolated Chrome for Testing and CDP. This partial artifact does not prove side-panel natural-language selection, permission transition, cancellation/cleanup, production Origin Trial deployment, or clinical validity."
+  "evidenceBoundary": "Actual stock extension background/content-script discovery, fixed manual execution, and fictional permission transition through isolated Chrome for Testing. The stock sidebar document was loaded in an extension tab with the upstream headless test's target-tab query shim because a real side-panel opening requires a user gesture. This partial artifact does not prove natural-language selection, cancellation/cleanup, production Origin Trial deployment, or clinical validity."
 }

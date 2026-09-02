@@ -98,7 +98,7 @@ export default function WebMcpProofPage() {
         <li><span>03</span><h3>Walk the protected flow</h3><p>Open the fictional case directly; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/match?demo=synthetic#private-chat">Open synthetic workflow</Link></li>
         <li><span>04</span><h3>Finish in Inspector</h3><p>Verify natural-language selection, manual calls, permission transitions, and cleanup.</p><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Inspector guide</a></li>
       </ol>
-      <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. Step 4 remains a manual Chrome Model Context Tool Inspector gate and is never inferred from static tests.</p>
+      <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. A recorded stock Inspector run now covers discovery, one fixed safe call, and the fictional permission transition; natural-language and cancellation checks remain manual Chrome gates.</p>
     </section>
 
     <CompetitionPreflight />
@@ -113,16 +113,17 @@ export default function WebMcpProofPage() {
         <strong>{webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed}/{webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksTotal} · Partial</strong>
       </div>
       <div className="recorded-inspector-copy">
-        <h2 id="recorded-inspector-title">Real extension plumbing passed discovery and fixed safe execution.</h2>
+        <h2 id="recorded-inspector-title">Real extension plumbing passed discovery, safe execution, and permission revocation.</h2>
         <p>Unmodified Model Context Tool Inspector {webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.version} ran through its background and content scripts in isolated Chrome for Testing {webMcpJudgeBundle.recordedInspectorExtensionRuntime.browser.version}. This is stronger than a simulated tool list, but it is not a complete Inspector pass.</p>
       </div>
       <ul aria-label="Recorded Inspector outcome summary">
         <li className="recorded-inspector-pass"><strong>Pass</strong><span>Two public tools discovered and both schemas parsed</span></li>
         <li className="recorded-inspector-pass"><strong>Pass</strong><span><code>trialbridge_method</code> completed with fixed empty input</span></li>
-        <li className="recorded-inspector-pending"><strong>Not run</strong><span>Natural-language selection, permission transition, and cancellation/cleanup</span></li>
+        <li className="recorded-inspector-pass"><strong>Pass</strong><span>Permission lifecycle observed as <code>2 → 2 → 6 → 2</code></span></li>
+        <li className="recorded-inspector-pending"><strong>Not run</strong><span>Two natural-language checks and cancellation/cleanup</span></li>
       </ul>
       <div className="recorded-inspector-boundary">
-        <p><strong>No Gemini call · no health information.</strong> The stock natural-language path requires a Gemini key, so it was not invoked under the <code>gpt-oss:120b-cloud</code>-only policy. The four remaining checks stay in the manual kit below.</p>
+        <p><strong>No Gemini call · no health information.</strong> The stock natural-language path requires a Gemini key, so it was not invoked under the <code>gpt-oss:120b-cloud</code>-only policy. Three remaining checks stay in the manual kit below; production Origin Trial validation remains separate.</p>
         <div><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-inspector-extension-runtime.json" target="_blank" rel="noreferrer">Inspect metadata receipt</a><a href={webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.repository} target="_blank" rel="noreferrer">Open pinned Inspector source</a></div>
       </div>
     </aside>
@@ -220,6 +221,6 @@ export default function WebMcpProofPage() {
       <Link className="secondary-action action-link" href="/match#private-chat">Open the guided workflow receipt</Link>
     </section>
 
-    <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation and current-browser lifecycle. Natural-language tool selection and permission transitions must still be demonstrated in Chrome Model Context Tool Inspector.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
+    <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation, current-browser lifecycle, and one recorded fictional permission transition. Natural-language selection, cancellation/cleanup, and production Origin Trial behavior still require Chrome validation.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
   </main>;
 }
