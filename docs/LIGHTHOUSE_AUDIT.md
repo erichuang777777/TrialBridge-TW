@@ -145,6 +145,19 @@ npx --yes lighthouse http://localhost:3002 --chrome-path="C:\Program Files\Googl
 
 The Chrome launcher produced an `EPERM` while deleting its temporary profile after writing each report. The final JSON report was present and parseable; the cleanup error did not alter the recorded scores.
 
+## Agentic Browsing and registered WebMCP tools
+
+Lighthouse 13.4.1's experimental `agentic-browsing` category was run against the existing `localhost:3001` service with Chrome Stable 152.0.7977.64 and the local `WebMCP,WebMCPTesting` features. The first `/webmcp/quickstart` run scored 0.67 and identified one specific accessibility-tree failure: `article[role=listitem]` was an inappropriate role override. The status cards now use native `ul` and `li` elements.
+
+The accepted reruns recorded the following deterministic signals:
+
+| Page | Category ratio | Registered WebMCP tools | Schema | Accessibility tree | `llms.txt` | CLS |
+| --- | ---: | --- | --- | --- | --- | ---: |
+| `/webmcp/quickstart` | 1.00 | 2 imperative | Pass | Pass | Pass | 0 |
+| `/trials` | 1.00 | 1 declarative | Pass | Pass | Pass | 0 |
+
+The database's form-coverage audit was not applicable because no uncovered candidate form remained; the registered-tools audit directly observed `search_public_trial_form`. The quick route directly exposed `trialbridge_method` and `search_public_cancer_trials`. The metadata-only record is `evals/webmcp-lighthouse-agentic-acceptance.json`. Raw Lighthouse reports were used to derive and verify this summary but are not committed because they contain page text and source locations. Chrome launcher again reported its known post-report temporary-profile `EPERM`; both JSON reports were complete and parseable first. This evidence proves these recorded page observations, not tool invocation, Inspector selection, production Origin Trial status, or clinical quality.
+
 ## Deliberate SEO boundary
 
 The default profile's only SEO failure is crawlability. `app/layout.tsx` and `app/robots.ts` intentionally disable indexing because `docs/READINESS.md` classifies this build as an engineering MVP, not a public clinical service. Do not enable the reviewed discovery profile merely to raise a competition score. Indexing requires the public-clinical readiness, legal, governance, monitoring, and incident-response gates to be approved first, plus an exact non-loopback HTTPS `SITE_URL` and `SITE_INDEXING_ENABLED=true`.

@@ -25,7 +25,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   const originTrialToken = getWebMcpOriginTrialMetaToken();
   return (
     <html lang="en">
-      <head>{originTrialToken ? <meta httpEquiv="origin-trial" content={originTrialToken} /> : null}</head>
+      <head>
+        {originTrialToken ? <meta httpEquiv="origin-trial" content={originTrialToken} /> : null}
+        <link rel="describedby" href="/llms.txt" />
+      </head>
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         {children}

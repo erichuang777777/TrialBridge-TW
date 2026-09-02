@@ -27,6 +27,7 @@ import { webMcpSpecCrosswalk, webMcpSpecCrosswalkBundle } from "../lib/webmcp/sp
 import { webMcpBrowserSetupContract, webMcpLocalTestingFlag } from "../lib/webmcp/browserSetup.ts";
 import { liveAgentRehearsalContract, liveAgentRehearsalScenarios } from "../lib/webmcp/liveRehearsalContract.ts";
 import { quickJudgeDemoContract } from "../lib/webmcp/quickJudgeDemo.ts";
+import { agentDiscoveryContract, createLlmsTxt, createWebMcpAgentGuide } from "../lib/webmcp/agentDiscovery.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -145,6 +146,27 @@ check(recordedBrowserRuntime.result.postRunToolNames.slice().sort().join("|") ==
 check(typeof recordedBrowserRuntime.evidenceBoundary === "string" && /not an Origin Trial production deployment/i.test(recordedBrowserRuntime.evidenceBoundary), "Recorded browser runtime evidence boundary is missing.");
 check(!/"(?:rawText|maskedText|medicalNote|confirmedProfile|profileFact|trialResult|prompt|toolArgument|toolOutput|content|thinking)"\s*:/i.test(recordedBrowserRuntimeSource), "Recorded browser runtime contains a forbidden payload field.");
 
+const agenticLighthouseSource = readFileSync("evals/webmcp-lighthouse-agentic-acceptance.json", "utf8");
+const agenticLighthouse = JSON.parse(agenticLighthouseSource) as {
+  artifactClass: string;
+  lighthouse: { version: string; category: string };
+  browser: { productVersion: string; headless: boolean; localTestingFeatures: string[] };
+  target: { origin: string; secureContext: boolean };
+  pages: Array<{ route: string; categoryScore: number; accessibilityTree: string; schemaValidity: string; cumulativeLayoutShift: number; llmsTxt: string; registeredTools: { declarative: string[]; imperative: string[] } }>;
+  privacyBoundary: { containsHealthInformation: boolean; storesArguments: boolean; storesOutputs: boolean; containsPageText: boolean; rawReportsCommitted: boolean };
+  evidenceBoundary: string;
+};
+check(agenticLighthouse.artifactClass === "recorded_lighthouse_agentic_browsing_acceptance", "Recorded Agentic Browsing artifact class is invalid.");
+check(agenticLighthouse.lighthouse.version === "13.4.1" && agenticLighthouse.lighthouse.category === "agentic-browsing", "Recorded Agentic Browsing audit must identify Lighthouse 13.4.1 and its category.");
+check(/^152\./.test(agenticLighthouse.browser.productVersion) && agenticLighthouse.browser.headless === true && ["WebMCP", "WebMCPTesting"].every((feature) => agenticLighthouse.browser.localTestingFeatures.includes(feature)), "Recorded Agentic Browsing audit must identify Chrome 152 and the isolated WebMCP features.");
+check(agenticLighthouse.target.origin === "http://localhost:3001" && agenticLighthouse.target.secureContext === true, "Recorded Agentic Browsing target is invalid.");
+check(agenticLighthouse.pages.map((page) => page.route).join("|") === "/webmcp/quickstart|/trials", "Recorded Agentic Browsing routes are invalid.");
+check(agenticLighthouse.pages.every((page) => page.categoryScore === 1 && page.accessibilityTree === "pass" && page.schemaValidity === "pass" && page.cumulativeLayoutShift === 0 && page.llmsTxt === "pass"), "Every recorded Agentic Browsing page must pass the weighted audits with zero CLS.");
+check(agenticLighthouse.pages[0]?.registeredTools.imperative.slice().sort().join("|") === publicTools.map((tool) => tool.name).sort().join("|"), "Quickstart Agentic Browsing audit must observe both public imperative tools.");
+check(agenticLighthouse.pages[1]?.registeredTools.declarative.join("|") === "search_public_trial_form", "Trials Agentic Browsing audit must observe the declarative form tool.");
+check(Object.values(agenticLighthouse.privacyBoundary).every((value) => value === false), "Recorded Agentic Browsing summary must exclude health data, payloads, page text, and raw reports.");
+check(!/"(?:rawText|maskedText|medicalNote|confirmedProfile|profileFact|trialResult|prompt|toolArgument|toolOutput|pageText|content|thinking)"\s*:/i.test(agenticLighthouseSource), "Recorded Agentic Browsing summary contains a forbidden payload field.");
+
 const inspectorOutcomes = Object.fromEntries(webMcpInspectorAcceptanceCases.map((item) => [item.id, "pass"])) as Record<(typeof webMcpInspectorAcceptanceCases)[number]["id"], "pass">;
 const inspectorReceipt = createWebMcpInspectorAcceptanceReceipt({ generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", chromeMajor: 152, outcomes: inspectorOutcomes });
 check(webMcpInspectorAcceptanceCases.length === 6, "Manual Inspector kit must keep its six acceptance cases.");
@@ -221,6 +243,17 @@ check(quickJudgeDemoContract.publicToolNames.join("|") === "trialbridge_method|s
 check(quickJudgeDemoContract.safeExecutionTool === "trialbridge_method" && quickJudgeDemoContract.behavior.acceptsFreeText === false && quickJudgeDemoContract.behavior.runsCloudModel === false && quickJudgeDemoContract.behavior.runsRegistrySearch === false, "Three-minute judge execution must remain fixed, no-input, no-model, and no-registry.");
 check(quickJudgeDemoContract.privacyBoundary.containsHealthInformation === false && quickJudgeDemoContract.privacyBoundary.readsPatientContext === false, "Three-minute judge route must remain no-PHI and independent of patient context.");
 check(!/<(?:input|textarea)\b/i.test(quickJudgeSurface), "Three-minute judge console must not accept free text.");
+check(quickJudgeSurface.includes('<ul className="quick-check-grid">') && !quickJudgeSurface.includes('role="listitem"'), "Three-minute judge status checks must use a native list instead of an invalid ARIA role override.");
+
+const llmsRoute = readFileSync("app/llms.txt/route.ts", "utf8");
+const agentGuideRoute = readFileSync("app/webmcp/agent-guide.md/route.ts", "utf8");
+const agentGuide = createWebMcpAgentGuide("https://trialbridge.example");
+const llmsTxt = createLlmsTxt("https://trialbridge.example");
+check(agentDiscoveryContract.separateFromWebMcp === true && agentDiscoveryContract.privacyBoundary.containsHealthInformation === false, "Agent discovery guidance must remain separate from WebMCP and no-PHI.");
+check(agentDiscoveryContract.generatedFromCanonicalToolCatalog === true && webMcpToolContractCatalog.every((tool) => agentGuide.includes(`\`${tool.name}\``)), "Agent guide must derive every capability name from the canonical catalog.");
+check(llmsTxt.startsWith("# TrialBridge TW\n\n> ") && llmsTxt.includes("/webmcp/agent-guide.md") && llmsTxt.includes("/webmcp/contracts.json"), "llms.txt must expose the concise agent entry points.");
+check(llmsRoute.includes("text/plain") && agentGuideRoute.includes("text/markdown"), "Agent discovery routes must return their declared text formats.");
+check(!/(?:rawText|maskedText|confirmedProfile|trialResult|toolOutput)\s*:/i.test(`${llmsTxt}\n${agentGuide}`), "Agent discovery guidance contains a forbidden workflow payload field.");
 
 const runtimeAcceptanceSource = readFileSync("lib/webmcp/runtimeAcceptance.ts", "utf8");
 check(webMcpRuntimeAcceptanceChecks.length === 6, "Live runtime acceptance must keep six lifecycle checks.");
@@ -369,11 +402,13 @@ check(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired === false && webMcp
 check(webMcpJudgeBundle.summary.liveAgentRehearsalScenarios === 4 && webMcpJudgeBundle.liveAgentRehearsal.behavior.executesSelectedTool === false, "Judge bundle must carry the four-scenario no-execution live rehearsal contract.");
 check(webMcpJudgeBundle.summary.fixedPublicBrowserExecution === true && webMcpJudgeBundle.fixedPublicBrowserExecution.toolName === "search_public_cancer_trials", "Judge bundle must carry the separate fixed public browser-execution contract.");
 check(webMcpJudgeBundle.summary.quickJudgeRoute === quickJudgeDemoContract.route && webMcpJudgeBundle.quickJudgeDemo.targetMinutes === 3, "Judge bundle must carry the three-minute route contract.");
+check(webMcpJudgeBundle.summary.agentDiscoveryRoute === agentDiscoveryContract.routes.agentGuide && webMcpJudgeBundle.agentDiscovery.separateFromWebMcp === true, "Judge bundle must carry the separate agent-discovery contract.");
 check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
 check(webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.networkRequests === false, "Judge runtime suite profile must remain no-PHI and no-network.");
 check(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksTotal === 6, "Judge bundle must carry the recorded six-of-six browser runtime result.");
+check(webMcpJudgeBundle.summary.recordedAgenticPagesPassed === 2 && webMcpJudgeBundle.recordedAgenticLighthouse.pages.length === 2, "Judge bundle must carry both passing Lighthouse Agentic Browsing page results.");
 check(webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors === 0 && webMcpJudgeBundle.recordedBrowserRuntime.probePresentAfter === false && webMcpJudgeBundle.recordedBrowserRuntime.containsHealthInformation === false, "Judge bundle recorded browser result must remain clean and no-PHI.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
 check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
@@ -397,6 +432,7 @@ if (findings.length > 0) {
     browserDiagnosticReceipt: "download-only-no-health-data",
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     recordedBrowserRuntime: `${webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/${webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} Chrome ${recordedBrowserRuntime.browser.version}`,
+    recordedAgenticLighthouse: `${agenticLighthouse.pages.filter((page) => page.categoryScore === 1).length}/${agenticLighthouse.pages.length} pages`,
     originTrialDeploymentContract: "local|configured-unverified|fail-closed-no-token-json",
     cloudProbeTimeoutMs,
     cloudProbeRateLimit: "3/10m",
@@ -411,6 +447,7 @@ if (findings.length > 0) {
     liveAgentRehearsalScenarios: liveAgentRehearsalScenarios.length,
     fixedPublicBrowserExecution: `${fixedPublicExecutionContract.toolName}:${fixedPublicExecutionContract.condition}`,
     quickJudgeRoute: quickJudgeDemoContract.route,
+    agentDiscoveryRoute: agentDiscoveryContract.routes.agentGuide,
     judgeConformanceItems: webMcpConformanceMatrix.length,
     judgeBundle: "static-json-no-health-data",
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,

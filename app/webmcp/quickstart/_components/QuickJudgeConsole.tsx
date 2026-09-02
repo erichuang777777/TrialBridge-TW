@@ -117,11 +117,11 @@ export function QuickJudgeConsole() {
 
   return <section className={`quick-judge-console quick-browser-${browserState}`} aria-labelledby="quick-console-title">
     <div className="quick-console-heading"><div><p className="eyebrow">Live current-browser check</p><h2 id="quick-console-title">Discover, then execute one safe method.</h2></div><span role="status" aria-atomic="true">{browserStatus}</span></div>
-    <div className="quick-check-grid" role="list">
-      <article className={browserState === "ready" ? "check-pass" : undefined} role="listitem"><i aria-hidden="true" /><small>Native API</small><strong>{browserState === "ready" ? "document.modelContext" : browserState === "unsupported" ? "Preview not detected" : browserState === "error" ? "Needs attention" : "Checking"}</strong></article>
-      <article className={registeredNames.length === quickJudgeDemoContract.publicToolNames.length ? "check-pass" : undefined} role="listitem"><i aria-hidden="true" /><small>Public capability</small><strong>{registeredNames.length}/2 origin-scoped tools</strong></article>
-      <article className={headerCount === 3 ? "check-pass" : undefined} role="listitem"><i aria-hidden="true" /><small>Security headers</small><strong>{headerCount}/3 verified</strong></article>
-    </div>
+    <ul className="quick-check-grid">
+      <li className={browserState === "ready" ? "check-pass" : undefined}><i aria-hidden="true" /><small>Native API</small><strong>{browserState === "ready" ? "document.modelContext" : browserState === "unsupported" ? "Preview not detected" : browserState === "error" ? "Needs attention" : "Checking"}</strong></li>
+      <li className={registeredNames.length === quickJudgeDemoContract.publicToolNames.length ? "check-pass" : undefined}><i aria-hidden="true" /><small>Public capability</small><strong>{registeredNames.length}/2 origin-scoped tools</strong></li>
+      <li className={headerCount === 3 ? "check-pass" : undefined}><i aria-hidden="true" /><small>Security headers</small><strong>{headerCount}/3 verified</strong></li>
+    </ul>
     {browserState === "unsupported" && <aside className="quick-browser-recovery"><strong>No visitor extension is required.</strong><p>For local Chrome testing, enable the native preview, relaunch, then reopen this page.</p><code>{webMcpLocalTestingFlag}</code><a href="/webmcp#browser-setup-title">Open setup details</a></aside>}
     <section className={`quick-method-check quick-method-${executionState}`} aria-labelledby="quick-method-title" aria-busy={executionState === "running"}>
       <div><span>Step 02 · Explicit execution</span><strong id="quick-method-title">Run <code>trialbridge_method</code></strong><p>No input, network request, model call, registry search, patient context, or write authority.</p></div>

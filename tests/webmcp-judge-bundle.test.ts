@@ -19,6 +19,7 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.summary.capabilityStates, 4);
   assert.equal(webMcpJudgeBundle.summary.runtimeAcceptanceChecks, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed, 6);
+  assert.equal(webMcpJudgeBundle.summary.recordedAgenticPagesPassed, 2);
   assert.equal(webMcpJudgeBundle.summary.specificationClauses, 8);
   assert.equal(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired, false);
   assert.equal(webMcpJudgeBundle.specificationCrosswalk.upstreamCommit, "41d12f057167ccf5954dbcf49d99502cb6c84491");
@@ -31,6 +32,9 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.quickJudgeDemo.behavior.acceptsFreeText, false);
   assert.equal(webMcpJudgeBundle.quickJudgeDemo.behavior.runsCloudModel, false);
   assert.equal(webMcpJudgeBundle.quickJudgeDemo.privacyBoundary.containsHealthInformation, false);
+  assert.equal(webMcpJudgeBundle.summary.agentDiscoveryRoute, "/webmcp/agent-guide.md");
+  assert.equal(webMcpJudgeBundle.agentDiscovery.separateFromWebMcp, true);
+  assert.equal(webMcpJudgeBundle.agentDiscovery.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.liveAgentRehearsal.behavior.acceptsFreeText, false);
   assert.equal(webMcpJudgeBundle.liveAgentRehearsal.behavior.executesSelectedTool, false);
   assert.equal(webMcpJudgeBundle.liveAgentRehearsal.privacyBoundary.containsHealthInformation, false);
@@ -53,6 +57,13 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors, 0);
   assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.probePresentAfter, false);
   assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.containsHealthInformation, false);
+  assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.artifactClass, "recorded_lighthouse_agentic_browsing_acceptance");
+  assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.lighthouse.version, "13.4.1");
+  assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.pages.length, 2);
+  assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.pages.every((page) => page.categoryScore === 1 && page.accessibilityTree === "pass" && page.schemaValidity === "pass" && page.llmsTxt === "pass" && page.cumulativeLayoutShift === 0), true);
+  assert.deepEqual(webMcpJudgeBundle.recordedAgenticLighthouse.pages[0]?.registeredTools.imperative, ["trialbridge_method", "search_public_cancer_trials"]);
+  assert.deepEqual(webMcpJudgeBundle.recordedAgenticLighthouse.pages[1]?.registeredTools.declarative, ["search_public_trial_form"]);
+  assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.passed, 55);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.failed, 0);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.containsPatientData, false);

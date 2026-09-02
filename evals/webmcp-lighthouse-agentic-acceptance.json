@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0",
+  "artifactClass": "recorded_lighthouse_agentic_browsing_acceptance",
+  "recordedAt": "2026-09-02T03:44:47.631Z",
+  "lighthouse": {
+    "version": "13.4.1",
+    "category": "agentic-browsing",
+    "officialAuditDocumentation": "https://developer.chrome.com/docs/lighthouse/agentic-browsing/scoring"
+  },
+  "browser": {
+    "product": "Google Chrome",
+    "channel": "Stable",
+    "productVersion": "152.0.7977.64",
+    "headless": true,
+    "localTestingFeatures": [
+      "WebMCP",
+      "WebMCPTesting"
+    ]
+  },
+  "target": {
+    "origin": "http://localhost:3001",
+    "secureContext": true
+  },
+  "pages": [
+    {
+      "route": "/webmcp/quickstart",
+      "recordedAt": "2026-09-02T03:44:13.758Z",
+      "categoryScore": 1,
+      "accessibilityTree": "pass",
+      "schemaValidity": "pass",
+      "cumulativeLayoutShift": 0,
+      "llmsTxt": "pass",
+      "registeredTools": {
+        "declarative": [],
+        "imperative": [
+          "trialbridge_method",
+          "search_public_cancer_trials"
+        ]
+      },
+      "formCoverage": "not_applicable_no_candidate_form"
+    },
+    {
+      "route": "/trials",
+      "recordedAt": "2026-09-02T03:44:47.631Z",
+      "categoryScore": 1,
+      "accessibilityTree": "pass",
+      "schemaValidity": "pass",
+      "cumulativeLayoutShift": 0,
+      "llmsTxt": "pass",
+      "registeredTools": {
+        "declarative": [
+          "search_public_trial_form"
+        ],
+        "imperative": []
+      },
+      "formCoverage": "not_applicable_no_uncovered_candidate_form"
+    }
+  ],
+  "privacyBoundary": {
+    "containsHealthInformation": false,
+    "storesArguments": false,
+    "storesOutputs": false,
+    "containsPageText": false,
+    "rawReportsCommitted": false
+  },
+  "cleanup": {
+    "reportWrittenBeforeLauncherCleanup": true,
+    "launcherTemporaryProfileCleanupWarning": "EPERM"
+  },
+  "evidenceBoundary": "Recorded local Lighthouse Agentic Browsing audits prove registered-tool observation, schema validity, accessibility-tree integrity, llms.txt retrieval, and layout stability for these two page states. They do not prove natural-language Inspector selection, a production Origin Trial deployment, tool execution, registry quality, or clinical validity."
+}

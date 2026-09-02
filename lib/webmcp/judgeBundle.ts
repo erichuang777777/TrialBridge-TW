@@ -1,5 +1,6 @@
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json" with { type: "json" };
 import recordedBrowserRuntime from "../../evals/webmcp-browser-runtime-acceptance.json" with { type: "json" };
+import recordedAgenticLighthouse from "../../evals/webmcp-lighthouse-agentic-acceptance.json" with { type: "json" };
 import { webMcpCapabilityInventory } from "./capabilityInventory.ts";
 import { webMcpCriticalJourney } from "./criticalJourney.ts";
 import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
@@ -12,6 +13,7 @@ import { webMcpBrowserSetupContract } from "./browserSetup.ts";
 import { liveAgentRehearsalContract } from "./liveRehearsalContract.ts";
 import { fixedPublicExecutionContract } from "./fixedPublicExecution.ts";
 import { quickJudgeDemoContract } from "./quickJudgeDemo.ts";
+import { agentDiscoveryContract } from "./agentDiscovery.ts";
 
 export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
 
@@ -130,11 +132,13 @@ export const webMcpJudgeBundle = {
     liveAgentRehearsalScenarios: liveAgentRehearsalContract.fixedScenarioIds.length,
     fixedPublicBrowserExecution: fixedPublicExecutionContract.behavior.executesOnlyFixedPublicSearch,
     quickJudgeRoute: quickJudgeDemoContract.route,
+    agentDiscoveryRoute: agentDiscoveryContract.routes.agentGuide,
     manualInspectorCases: webMcpInspectorAcceptanceCases.length,
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     recordedBrowserRuntimeChecksPassed: recordedBrowserRuntime.result.receipt.lifecycleAcceptance.checks.filter((item) => item.status === "pass").length,
+    recordedAgenticPagesPassed: recordedAgenticLighthouse.pages.filter((page) => page.categoryScore === 1).length,
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,
@@ -143,6 +147,7 @@ export const webMcpJudgeBundle = {
   liveAgentRehearsal: liveAgentRehearsalContract,
   fixedPublicBrowserExecution: fixedPublicExecutionContract,
   quickJudgeDemo: quickJudgeDemoContract,
+  agentDiscovery: agentDiscoveryContract,
   toolContractCatalog: {
     route: "/webmcp/contracts.json",
     contractVersion: webMcpToolContractBundle.contractVersion,
@@ -171,6 +176,17 @@ export const webMcpJudgeBundle = {
     postRunToolNames: recordedBrowserRuntime.result.postRunToolNames,
     containsHealthInformation: recordedBrowserRuntime.result.receipt.containsHealthInformation,
     evidenceBoundary: recordedBrowserRuntime.evidenceBoundary,
+  },
+  recordedAgenticLighthouse: {
+    artifactClass: recordedAgenticLighthouse.artifactClass,
+    receiptPath: "evals/webmcp-lighthouse-agentic-acceptance.json",
+    recordedAt: recordedAgenticLighthouse.recordedAt,
+    lighthouse: recordedAgenticLighthouse.lighthouse,
+    browser: recordedAgenticLighthouse.browser,
+    target: recordedAgenticLighthouse.target,
+    pages: recordedAgenticLighthouse.pages,
+    privacyBoundary: recordedAgenticLighthouse.privacyBoundary,
+    evidenceBoundary: recordedAgenticLighthouse.evidenceBoundary,
   },
   conformance: webMcpConformanceMatrix,
   recordedSelectionEval: {

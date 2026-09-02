@@ -685,10 +685,10 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .quick-console-heading h2 { max-width: 720px; font-size: clamp(1.45rem, 3vw, 2.15rem); }
 .quick-console-heading > span { max-width: 300px; min-height: 34px; display: inline-flex; align-items: center; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.72rem; font-weight: 900; text-align: right; }
 .quick-browser-ready .quick-console-heading > span { color: var(--success-ink); background: var(--success-surface); }
-.quick-check-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
-.quick-check-grid article { min-width: 0; display: grid; grid-template-columns: 11px minmax(0, 1fr); gap: 1px 8px; align-content: center; min-height: 82px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
+.quick-check-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
+.quick-check-grid li { min-width: 0; display: grid; grid-template-columns: 11px minmax(0, 1fr); gap: 1px 8px; align-content: center; min-height: 82px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
 .quick-check-grid i { grid-row: 1 / span 2; width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--match-missing); }
-.quick-check-grid article.check-pass i { background: var(--match-aligned); }
+.quick-check-grid li.check-pass i { background: var(--match-aligned); }
 .quick-check-grid small { color: var(--ink-soft); font-size: 0.62rem; font-weight: 900; text-transform: uppercase; }
 .quick-check-grid strong { font-size: 0.78rem; overflow-wrap: anywhere; }
 .quick-browser-recovery { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 16px; margin-top: 10px; padding: 12px 14px; border-left: 3px solid var(--match-missing); background: var(--paper); }
@@ -713,6 +713,13 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .quick-method-actions button:disabled { border-color: #688b8d; background: #688b8d; cursor: not-allowed; }
 .quick-method-actions small { color: var(--ink-soft); font-size: 0.67rem; }
 .quick-console-boundary { margin: 13px 0 0; padding-top: 11px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.72rem; line-height: 1.5; }
+.quick-agentic-proof { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px 18px; align-items: center; margin-top: 10px; padding: 13px 15px; border: 1px solid var(--success-line); border-left: 4px solid var(--match-aligned); border-radius: 10px; background: var(--success-surface); }
+.quick-agentic-proof > span { display: inline-flex; align-items: center; gap: 7px; color: var(--success-ink); font-size: 0.66rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
+.quick-agentic-proof > span i { width: 8px; height: 8px; border-radius: 50%; background: var(--match-aligned); }
+.quick-agentic-proof strong { font-size: 0.84rem; }
+.quick-agentic-proof p { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.7rem; line-height: 1.45; }
+.quick-agentic-proof > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; }
+.quick-agentic-proof a { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.7rem; font-weight: 900; }
 .quickstart-path { margin-top: 28px; padding-top: 28px; border-top: 1px solid var(--line); }
 .quickstart-path h2, .quickstart-next h2 { font-size: clamp(1.45rem, 3vw, 2.2rem); }
 .quickstart-path ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0 0; padding: 0; list-style: none; }
@@ -1257,6 +1264,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .proof-next-step a { min-height: 44px; display: inline-flex; align-items: center; font-weight: 800; }
 
 @media (max-width: 780px) {
+  .quick-agentic-proof { grid-template-columns: 1fr; }
+  .quick-agentic-proof > div:last-child { justify-content: flex-start; }
   .quickstart-header > nav, .quick-console-heading, .quickstart-next, .proof-quickstart-link { align-items: stretch; flex-direction: column; }
   .quickstart-header > nav { padding-bottom: 12px; }
   .quickstart-header > nav > div { flex-wrap: wrap; }

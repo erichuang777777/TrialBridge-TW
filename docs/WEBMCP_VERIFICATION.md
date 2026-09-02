@@ -4,6 +4,12 @@
 
 `/webmcp/quickstart` is a three-minute, no-PHI entry point. It constructs the same two public imperative definitions as the product, registers them with an AbortSignal and `exposedTo: [location.origin]`, discovers only from the current origin, and checks `Permissions-Policy`, opener isolation, and MIME protection. Its only executable action is `trialbridge_method`: no input, ten-second cancellation cap, no model or registry request, no patient context, no workflow mutation, and no persistence. The resulting receipt is bounded and tab-local. Deterministic tests and `npm run verify:webmcp` cover this contract; current-browser interaction and Inspector selection remain separate acceptance boundaries.
 
+## Agent discovery and Lighthouse evidence
+
+`/llms.txt` follows the emerging llms.txt convention and points to `/webmcp/agent-guide.md`, quickstart, the visible public search, canonical contracts, and the competition bundle. The root layout advertises it with `rel="describedby"`. The guide derives all eight tool names from the canonical catalog and explains public, permission-gated, and shortlist-gated authority. Both resources accept no input and contain no workflow state or health information. They help agents find the runtime; they are not WebMCP protocol endpoints and cannot prove discovery or execution.
+
+Chrome Lighthouse 13.4.1 Agentic Browsing was run with Chrome Stable 152 and the local `WebMCP` and `WebMCPTesting` features. `/webmcp/quickstart` exposed exactly the two public imperative tools; `/trials` exposed the one visible declarative tool. Both recorded category score 1, valid WebMCP schemas, a well-formed accessibility tree, `llms.txt` pass, and CLS 0. The first audit found an invalid `article[role=listitem]` override; replacing it with a native `ul`/`li` structure produced the passing rerun. `evals/webmcp-lighthouse-agentic-acceptance.json` stores only routes, tool names, states, versions, and evidence boundaries. Raw reports, page text, arguments, and outputs are not committed. Lighthouse's Agentic Browsing category is experimental and does not replace Inspector or clinical acceptance.
+
 ## Registered tools
 
 Visible on `/trials` through declarative WebMCP:

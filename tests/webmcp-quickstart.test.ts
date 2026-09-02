@@ -58,13 +58,15 @@ test("quickstart UI registers same-origin public tools and keeps execution expli
     readFile("app/webmcp/quickstart/_components/QuickJudgeConsole.tsx", "utf8"),
     readFile("app/globals.css", "utf8"),
   ]);
-  for (const marker of ["three-minute judge demo", "QuickJudgeConsole", "public tools now", "write or enrollment tools", "/match?demo=synthetic", "/webmcp"]) {
+  for (const marker of ["three-minute judge demo", "QuickJudgeConsole", "public tools now", "write or enrollment tools", "Agentic Browsing pages passed", "Chrome audit method", "/match?demo=synthetic", "/webmcp"]) {
     assert.match(page, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
   }
   for (const marker of ["buildTrialBridgeTools", "registerTool(tool, { signal: registrationController.signal, exposedTo: [location.origin] })", "getTools({ fromOrigins: [location.origin] })", "executeSafeMethodToolCompat", "quickJudgeDemoContract.executionTimeoutMs", 'role="status" aria-atomic="true"']) {
     assert.ok(consoleSource.includes(marker), `quickstart console is missing ${marker}`);
   }
   assert.doesNotMatch(consoleSource, /<(?:input|textarea)\b/i);
+  assert.match(consoleSource, /<ul className="quick-check-grid">/);
+  assert.doesNotMatch(consoleSource, /role="listitem"/);
   assert.match(css, /\.quick-method-actions button[^}]*min-height:\s*44px/);
   assert.match(css, /\.quick-check-grid, \.quick-browser-recovery, \.quickstart-path ol \{ grid-template-columns: 1fr; \}/);
 });

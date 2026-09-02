@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BrandMark } from "@/app/components/BrandMark";
 import { createPageMetadata } from "@/lib/site/metadata";
 import { QuickJudgeConsole } from "./_components/QuickJudgeConsole";
+import recordedAgenticLighthouse from "@/evals/webmcp-lighthouse-agentic-acceptance.json";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Three-minute WebMCP Demo",
@@ -22,6 +23,12 @@ export default function WebMcpQuickstartPage() {
     </header>
 
     <QuickJudgeConsole />
+
+    <aside className="quick-agentic-proof" aria-label="Recorded Lighthouse Agentic Browsing evidence">
+      <span><i aria-hidden="true" />Recorded local audit</span>
+      <div><strong>{recordedAgenticLighthouse.pages.length}/{recordedAgenticLighthouse.pages.length} Agentic Browsing pages passed</strong><p>Lighthouse {recordedAgenticLighthouse.lighthouse.version} · accessibility trees valid · WebMCP schemas valid · <code>llms.txt</code> passed · CLS 0</p></div>
+      <div><a href="/webmcp/evidence.json">Inspect metadata</a><a href={recordedAgenticLighthouse.lighthouse.officialAuditDocumentation} target="_blank" rel="noreferrer">Chrome audit method</a></div>
+    </aside>
 
     <section className="quickstart-path" aria-labelledby="quickstart-path-title">
       <div><p className="eyebrow">Continue the visible journey</p><h2 id="quickstart-path-title">Three proofs. One human-controlled product.</h2></div>
