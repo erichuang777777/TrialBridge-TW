@@ -25,6 +25,7 @@ test("ClinicalTrials.gov normalization retains registry facts and locations", ()
   assert.equal(trial.regionTier, "taiwan");
   assert.deepEqual(trial.conditions, ["Gastric Cancer"]);
   assert.equal(trial.locations.length, 2);
+  assert.equal(trial.contacts.some((contact) => contact.role === "investigator" && contact.name === "Synthetic Study Chair"), true);
   assert.equal(trial.sources[0].lastUpdated, "2026-08-20");
 });
 
@@ -56,9 +57,20 @@ test("deduplication merges only explicit shared identifiers and keeps both sourc
   assert.equal(merged.length, 1);
   assert.equal(merged[0].canonicalId, tfda.canonicalId);
   assert.deepEqual(merged[0].sources.map((source) => source.registry).sort(), ["ClinicalTrials.gov", "TFDA"]);
+  assert.equal(merged[0].eligibility.minimumAge, "18 Years");
+  assert.equal(merged[0].contacts.some((contact) => contact.role === "investigator"), true);
 
   const unrelated = { ...ctgov, identifiers: ["NCT99999999"], canonicalId: "ctgov:nct99999999" };
   assert.equal(deduplicateTrials([tfda, unrelated]).length, 2);
+});
+
+test("an exact TFDA duplicate uses the ClinicalTrials.gov recruitment state when TFDA does not publish one", () => {
+  const tfdaUnknown = normalizeTfdaRecord({ ...tfdaFixture, 執行狀態: undefined }, retrievedAt);
+  const ctgov = normalizeClinicalTrialsGovStudy(ctgovFixture, retrievedAt);
+  const merged = deduplicateTrials([tfdaUnknown, ctgov]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].recruitment.raw, "RECRUITING");
+  assert.equal(merged[0].recruitment.category, "open");
 });
 
 test("ranking is Taiwan then Asia then worldwide", () => {

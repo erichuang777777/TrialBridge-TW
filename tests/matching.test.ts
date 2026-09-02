@@ -73,3 +73,13 @@ test("Taiwan and Asia travel preference aligns with an Asia-tier trial", () => {
   const asiaTrial = { ...trial, regionTier: "asia" as const };
   assert.equal(assessTrial(travelProfile, asiaTrial).assessments.find((item) => item.key === "location")?.outcome, "possibly_met");
 });
+
+test("closed recruitment is shown separately and does not create a clinical mismatch by itself", () => {
+  const openMatch = assessTrial(profile, trial);
+  const closedMatch = assessTrial(profile, {
+    ...trial,
+    recruitment: { raw: "COMPLETED", category: "not_open", acceptingNewParticipants: false },
+  });
+  assert.equal(closedMatch.status, openMatch.status);
+  assert.equal(closedMatch.assessments.find((item) => item.key === "recruitment")?.outcome, "possibly_not_met");
+});

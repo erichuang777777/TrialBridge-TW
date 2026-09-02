@@ -51,7 +51,7 @@ export async function runCompetitionPreflight(options: PreflightOptions = {}): P
   const runCloud = options.runCloud ?? ((signal) => probeCloudModel({ signal }));
   const queryPlan = createRegistryQueryPlan(competitionPreflightCondition);
   const runRegistries = options.runRegistries ?? ((signal) => searchTrialRegistries(
-    { condition: competitionPreflightCondition, pageSize: 3, includeNotOpen: false },
+    { condition: competitionPreflightCondition, pageSize: 3, includeNotOpen: true },
     undefined,
     queryPlan.registryConditions,
     { signal },

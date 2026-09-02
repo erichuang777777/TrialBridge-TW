@@ -7,6 +7,11 @@ function sharedIdentifier(left: NormalizedTrial, right: NormalizedTrial): boolea
 }
 
 function mergeExactDuplicate(primary: NormalizedTrial, duplicate: NormalizedTrial): NormalizedTrial {
+  const clinicalTrialsGovRecord = primary.sources.some((source) => source.registry === "ClinicalTrials.gov")
+    ? primary
+    : duplicate.sources.some((source) => source.registry === "ClinicalTrials.gov")
+      ? duplicate
+      : undefined;
   return {
     ...primary,
     identifiers: uniqueText([...primary.identifiers, ...duplicate.identifiers]).map(normalizeIdentifier),
@@ -18,13 +23,27 @@ function mergeExactDuplicate(primary: NormalizedTrial, duplicate: NormalizedTria
     conditions: uniqueText([...primary.conditions, ...duplicate.conditions]),
     phases: uniqueText([...primary.phases, ...duplicate.phases]),
     interventions: uniqueText([...primary.interventions, ...duplicate.interventions]),
+    recruitment: clinicalTrialsGovRecord?.recruitment ?? (primary.recruitment.category === "unknown" ? duplicate.recruitment : primary.recruitment),
+    eligibility: {
+      combined: primary.eligibility.combined ?? duplicate.eligibility.combined,
+      inclusion: primary.eligibility.inclusion ?? duplicate.eligibility.inclusion,
+      exclusion: primary.eligibility.exclusion ?? duplicate.eligibility.exclusion,
+      minimumAge: primary.eligibility.minimumAge ?? duplicate.eligibility.minimumAge,
+      maximumAge: primary.eligibility.maximumAge ?? duplicate.eligibility.maximumAge,
+      sex: primary.eligibility.sex ?? duplicate.eligibility.sex,
+    },
     locations: [...primary.locations, ...duplicate.locations].filter((location, index, locations) =>
       locations.findIndex((candidate) =>
         [candidate.country, candidate.city, candidate.facility].join("|").toLocaleLowerCase("en") ===
         [location.country, location.city, location.facility].join("|").toLocaleLowerCase("en"),
       ) === index,
     ),
-    contacts: [...primary.contacts, ...duplicate.contacts],
+    contacts: [...primary.contacts, ...duplicate.contacts].filter((contact, index, contacts) =>
+      contacts.findIndex((candidate) =>
+        [candidate.role, candidate.name, candidate.facility, candidate.affiliation].join("|").toLocaleLowerCase("en") ===
+        [contact.role, contact.name, contact.facility, contact.affiliation].join("|").toLocaleLowerCase("en"),
+      ) === index,
+    ),
   };
 }
 

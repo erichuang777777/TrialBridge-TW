@@ -13,12 +13,13 @@ import type {
 } from "../types.ts";
 
 const API_BASE = "https://clinicaltrials.gov/api/v2";
-const OPEN_STATUSES = ["RECRUITING", "NOT_YET_RECRUITING", "ENROLLING_BY_INVITATION"];
+const OPEN_STATUSES = ["RECRUITING"];
 const RESPONSE_FIELDS = [
   "NCTId", "BriefTitle", "OfficialTitle", "OrgStudyIdInfo", "SecondaryIdInfo",
   "OverallStatus", "LastUpdatePostDate", "BriefSummary", "Condition", "StudyType", "Phase",
   "InterventionName", "InterventionType", "EligibilityCriteria", "MinimumAge", "MaximumAge", "Sex",
   "CentralContactName", "CentralContactEMail", "CentralContactPhone",
+  "OverallOfficialName", "OverallOfficialAffiliation", "OverallOfficialRole",
   "LocationFacility", "LocationCity", "LocationCountry", "LocationStatus",
   "LocationContactName", "LocationContactEMail", "LocationContactPhone",
 ];
@@ -51,6 +52,9 @@ const rawStudySchema = z.object({
     contactsLocationsModule: z.object({
       centralContacts: z.array(z.object({
         name: z.string().optional(), email: z.string().optional(), phone: z.string().optional(),
+      })).optional(),
+      overallOfficials: z.array(z.object({
+        name: z.string().optional(), affiliation: z.string().optional(), role: z.string().optional(),
       })).optional(),
       locations: z.array(z.object({
         facility: z.string().optional(), city: z.string().optional(), country: z.string().optional(),
@@ -103,6 +107,12 @@ export function normalizeClinicalTrialsGovStudy(raw: RawStudy, retrievedAt: stri
         name: cleanText(contact.name), email: cleanText(contact.email), phone: cleanText(contact.phone),
       })),
     ),
+    ...(section.contactsLocationsModule?.overallOfficials ?? []).map((official) => ({
+      role: "investigator" as const,
+      name: cleanText(official.name),
+      affiliation: cleanText(official.affiliation),
+      investigatorRole: cleanText(official.role),
+    })),
   ];
   const status = section.statusModule.overallStatus;
   const identifiers = uniqueText([
@@ -135,7 +145,7 @@ export function normalizeClinicalTrialsGovStudy(raw: RawStudy, retrievedAt: stri
     recruitment: {
       raw: status,
       category: recruitmentCategory(status),
-      acceptingNewParticipants: OPEN_STATUSES.includes(status),
+      acceptingNewParticipants: status === "RECRUITING" || status === "ENROLLING_BY_INVITATION",
     },
     eligibility: {
       ...eligibility,

@@ -7,6 +7,16 @@ import { formatRegistryDuration, registrySourceTimeoutMs } from "@/lib/trials/re
 import { createPublicTrialSearchPath, defaultPublicTrialCondition, normalizePublicTrialCondition, normalizeShareablePublicTrialCondition, parsePublicTrialSearchParams } from "@/lib/trials/searchUrl";
 import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput";
 import { publicTrialFormContractCore } from "@/lib/webmcp/toolContractCore";
+import {
+  conditionBadges,
+  phaseLabel,
+  recruitmentLabel,
+  regionLabel,
+  trialMatchesFilters,
+  trialPhaseFilter,
+  type TrialPhaseFilter,
+  type TrialRecruitmentFilter,
+} from "@/lib/trials/presentation";
 
 type SearchResponse = {
   trials?: NormalizedTrial[];
@@ -29,11 +39,26 @@ const regions: Array<{ value: "all" | RegionTier; label: string }> = [
   { value: "taiwan", label: "Taiwan" },
   { value: "asia", label: "Asia" },
   { value: "world", label: "Worldwide" },
+  { value: "unknown", label: "Sites not published" },
 ];
-
-function regionLabel(region: RegionTier) {
-  return { taiwan: "Taiwan", asia: "Asia", world: "Worldwide", unknown: "Location unknown" }[region];
-}
+const phases: Array<{ value: TrialPhaseFilter; label: string }> = [
+  { value: "all", label: "All phases" },
+  { value: "phase1", label: "Phase 1" },
+  { value: "phase1_2", label: "Phase 1/2" },
+  { value: "phase2", label: "Phase 2" },
+  { value: "phase2_3", label: "Phase 2/3" },
+  { value: "phase3", label: "Phase 3" },
+  { value: "phase4", label: "Phase 4" },
+  { value: "na", label: "Phase N/A" },
+];
+const recruitmentOptions: Array<{ value: TrialRecruitmentFilter; label: string }> = [
+  { value: "all", label: "All recruitment states" },
+  { value: "open", label: "Recruiting" },
+  { value: "opening_soon", label: "Not yet recruiting" },
+  { value: "invitation_only", label: "Invitation only" },
+  { value: "not_open", label: "Closed / completed" },
+  { value: "unknown", label: "Status not published" },
+];
 
 function sourceStateLabel(source: NonNullable<SearchResponse["sources"]>[number]) {
   if (!source.dataState) return `queried ${new Date(source.retrievedAt).toLocaleDateString("en-CA")}`;
@@ -51,8 +76,10 @@ function sourceStateLabel(source: NonNullable<SearchResponse["sources"]>[number]
 export function TrialDatabase() {
   const [query, setQuery] = useState(defaultPublicTrialCondition);
   const [submittedQuery, setSubmittedQuery] = useState(defaultPublicTrialCondition);
-  const [includeNotOpen, setIncludeNotOpen] = useState(false);
+  const [includeNotOpen, setIncludeNotOpen] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<"all" | RegionTier>("all");
+  const [selectedPhase, setSelectedPhase] = useState<TrialPhaseFilter>("all");
+  const [selectedRecruitment, setSelectedRecruitment] = useState<TrialRecruitmentFilter>("all");
   const [result, setResult] = useState<SearchResponse>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -73,6 +100,8 @@ export function TrialDatabase() {
     setLoading(true);
     setError("");
     setSelectedRegion("all");
+    setSelectedPhase("all");
+    setSelectedRecruitment("all");
     setSubmittedQuery(normalized);
     if (syncUrl) {
       if (normalizeShareablePublicTrialCondition(normalized)) {
@@ -130,14 +159,15 @@ export function TrialDatabase() {
     if (initialSearchStarted.current) return;
     initialSearchStarted.current = true;
     const urlState = parsePublicTrialSearchParams(window.location.search);
+    const initialIncludeNotOpen = window.location.search ? urlState.includeNotOpen : true;
     setQuery(urlState.condition);
-    setIncludeNotOpen(urlState.includeNotOpen);
+    setIncludeNotOpen(initialIncludeNotOpen);
     if (urlState.rejectedCondition) setUrlNotice("The shared search condition was removed because it was not a curated general cancer condition. Enter a broad cancer type without identifiers.");
     if (window.location.search) {
       const safePath = urlState.hasExplicitCondition && !urlState.rejectedCondition ? createPublicTrialSearchPath(urlState.condition, urlState.includeNotOpen) : "/trials";
       window.history.replaceState(window.history.state, "", safePath);
     }
-    void search(urlState.condition, urlState.includeNotOpen, false);
+    void search(urlState.condition, initialIncludeNotOpen, false);
   }, []);
 
   useEffect(() => {
@@ -163,7 +193,11 @@ export function TrialDatabase() {
     };
   }, []);
 
-  const visibleTrials = useMemo(() => (result.trials ?? []).filter((trial) => selectedRegion === "all" || trial.regionTier === selectedRegion), [result.trials, selectedRegion]);
+  const visibleTrials = useMemo(() => (result.trials ?? []).filter((trial) => trialMatchesFilters(trial, {
+    phase: selectedPhase,
+    region: selectedRegion,
+    recruitment: selectedRecruitment,
+  })), [result.trials, selectedPhase, selectedRecruitment, selectedRegion]);
 
   return (
     <section className="database-shell" aria-labelledby="database-search-title">
@@ -182,7 +216,7 @@ export function TrialDatabase() {
         <div className="suggestion-row" aria-label="Suggested searches">
           {suggestions.map((suggestion) => <button type="button" key={suggestion.condition} onClick={() => { setQuery(suggestion.condition); void search(suggestion.condition); }}>{suggestion.label}</button>)}
         </div>
-        <label className="confirm-check"><input name="includeNotOpen" type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} toolparamdescription={publicTrialFormContractCore.inputSchema.properties.includeNotOpen.description} />Include records that are not currently open</label>
+        <label className="confirm-check"><input name="includeNotOpen" type="checkbox" checked={includeNotOpen} onChange={(event) => setIncludeNotOpen(event.target.checked)} toolparamdescription={publicTrialFormContractCore.inputSchema.properties.includeNotOpen.description} />Load closed, completed, and status-unknown records too</label>
         <p className="field-helper">English and Traditional Chinese cancer terms are supported. Use only a general condition here; do not paste medical records or identifying information.</p>
       </form>
 
@@ -191,10 +225,13 @@ export function TrialDatabase() {
         {!loading && error && <div className="error-panel" role="alert"><strong>Search stopped</strong><p>{error}</p>{(result.failures?.length ?? 0) > 0 && <ul className="registry-error-sources">{result.failures!.map((failure) => <li key={failure.registry}><strong>{failure.registry}</strong><span>{failure.code === "SOURCE_TIMEOUT" ? "Timed out" : "Unavailable"} · {formatRegistryDuration(failure.durationMs)}</span></li>)}</ul>}<button onClick={() => void search(submittedQuery)}>Try again</button></div>}
         {!loading && !error && <>
           <div className="results-toolbar">
-            <div role="status" aria-atomic="true"><p className="eyebrow">Results</p><h2>{visibleTrials.length} records for “{submittedQuery}”</h2></div>
-            <div className="region-filters" aria-label="Filter results by region">
-              {regions.map((region) => <button key={region.value} className={selectedRegion === region.value ? "selected" : ""} aria-pressed={selectedRegion === region.value} onClick={() => setSelectedRegion(region.value)}>{region.label}</button>)}
-            </div>
+            <div role="status" aria-atomic="true"><p className="eyebrow">Results</p><h2>{visibleTrials.length} of {(result.trials ?? []).length} records for “{submittedQuery}”</h2></div>
+          </div>
+          <div className="trial-filter-bar" aria-label="Filter trials">
+            <label><span>Phase</span><select value={selectedPhase} onChange={(event) => setSelectedPhase(event.target.value as TrialPhaseFilter)}>{phases.map((phase) => <option value={phase.value} key={phase.value}>{phase.label}</option>)}</select></label>
+            <label><span>Location</span><select value={selectedRegion} onChange={(event) => setSelectedRegion(event.target.value as "all" | RegionTier)}>{regions.map((region) => <option value={region.value} key={region.value}>{region.label}</option>)}</select></label>
+            <label><span>Recruitment</span><select value={selectedRecruitment} onChange={(event) => setSelectedRecruitment(event.target.value as TrialRecruitmentFilter)}>{recruitmentOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
+            <button type="button" onClick={() => { setSelectedPhase("all"); setSelectedRegion("all"); setSelectedRecruitment("all"); }}>Reset filters</button>
           </div>
 
           {result.queryPlan && <section className={`registry-query-plan query-${result.queryPlan.strategy}`} aria-labelledby="registry-query-plan-title">
@@ -205,17 +242,34 @@ export function TrialDatabase() {
           {(result.sources?.length ?? 0) > 0 && <div className="registry-receipts">{result.sources!.map((source) => <span className={`receipt-${source.dataState?.mode ?? "live"}`} key={source.registry}><strong>{source.registry}</strong> {source.count}<small>{sourceStateLabel(source)} · {formatRegistryDuration(source.durationMs)}</small></span>)}</div>}
           {(result.failures?.length ?? 0) > 0 && <div className="registry-partial-notice" role="status" aria-atomic="true"><div><strong>Partial registry results</strong><p>Available records are still shown below. Retry later to restore complete source coverage.</p></div><ul>{result.failures!.map((failure) => <li key={failure.registry}><strong>{failure.registry}</strong><span>{failure.code === "SOURCE_TIMEOUT" ? "Timed out" : "Unavailable"} · {formatRegistryDuration(failure.durationMs)}</span><small>{failure.message}</small></li>)}</ul></div>}
 
-          {visibleTrials.length === 0 ? <div className="empty-results"><h3>No records in this view</h3><p>Try another cancer term, include closed records, or switch to All regions.</p></div> : <div className="trial-grid">{visibleTrials.map((trial) => <article className="trial-card" key={trial.canonicalId}>
-            <div className="trial-card-top"><span className="region-badge">{regionLabel(trial.regionTier)}</span><span className={`recruitment-badge recruitment-${trial.recruitment.category}`}>{trial.recruitment.acceptingNewParticipants ? "Accepting participants" : trial.recruitment.raw}</span></div>
-            <h3>{trial.title}</h3>
-            <p className="trial-meta">{trial.phases.join(" · ") || "Phase not stated"} · {trial.conditions.slice(0, 3).join(" · ") || "Condition not stated"}</p>
-            {trial.locations.length > 0 && <p><strong>Locations:</strong> {trial.locations.slice(0, 3).map((location) => [location.city, location.country].filter(Boolean).join(", ")).join(" · ")}{trial.locations.length > 3 ? ` +${trial.locations.length - 3}` : ""}</p>}
-            <details><summary>View registry details</summary>{trial.summary && <p>{trial.summary}</p>}{trial.interventions.length > 0 && <p><strong>Interventions:</strong> {trial.interventions.join(", ")}</p>}<p><strong>Eligibility:</strong> {[trial.eligibility.minimumAge, trial.eligibility.maximumAge, trial.eligibility.sex].filter(Boolean).join(" · ") || "See source registry"}</p></details>
-            <div className="trial-sources">{trial.sources.map((source) => <a key={`${source.registry}:${source.registryId}`} href={source.url} target="_blank" rel="noreferrer">{source.registry}: {source.registryId}</a>)}</div>
-          </article>)}</div>}
+          {visibleTrials.length === 0 ? <div className="empty-results"><h3>No records in this view</h3><p>Reset the filters or load closed and status-unknown records.</p></div> : <div className="trial-grid">{visibleTrials.map((trial) => <TrialDatabaseCard trial={trial} key={trial.canonicalId} />)}</div>}
           <p className="database-disclaimer">{result.disclaimer}</p>
         </>}
       </div>
     </section>
   );
+}
+
+function TrialDatabaseCard({ trial }: { trial: NormalizedTrial }) {
+  const phase = trialPhaseFilter(trial);
+  const conditions = conditionBadges(trial.conditions);
+  const locations = [...trial.locations].sort((left, right) => Number(right.recruitmentStatus === "RECRUITING") - Number(left.recruitmentStatus === "RECRUITING"));
+  const contacts = trial.contacts.filter((contact) => contact.name && (contact.role === "investigator" || contact.role === "site" || contact.role === "central")).slice(0, 2);
+  return <article className="trial-card">
+    <div className="trial-card-top"><span className="region-badge">{regionLabel(trial.regionTier)}</span><span className={`recruitment-badge recruitment-${trial.recruitment.category}`}>{recruitmentLabel(trial)}</span></div>
+    <h3>{trial.title}</h3>
+    <div className="trial-taxonomy-badges" aria-label="Trial phase and registered conditions">
+      <span className={`phase-badge phase-${phase}`}>{phaseLabel(phase)}</span>
+      {conditions.badges.map((badge) => <span className={`condition-badge condition-${badge.kind}`} key={`${badge.kind}:${badge.label}`}>{badge.label}</span>)}
+      {conditions.hiddenCount > 0 && <span className="condition-badge">+{conditions.hiddenCount}</span>}
+    </div>
+    <div className="trial-site-summary">
+      <strong>{locations.length > 0 ? "Published sites" : "Sites not published"}</strong>
+      {locations.length > 0 ? <ul>{locations.slice(0, 3).map((location, index) => <li key={`${location.facility ?? "site"}:${location.city ?? index}`}><span>{[location.facility, location.city, location.country].filter(Boolean).join(" · ")}</span>{location.recruitmentStatus && <small>{location.recruitmentStatus.replaceAll("_", " ").toLocaleLowerCase("en")}</small>}</li>)}</ul> : <p>The registry record does not list a site. Check the source or central study contact before planning travel.</p>}
+      {locations.length > 3 && <small>+{locations.length - 3} additional published sites</small>}
+    </div>
+    {contacts.length > 0 && <div className="trial-contact-summary"><strong>Investigator / study contact</strong>{contacts.map((contact, index) => <span key={`${contact.role}:${contact.name}:${index}`}>{contact.name}{contact.affiliation ? ` · ${contact.affiliation}` : contact.facility ? ` · ${contact.facility}` : ""}<small>{contact.role === "investigator" ? contact.investigatorRole?.replaceAll("_", " ") || "registry investigator" : `${contact.role} contact`}</small></span>)}</div>}
+    <details><summary>View registry details</summary>{trial.summary && <p>{trial.summary}</p>}{trial.interventions.length > 0 && <p><strong>Interventions:</strong> {trial.interventions.join(", ")}</p>}<p><strong>Eligibility:</strong> {[trial.eligibility.minimumAge, trial.eligibility.maximumAge, trial.eligibility.sex].filter(Boolean).join(" · ") || "See source registry"}</p><p><strong>Recruitment source text:</strong> {trial.recruitment.raw || "Not published"}</p></details>
+    <div className="trial-sources">{trial.sources.map((source) => <a key={`${source.registry}:${source.registryId}`} href={source.url} target="_blank" rel="noreferrer">{source.registry}: {source.registryId}</a>)}</div>
+  </article>;
 }

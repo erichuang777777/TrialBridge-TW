@@ -38,6 +38,7 @@ export const ctgovFixture = {
     },
     contactsLocationsModule: {
       centralContacts: [{ name: "Study information", email: "study@example.test" }],
+      overallOfficials: [{ name: "Synthetic Study Chair", affiliation: "Taiwan research network", role: "STUDY_CHAIR" }],
       locations: [
         { facility: "Taiwan research site", city: "Taipei", country: "Taiwan", status: "RECRUITING" },
         { facility: "Japan research site", city: "Tokyo", country: "Japan", status: "RECRUITING" },

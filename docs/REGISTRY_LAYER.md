@@ -31,6 +31,10 @@ The bridge is terminology navigation, not clinical translation. It performs exac
 
 Every normalized record keeps registry ID, public URL, retrieval time, source update time, license when supplied, recruitment wording, locations, criteria, and cross-registry identifiers. Registry prose remains untrusted external content.
 
+The current TFDA export does not include a dependable recruitment-status, study-site, or site-investigator field. TrialBridge TW therefore keeps matching TFDA approvals as `unknown` recruitment records when the search includes non-open records; it does not infer Recruiting from a planned end date. When the same protocol has an exact shared identifier in ClinicalTrials.gov, deterministic deduplication supplements the TFDA-first record with the registry's published recruitment state, locations, eligibility age/sex fields, and investigator or contact data. Without that exact identifier, the UI says that status or sites were not published and directs the person to the source or study team.
+
+The visible database and patient matching workflow load recruiting, closed, completed, and status-unpublished records before applying Phase, Location, and Recruitment filters. This prevents a healthy TFDA response from appearing useless merely because its current export cannot support a Recruiting-only filter. Recruiting remains a distinct official label; the product never replaces it with the broader phrase “accepting patients.”
+
 Deduplication occurs only when records share an explicit normalized identifier such as a protocol number. Similar titles alone never trigger a merge. When records are merged, every source is retained and Taiwan fields lead the display record.
 
 ## Geographic priority

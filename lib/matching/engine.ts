@@ -118,20 +118,28 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
   const registryEligibility = [trial.eligibility.combined, trial.eligibility.inclusion, trial.eligibility.exclusion].filter(Boolean).join(" ");
   const potentialExclusions = potentialInterventionExclusions(profile, trial);
   const eligibilityOutcome: AssessmentOutcome = potentialExclusions.length > 0 ? "possibly_not_met" : eligibilityFacts.length === 0 || !registryEligibility ? "missing" : "unknown";
+  const recruitmentOutcome: AssessmentOutcome = trial.recruitment.category === "open"
+    ? "possibly_met"
+    : trial.recruitment.category === "not_open"
+      ? "possibly_not_met"
+      : trial.recruitment.category === "unknown"
+        ? "missing"
+        : "unknown";
 
   const assessments: CriterionAssessment[] = [
     { key: "condition", outcome: diseaseOverlap ? "possibly_met" : "possibly_not_met", patientFactIds: cancerFacts.map((fact) => fact.id), registryField: "conditions/title", explanationZhHant: diseaseOverlap ? "確認摘要與登錄疾病用語有交集。" : "確認摘要與公開登錄疾病用語未找到明確交集。", explanationEn: diseaseOverlap ? "The confirmed summary overlaps the registered condition terms." : "No clear overlap was found with the public condition terms." },
-    { key: "recruitment", outcome: trial.recruitment.acceptingNewParticipants ? "possibly_met" : "possibly_not_met", patientFactIds: [], registryField: "recruitment status", explanationZhHant: trial.recruitment.acceptingNewParticipants ? "公開登錄顯示目前或即將接受受試者。" : "公開登錄未顯示目前接受新受試者。", explanationEn: trial.recruitment.acceptingNewParticipants ? "The registry indicates current or upcoming participant acceptance." : "The registry does not indicate that new participants are being accepted." },
+    { key: "recruitment", outcome: recruitmentOutcome, patientFactIds: [], registryField: "recruitment status", explanationZhHant: recruitmentOutcome === "possibly_met" ? "公開登錄狀態為招募中。" : recruitmentOutcome === "possibly_not_met" ? "公開登錄顯示目前未招募；此項與疾病條件是否相符分開呈現。" : recruitmentOutcome === "missing" ? "此來源未公開可靠的招募狀態，需向試驗團隊確認。" : "公開登錄狀態為尚未招募或僅限邀請，需向試驗團隊確認可否加入。", explanationEn: recruitmentOutcome === "possibly_met" ? "The public registry status is Recruiting." : recruitmentOutcome === "possibly_not_met" ? "The public registry is not recruiting; availability is shown separately from clinical fit." : recruitmentOutcome === "missing" ? "This source does not publish a reliable recruitment status; confirm with the study team." : "The public registry says not yet recruiting or invitation only; confirm availability with the study team." },
     { key: "age", outcome: !ageKnown ? "missing" : ageWithin ? "possibly_met" : "possibly_not_met", patientFactIds: age.factIds, registryField: "minimumAge/maximumAge", explanationZhHant: !ageKnown ? "病人摘要或登錄缺少可比較的年齡資料。" : ageWithin ? "確認年齡在公開年齡範圍內。" : "確認年齡不在公開年齡範圍內。", explanationEn: !ageKnown ? "The patient summary or registry is missing comparable age information." : ageWithin ? "The confirmed age is within the public age range." : "The confirmed age is outside the public age range." },
     { key: "sex", outcome: !registrySex || (!patientSex && !sexUnrestricted) ? "missing" : sexUnrestricted || sexWithin ? "possibly_met" : "possibly_not_met", patientFactIds: sexFacts.map((fact) => fact.id), registryField: "sex", explanationZhHant: !registrySex || (!patientSex && !sexUnrestricted) ? "病人摘要或登錄缺少可比較的性別條件。" : sexUnrestricted ? "公開登錄未限制性別。" : sexWithin ? "確認資料與公開性別條件一致。" : "確認資料與公開性別條件不一致。", explanationEn: !registrySex || (!patientSex && !sexUnrestricted) ? "The patient summary or registry is missing comparable sex information." : sexUnrestricted ? "The public registry does not restrict sex." : sexWithin ? "The confirmed information matches the public sex criterion." : "The confirmed information does not match the public sex criterion." },
     { key: "location", outcome: locationOutcome, patientFactIds: travelFacts.map((fact) => fact.id), registryField: "locations", explanationZhHant: locationOutcome === "missing" ? "缺少旅行偏好或登錄地點資料。" : locationOutcome === "possibly_met" ? `旅行偏好與 ${trial.regionTier} 地區層級一致；未估算實際旅行時間。` : locationOutcome === "possibly_not_met" ? `旅行偏好與 ${trial.regionTier} 地區層級不同。` : "已有地點與旅行資訊，但仍無法可靠判定可行性。", explanationEn: locationOutcome === "missing" ? "Travel preference or registry location information is missing." : locationOutcome === "possibly_met" ? `Travel preference aligns with the ${trial.regionTier} region tier; actual travel time is not estimated.` : locationOutcome === "possibly_not_met" ? `Travel preference differs from the ${trial.regionTier} region tier.` : "Location and travel information exist, but feasibility remains uncertain." },
     { key: "eligibility_details", outcome: eligibilityOutcome, patientFactIds: eligibilityFacts.map((fact) => fact.id), registryField: potentialExclusions.length > 0 ? "exclusion criteria" : "eligibility criteria", explanationZhHant: potentialExclusions.length > 0 ? "已確認的治療用語與公開排除條件有交集，可能是排除訊號；仍需人工確認。" : eligibilityOutcome === "missing" ? "病人摘要或公開登錄缺少其他可比較資格資料。" : "雙方都有其他資格資料，但需要逐條人工確認，不能僅靠用語交集判定。", explanationEn: potentialExclusions.length > 0 ? "A confirmed treatment term overlaps the public exclusion criteria and may be an exclusion signal; human review is still required." : eligibilityOutcome === "missing" ? "The patient summary or public registry is missing other comparable eligibility details." : "Both sides contain other eligibility details, but they require criterion-by-criterion review and cannot be decided by term overlap alone." },
   ];
-  const status = assessments.some((item) => item.outcome === "possibly_not_met")
+  const clinicalAssessments = assessments.filter((item) => item.key !== "recruitment");
+  const status = clinicalAssessments.some((item) => item.outcome === "possibly_not_met")
     ? "unlikely_based_on_public_record"
-    : assessments.some((item) => item.outcome === "missing")
+    : clinicalAssessments.some((item) => item.outcome === "missing")
       ? "needs_information"
-      : assessments.some((item) => item.outcome === "unknown") ? "needs_review" : "discuss";
+      : clinicalAssessments.some((item) => item.outcome === "unknown") ? "needs_review" : "discuss";
   return { trial, status, assessments, potentialExclusions };
 }
 
@@ -140,7 +148,7 @@ export async function matchConfirmedProfile(profileInput: ConfirmedProfile, adap
   const condition = deriveConditionQuery(profile);
   const cancerFacts = factsFor(profile, ["cancer_type", "primary_site", "histology"]);
   const result = await searchTrialRegistries(
-    { condition, pageSize: 30, includeNotOpen: false },
+    { condition, pageSize: 50, includeNotOpen: true },
     adapters,
     {
       TFDA: cancerFacts.map((fact) => fact.displayZhHant).join(" ").slice(0, 120),

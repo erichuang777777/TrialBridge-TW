@@ -88,7 +88,7 @@ export default function WebMcpProofPage() {
       <div className="judge-runbook-heading"><div><p className="eyebrow">Four-step judge path</p><h2 id="judge-runbook-title">Reach each proof without hunting through the site.</h2></div><span>About 5 minutes</span></div>
       <ol>
         <li><span>01</span><h3>Check this browser</h3><p>Run six no-PHI lifecycle checks for discovery, execution, cancellation, toolchange, and cleanup.</p><a href="#live-diagnostic-title">Run live diagnostics</a></li>
-        <li><span>02</span><h3>Run a bilingual search</h3><p>Open the same visible declarative form with a shareable Traditional Chinese condition.</p><Link href="/trials?condition=%E8%83%83%E7%99%8C">Search 胃癌</Link></li>
+        <li><span>02</span><h3>Run a bilingual search</h3><p>Open the same visible declarative form with recruiting, closed, and status-unpublished records available for filtering.</p><Link href="/trials?condition=%E8%83%83%E7%99%8C&includeNotOpen=1">Search 胃癌</Link></li>
         <li><span>03</span><h3>Walk the protected flow</h3><p>Open the fictional case directly; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/match?demo=synthetic#private-chat">Open synthetic workflow</Link></li>
         <li><span>04</span><h3>Finish in Inspector</h3><p>Verify natural-language selection, manual calls, permission transitions, and cleanup.</p><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Inspector guide</a></li>
       </ol>

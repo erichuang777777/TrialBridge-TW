@@ -41,11 +41,13 @@ export const normalizedTrialSchema = z.object({
     recruitmentStatus: z.string().min(1).optional(),
   })),
   contacts: z.array(z.object({
-    role: z.enum(["central", "site"]),
+    role: z.enum(["central", "site", "investigator"]),
     name: z.string().min(1).optional(),
     email: z.string().min(1).optional(),
     phone: z.string().min(1).optional(),
     facility: z.string().min(1).optional(),
+    affiliation: z.string().min(1).optional(),
+    investigatorRole: z.string().min(1).optional(),
   })),
   regionTier: z.enum(["taiwan", "asia", "world", "unknown"]),
 });

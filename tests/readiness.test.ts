@@ -304,7 +304,11 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.doesNotMatch(chat, /I am a caregiver/);
   assert.doesNotMatch(chat, /I(?:'|’|\s+a)?m\s+(?:the\s+)?patient|I\s+am\s+a\s+care\s*giver/i);
   assert.doesNotMatch(chat, /SELECT_ROLE|SET_SUBJECT_ROLE|select_patient|select_caregiver/);
-  assert.match(chat, /No known public-record difference/);
+  assert.match(chat, /Recruiting · no known public difference/);
+  assert.match(chat, /Potential fit · not currently recruiting/);
+  assert.match(chat, /resultPhase/);
+  assert.match(chat, /resultRegion/);
+  assert.match(chat, /resultRecruitment/);
   assert.match(chat, /More information needed/);
   assert.match(chat, /Public-record differences found/);
   assert.match(chat, /Ask about the results/);

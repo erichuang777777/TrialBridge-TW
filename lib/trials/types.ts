@@ -24,11 +24,13 @@ export interface TrialLocation {
 }
 
 export interface TrialContact {
-  role: "central" | "site";
+  role: "central" | "site" | "investigator";
   name?: string;
   email?: string;
   phone?: string;
   facility?: string;
+  affiliation?: string;
+  investigatorRole?: string;
 }
 
 export interface NormalizedTrial {

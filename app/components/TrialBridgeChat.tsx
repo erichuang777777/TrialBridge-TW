@@ -17,6 +17,7 @@ import { SummaryConfirmation } from "./SummaryConfirmation";
 import { TrialResultGroup } from "./TrialResultGroup";
 import { DiscussionBriefPanel } from "./DiscussionBriefPanel";
 import { TrialShortlistPanel } from "./TrialShortlistPanel";
+import { trialMatchesFilters, type TrialPhaseFilter, type TrialRecruitmentFilter, type TrialRegionFilter } from "@/lib/trials/presentation";
 
 type AssistantMessage = { id: string; role: "user" | "assistant"; content: string };
 
@@ -75,6 +76,9 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
   const [matches, setMatches] = useState<TrialMatch[]>([]);
   const [clarificationQuestions, setClarificationQuestions] = useState<FollowUpQuestion[]>([]);
   const [resultView, setResultView] = useState<"cards" | "list">("cards");
+  const [resultPhase, setResultPhase] = useState<TrialPhaseFilter>("all");
+  const [resultRegion, setResultRegion] = useState<TrialRegionFilter>("all");
+  const [resultRecruitment, setResultRecruitment] = useState<TrialRecruitmentFilter>("all");
   const [shortlistedTrialIds, setShortlistedTrialIds] = useState<string[]>([]);
   const [matching, setMatching] = useState(false);
   const [outreach, setOutreach] = useState<{ subject: string; body: string; sent: false }>();
@@ -90,6 +94,11 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
   const t = copy[state.language];
   const allChecked = Boolean(state.draft?.facts.length) && state.draft!.facts.every((fact) => checked[fact.id]);
   const step = useMemo(() => ({ mode: 1, privacy: 1, capture: 1, mask_review: 1, extracting: 1, confirmation: 2, ready: 3 }[state.stage]), [state.stage]);
+  const filteredMatches = useMemo(() => matches.filter((match) => trialMatchesFilters(match.trial, {
+    phase: resultPhase,
+    region: resultRegion,
+    recruitment: resultRecruitment,
+  })), [matches, resultPhase, resultRecruitment, resultRegion]);
 
   useEffect(() => {
     if (state.stage !== "extracting") return;
@@ -142,6 +151,9 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     setChecked({});
     setEdits({});
     setMatches([]);
+    setResultPhase("all");
+    setResultRegion("all");
+    setResultRecruitment("all");
     setShortlistedTrialIds([]);
     setClarificationQuestions([]);
     setClarificationAnswers({});
@@ -172,6 +184,9 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
 
   async function loadMatches(profile: ConfirmedProfile, askBeforeResults = true) {
     setMatching(true);
+    setResultPhase("all");
+    setResultRegion("all");
+    setResultRecruitment("all");
     setShortlistedTrialIds([]);
     setOutreach(undefined);
     setDiscussionBrief(undefined);
@@ -180,7 +195,7 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
       const response = await fetch("/api/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profile }) });
       const payload = await response.json() as { matches?: TrialMatch[]; error?: string };
       if (!response.ok || !payload.matches) throw new Error(payload.error ?? "Matching failed.");
-      const questions = askBeforeResults ? derivePreMatchQuestions(profile, payload.matches.slice(0, 12).map((match) => match.trial)) : [];
+      const questions = askBeforeResults ? derivePreMatchQuestions(profile, payload.matches.map((match) => match.trial)) : [];
       if (questions.length > 0) {
         setMatches([]);
         setClarificationQuestions(questions);
@@ -344,10 +359,18 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
         {matches.length > 0 && <div className="visual-results" aria-live="polite">
           <div className="results-title-row"><div><p className="eyebrow">Visual comparison</p><h3>{state.language === "en" ? "Source-traceable trial results" : "來源可追溯的試驗結果"}</h3></div><div className="results-controls"><MatchLegend language={state.language} /><div className="view-switcher" role="group" aria-label={state.language === "en" ? "Result view" : "結果顯示方式"}><button aria-pressed={resultView === "cards"} onClick={() => setResultView("cards")}>{state.language === "en" ? "Cards" : "卡片"}</button><button aria-pressed={resultView === "list"} onClick={() => setResultView("list")}>{state.language === "en" ? "List" : "條列"}</button></div></div></div>
           <details className="result-utilities"><summary><span><strong>{state.language === "en" ? "Saved trials and care-team tools" : "已儲存試驗與照護團隊工具"}</strong><small>{state.language === "en" ? "Compare saved trials or create a local discussion brief" : "比較已儲存試驗，或建立本機討論摘要"}</small></span><b>{shortlistedTrialIds.length}/3</b></summary><div className="result-utilities-body"><div className="results-export-row"><div><strong>{state.language === "en" ? "Take the comparison to your care team" : "將比較結果帶給照護團隊"}</strong><p>{state.language === "en" ? "Create a local brief in the current language from confirmed facts and up to five source-linked trials." : "使用已確認資料與最多五項可追溯試驗，以目前語言建立本機討論摘要。"}</p></div><button type="button" onClick={() => setDiscussionBrief(createTrialDiscussionBrief(state.confirmedProfile!, matches, state.language))}>{state.language === "en" ? "Create discussion brief" : "建立討論摘要"}</button></div><TrialShortlistPanel matches={resolveShortlistedMatches(matches, shortlistedTrialIds)} language={state.language} onRemove={toggleShortlist} onClear={() => setShortlistedTrialIds([])} /></div></details>
+          <div className="trial-filter-bar match-filter-bar" aria-label={state.language === "en" ? "Filter matched trials" : "篩選配對試驗"}>
+            <span className="filter-result-count">{filteredMatches.length}/{matches.length}</span>
+            <label><span>{state.language === "en" ? "Phase" : "期別"}</span><select value={resultPhase} onChange={(event) => setResultPhase(event.target.value as TrialPhaseFilter)}><option value="all">{state.language === "en" ? "All phases" : "所有期別"}</option><option value="phase1">Phase 1</option><option value="phase1_2">Phase 1/2</option><option value="phase2">Phase 2</option><option value="phase2_3">Phase 2/3</option><option value="phase3">Phase 3</option><option value="phase4">Phase 4</option><option value="na">{state.language === "en" ? "Phase N/A" : "未標示"}</option></select></label>
+            <label><span>{state.language === "en" ? "Location" : "地點"}</span><select value={resultRegion} onChange={(event) => setResultRegion(event.target.value as TrialRegionFilter)}><option value="all">{state.language === "en" ? "All locations" : "所有地點"}</option><option value="taiwan">{state.language === "en" ? "Taiwan" : "台灣"}</option><option value="asia">{state.language === "en" ? "Asia" : "亞洲"}</option><option value="world">{state.language === "en" ? "Worldwide" : "全球"}</option><option value="unknown">{state.language === "en" ? "Sites not published" : "地點未公開"}</option></select></label>
+            <label><span>{state.language === "en" ? "Recruitment" : "招募"}</span><select value={resultRecruitment} onChange={(event) => setResultRecruitment(event.target.value as TrialRecruitmentFilter)}><option value="all">{state.language === "en" ? "All states" : "所有狀態"}</option><option value="open">{state.language === "en" ? "Recruiting" : "招募中"}</option><option value="opening_soon">{state.language === "en" ? "Not yet recruiting" : "尚未招募"}</option><option value="invitation_only">{state.language === "en" ? "Invitation only" : "僅限邀請"}</option><option value="not_open">{state.language === "en" ? "Closed / completed" : "已結束／未招募"}</option><option value="unknown">{state.language === "en" ? "Status not published" : "狀態未公開"}</option></select></label>
+            <button type="button" onClick={() => { setResultPhase("all"); setResultRegion("all"); setResultRecruitment("all"); }}>{state.language === "en" ? "Reset" : "重設"}</button>
+          </div>
           <div className="result-groups">
-              <TrialResultGroup title={state.language === "en" ? "No known public-record difference" : "目前無已知公開條件差異"} description={state.language === "en" ? "Shown first. Yellow items still require criterion-by-criterion review; this is not a final eligibility decision." : "優先顯示；黃色項目仍需逐條確認，且不是最終資格判定。"} emptyText={state.language === "en" ? "No trial is currently in this group." : "目前沒有試驗在此群組。"} matches={matches.slice(0, 12).filter((match) => match.status === "discuss" || match.status === "needs_review")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
-              <TrialResultGroup title={state.language === "en" ? "More information needed" : "仍需更多資訊"} description={state.language === "en" ? "You were asked about the most common missing fields before these results were shown." : "顯示結果前已先詢問常見缺漏欄位。"} emptyText={state.language === "en" ? "No trial remains in this group." : "目前沒有試驗留在此群組。"} matches={matches.slice(0, 12).filter((match) => match.status === "needs_information")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
-              <TrialResultGroup collapsed title={state.language === "en" ? "Public-record differences found" : "發現公開條件差異"} description={state.language === "en" ? "Collapsed by default. Includes potential exclusion signals; only the study team can decide eligibility." : "預設收合。包含可能排除訊號；只有試驗團隊能判定最終資格。"} emptyText={state.language === "en" ? "No public-record mismatch was found." : "未發現公開資料差異。"} matches={matches.slice(0, 12).filter((match) => match.status === "unlikely_based_on_public_record")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup title={state.language === "en" ? "Recruiting · no known public difference" : "招募中 · 目前無已知公開條件差異"} description={state.language === "en" ? "Recruiting is confirmed by the registry. Yellow items still require criterion-by-criterion review; this is not an eligibility decision." : "登錄狀態確認為招募中；黃色項目仍需逐條確認，且不是資格判定。"} emptyText={state.language === "en" ? "No recruiting trial is currently in this filtered view." : "目前篩選結果沒有招募中的試驗。"} matches={filteredMatches.filter((match) => match.trial.recruitment.category === "open" && (match.status === "discuss" || match.status === "needs_review"))} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup collapsed title={state.language === "en" ? "Potential fit · not currently recruiting" : "可能相符 · 目前未招募"} description={state.language === "en" ? "Closed, completed, not-yet-recruiting, invitation-only, and status-unpublished records are kept for reference." : "保留已結束、已完成、尚未招募、僅限邀請與狀態未公開的紀錄供參考。"} emptyText={state.language === "en" ? "No non-recruiting potential fit is in this view." : "此篩選結果沒有未招募但可能相符的試驗。"} matches={filteredMatches.filter((match) => match.trial.recruitment.category !== "open" && (match.status === "discuss" || match.status === "needs_review"))} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup collapsed title={state.language === "en" ? "More information needed" : "仍需更多資訊"} description={state.language === "en" ? "These records remain visible while missing patient facts or registry criteria are clarified." : "缺少病人資料或登錄條件時仍保留顯示，等待補問與確認。"} emptyText={state.language === "en" ? "No trial remains in this group." : "目前沒有試驗留在此群組。"} matches={filteredMatches.filter((match) => match.status === "needs_information")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
+              <TrialResultGroup collapsed title={state.language === "en" ? "Public-record differences found" : "發現公開條件差異"} description={state.language === "en" ? "Includes disease, age, sex, travel, or potential intervention-exclusion differences; only the study team can decide eligibility." : "包含疾病、年齡、性別、旅行或可能治療排除差異；只有試驗團隊能判定資格。"} emptyText={state.language === "en" ? "No public-record mismatch was found." : "未發現公開資料差異。"} matches={filteredMatches.filter((match) => match.status === "unlikely_based_on_public_record")} profile={state.confirmedProfile} language={state.language} view={resultView} shortlistedTrialIds={shortlistedTrialIds} onToggleShortlist={toggleShortlist} onCreateOutreach={(match) => setOutreach(createOutreachDraft(state.confirmedProfile!, match.trial, state.language))} />
           </div>
         </div>}
         {discussionBrief && <DiscussionBriefPanel brief={discussionBrief} language={state.language} onClose={() => setDiscussionBrief(undefined)} />}
