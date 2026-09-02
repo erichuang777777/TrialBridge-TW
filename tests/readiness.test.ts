@@ -125,6 +125,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const inventory = await readFile(path.join(root, "lib", "webmcp", "capabilityInventory.ts"), "utf8");
   const contractCatalog = await readFile(path.join(root, "lib", "webmcp", "toolContractCatalog.ts"), "utf8");
   const judgeBundle = await readFile(path.join(root, "lib", "webmcp", "judgeBundle.ts"), "utf8");
+  const recordedBrowserRuntime = await readFile(path.join(root, "evals", "webmcp-browser-runtime-acceptance.json"), "utf8");
   const evidenceRoute = await readFile(path.join(root, "app", "webmcp", "evidence.json", "route.ts"), "utf8");
   const contractRoute = await readFile(path.join(root, "app", "webmcp", "contracts.json", "route.ts"), "utf8");
   const contractExplorer = await readFile(path.join(root, "app", "webmcp", "_components", "ToolContractExplorer.tsx"), "utf8");
@@ -167,6 +168,10 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /Compatibility profile audited/);
   assert.match(page, /toolchange · register signal · execute signal/);
   assert.match(page, /Run six no-PHI lifecycle checks/);
+  assert.match(page, /Recorded Chrome evidence/);
+  assert.match(page, /recordedBrowserRuntime\.checksPassed/);
+  assert.match(page, /Two public tools remained after cleanup/);
+  assert.match(page, /Inspect receipt/);
   assert.match(page, /product execution cancellation also reaches browser fetch, Next request, and each registry adapter/);
   assert.match(page, /webmachinelearning\.github\.io\/webmcp/);
   assert.match(page, /Four-step judge path/);
@@ -184,6 +189,8 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(judgeBundle, /competition_evidence_not_protocol_metadata/);
   assert.match(judgeBundle, /repository_verified/);
   assert.match(judgeBundle, /recorded_model_eval/);
+  assert.match(recordedBrowserRuntime, /recorded_live_browser_runtime_acceptance/);
+  assert.match(judgeBundle, /recordedBrowserRuntime/);
   assert.match(judgeBundle, /manual_gate/);
   assert.match(judgeBundle, /do not replace Chrome Model Context Tool Inspector/);
   assert.match(evidenceRoute, /dynamic = "force-static"/);
@@ -202,6 +209,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(searchUrl, /curated_bilingual_cancer_lexicon/);
   assert.match(css, /\.judge-runbook ol/);
   assert.match(css, /\.standards-grid/);
+  assert.match(css, /\.recorded-runtime-proof/);
   assert.match(css, /\.conformance-matrix > article \{ display: grid/);
   assert.match(css, /\.conformance-state > span/);
   assert.match(css, /conformance-matrix > article > div:nth-child\(2\).*text-align: left/);
@@ -289,6 +297,7 @@ test("review, clarification, grouped result views, and dedicated result chat rem
   assert.match(chat, /\/api\/cloud\/intake/);
   assert.doesNotMatch(chat, /I am the patient/);
   assert.doesNotMatch(chat, /I am a caregiver/);
+  assert.doesNotMatch(chat, /I(?:'|’|\s+a)?m\s+(?:the\s+)?patient|I\s+am\s+a\s+care\s*giver/i);
   assert.doesNotMatch(chat, /SELECT_ROLE|SET_SUBJECT_ROLE|select_patient|select_caregiver/);
   assert.match(chat, /No known public-record difference/);
   assert.match(chat, /More information needed/);

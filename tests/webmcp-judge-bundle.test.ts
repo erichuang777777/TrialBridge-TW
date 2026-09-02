@@ -16,6 +16,7 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.summary.toolContracts, 8);
   assert.equal(webMcpJudgeBundle.summary.capabilityStates, 4);
   assert.equal(webMcpJudgeBundle.summary.runtimeAcceptanceChecks, 6);
+  assert.equal(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed, 6);
   assert.deepEqual(webMcpJudgeBundle.toolContractCatalog, { route: "/webmcp/contracts.json", contractVersion: "2026-09-02.1", tools: 8, withinChromeGuidance: 8, containsHealthInformation: false });
   assert.equal(webMcpJudgeBundle.capabilityStateModel.artifactClass, "synthetic_capability_state_model_not_runtime_evidence");
   assert.deepEqual(webMcpJudgeBundle.capabilityStateModel.states.map((state) => state.activeImperativeToolNames.length), [2, 2, 6, 7]);
@@ -23,6 +24,13 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.runtimeAcceptanceProfile.artifactClass, "browser_runtime_suite_definition_not_runtime_result");
   assert.equal(webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length, 6);
   assert.deepEqual(webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary, { containsHealthInformation: false, storesToolPayloads: false, networkRequests: false });
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.artifactClass, "recorded_live_browser_runtime_acceptance");
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.browser.version, "153.0.8010.12");
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.checksPassed, 6);
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.checksTotal, 6);
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors, 0);
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.probePresentAfter, false);
+  assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.passed, 55);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.failed, 0);
   assert.equal(webMcpJudgeBundle.recordedSelectionEval.containsPatientData, false);

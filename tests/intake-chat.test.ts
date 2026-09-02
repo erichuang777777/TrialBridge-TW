@@ -35,12 +35,17 @@ test("guided intake uses only the required cloud model and returns a bounded wor
   assert.doesNotMatch(sent, /"subjectRole"/);
 });
 
-test("guided intake suppresses a model-generated identity gate", async () => {
-  const mockFetch: typeof fetch = async () => Response.json({
-    message: { content: JSON.stringify({ reply: "Are you the patient or a caregiver?", workflowAction: "append_medical_note" }) },
-  });
-  const result = await answerGuidedIntake(base, mockFetch);
-  assert.equal(result.workflowAction, "none");
-  assert.equal(result.reply, "No role selection is needed. Describe the known diagnosis, stage, biomarkers, treatments, age, or travel range.");
-  assert.doesNotMatch(result.reply, /patient|caregiver/i);
+test("guided intake suppresses model-generated patient or caregiver gates", async () => {
+  for (const reply of [
+    "Are you the patient or a caregiver?",
+    "Are you a care giver or the patient?",
+    "請問您是病人還是家屬？",
+  ]) {
+    const mockFetch: typeof fetch = async () => Response.json({
+      message: { content: JSON.stringify({ reply, workflowAction: "append_medical_note" }) },
+    });
+    const result = await answerGuidedIntake(base, mockFetch);
+    assert.equal(result.workflowAction, "none");
+    assert.doesNotMatch(result.reply, /patient|care\s*giver|病人|家屬/i);
+  }
 });

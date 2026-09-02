@@ -117,6 +117,27 @@ check(diagnosticReceipt.lifecycleAcceptance.state === "passed" && diagnosticRece
 check(verifyWebMcpBrowserDiagnosticReceipt(diagnosticReceipt).ok, "Complete browser diagnostic receipt must pass the offline structural verifier.");
 check(diagnosticReceipt.cloudProbe.containsHealthInformation === false && diagnosticReceipt.cloudProbe.storesModelContent === false, "Browser diagnostic receipt must not store cloud-probe content.");
 
+const recordedBrowserRuntimeSource = readFileSync("evals/webmcp-browser-runtime-acceptance.json", "utf8");
+const recordedBrowserRuntime = JSON.parse(recordedBrowserRuntimeSource) as {
+  artifactClass: string;
+  recordedAt: string;
+  browser: { product: string; channel: string; version: string; headless: boolean; localTestingFeatures: string[] };
+  target: { origin: string; route: string; secureContext: boolean };
+  result: { consoleErrors: number; postRunToolNames: string[]; probePresentAfter: boolean; receipt: unknown };
+  evidenceBoundary: string;
+};
+const recordedBrowserVerification = verifyWebMcpBrowserDiagnosticReceipt(recordedBrowserRuntime.result.receipt);
+check(recordedBrowserRuntime.artifactClass === "recorded_live_browser_runtime_acceptance", "Recorded browser artifact class is invalid.");
+check(recordedBrowserRuntime.browser.product === "Chrome for Testing" && recordedBrowserRuntime.browser.channel === "Beta" && /^153\./.test(recordedBrowserRuntime.browser.version), "Recorded browser runtime must identify the tested Chrome 153 Beta build.");
+check(recordedBrowserRuntime.browser.headless === true && ["WebMCP", "WebMCPTesting"].every((feature) => recordedBrowserRuntime.browser.localTestingFeatures.includes(feature)), "Recorded browser runtime must identify its isolated local-testing profile.");
+check(recordedBrowserRuntime.target.origin === "http://localhost:3001" && recordedBrowserRuntime.target.route === "/webmcp" && recordedBrowserRuntime.target.secureContext === true, "Recorded browser runtime target is invalid.");
+check(recordedBrowserVerification.ok && recordedBrowserVerification.metadataOnly, `Recorded browser receipt failed verification: ${recordedBrowserVerification.errors.join("; ")}`);
+check(recordedBrowserRuntime.result.consoleErrors === 0, "Recorded browser runtime must have zero console errors.");
+check(recordedBrowserRuntime.result.probePresentAfter === false, "Recorded browser runtime probe must be absent after cleanup.");
+check(recordedBrowserRuntime.result.postRunToolNames.slice().sort().join("|") === publicTools.map((tool) => tool.name).sort().join("|"), "Recorded browser runtime must end with only the public imperative tools.");
+check(typeof recordedBrowserRuntime.evidenceBoundary === "string" && /not an Origin Trial production deployment/i.test(recordedBrowserRuntime.evidenceBoundary), "Recorded browser runtime evidence boundary is missing.");
+check(!/"(?:rawText|maskedText|medicalNote|confirmedProfile|profileFact|trialResult|prompt|toolArgument|toolOutput|content|thinking)"\s*:/i.test(recordedBrowserRuntimeSource), "Recorded browser runtime contains a forbidden payload field.");
+
 const inspectorOutcomes = Object.fromEntries(webMcpInspectorAcceptanceCases.map((item) => [item.id, "pass"])) as Record<(typeof webMcpInspectorAcceptanceCases)[number]["id"], "pass">;
 const inspectorReceipt = createWebMcpInspectorAcceptanceReceipt({ generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", chromeMajor: 152, outcomes: inspectorOutcomes });
 check(webMcpInspectorAcceptanceCases.length === 6, "Manual Inspector kit must keep its six acceptance cases.");
@@ -185,6 +206,7 @@ for (const marker of ["registerTool", "getTools", "executeTool", 'addEventListen
   check(runtimeAcceptanceSource.includes(marker), `Live runtime acceptance is missing ${marker}.`);
 }
 check(!/fetch\(|rawText|maskedText|ConfirmedProfile|TrialMatch/.test(runtimeAcceptanceSource), "Live runtime acceptance must remain no-network and independent of medical workflow state.");
+check(runtimeAcceptanceSource.indexOf("JSON.stringify(input)") < runtimeAcceptanceSource.indexOf("executeTool(tool, input"), "Runtime acceptance must try the current Chrome serialized input before the draft object fallback.");
 
 const proofPage = readFileSync("app/webmcp/page.tsx", "utf8");
 for (const marker of ["Standards alignment", "Declarative API", "Imperative API", "Lifecycle compatibility", "Origin security", "Compatibility profile audited", "Critical user journey", "webMcpCriticalJourney.steps", "user-journey guidance"]) {
@@ -280,6 +302,8 @@ check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolCon
 check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
 check(webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.networkRequests === false, "Judge runtime suite profile must remain no-PHI and no-network.");
+check(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksTotal === 6, "Judge bundle must carry the recorded six-of-six browser runtime result.");
+check(webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors === 0 && webMcpJudgeBundle.recordedBrowserRuntime.probePresentAfter === false && webMcpJudgeBundle.recordedBrowserRuntime.containsHealthInformation === false, "Judge bundle recorded browser result must remain clean and no-PHI.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
 check(webMcpJudgeBundle.recordedSelectionEval.datasetDigestSha256 === webMcpSelectionDatasetDigest() && webMcpJudgeBundle.recordedSelectionEval.toolContractDigestSha256 === webMcpSelectionToolContractDigest(), "Judge bundle must carry current selection-eval digests.");
 
@@ -301,6 +325,7 @@ if (findings.length > 0) {
     criticalJourneySteps: webMcpCriticalJourney.steps.length,
     browserDiagnosticReceipt: "download-only-no-health-data",
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
+    recordedBrowserRuntime: `${webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/${webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} Chrome ${recordedBrowserRuntime.browser.version}`,
     cloudProbeTimeoutMs,
     cloudProbeRateLimit: "3/10m",
     cloudProbeEvidence: "metadata-only-no-health-data",

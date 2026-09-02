@@ -7,10 +7,16 @@ class MockModelContext extends EventTarget {
   private readonly definitions = new Map<string, WebMCP.ModelContextTool>();
   private readonly serializedOnly: boolean;
   private readonly dropExecutionSignal: boolean;
-  constructor(serializedOnly = false, dropExecutionSignal = false) {
+  private readonly serializeDiscoveredSchema: boolean;
+  private readonly executionDelayMs: number;
+  private readonly objectOnly: boolean;
+  constructor(serializedOnly = false, dropExecutionSignal = false, serializeDiscoveredSchema = false, executionDelayMs = 0, objectOnly = false) {
     super();
     this.serializedOnly = serializedOnly;
     this.dropExecutionSignal = dropExecutionSignal;
+    this.serializeDiscoveredSchema = serializeDiscoveredSchema;
+    this.executionDelayMs = executionDelayMs;
+    this.objectOnly = objectOnly;
     this.definitions.set("trialbridge_method", {
       name: "trialbridge_method",
       title: "TrialBridge method",
@@ -35,7 +41,7 @@ class MockModelContext extends EventTarget {
       name: tool.name,
       title: tool.title ?? "",
       description: tool.description,
-      inputSchema: tool.inputSchema,
+      inputSchema: this.serializeDiscoveredSchema ? JSON.stringify(tool.inputSchema) : tool.inputSchema,
       annotations: tool.annotations,
       origin: "https://trialbridge.example",
       window: {} as Window,
@@ -44,16 +50,19 @@ class MockModelContext extends EventTarget {
 
   async executeTool(tool: WebMCP.RegisteredTool, input: Record<string, unknown> | string, options?: { signal?: AbortSignal }) {
     if (this.serializedOnly && typeof input !== "string") throw new TypeError("DOMString input required");
+    if (this.objectOnly && typeof input === "string") throw new TypeError("Object input required");
     const definition = this.definitions.get(tool.name);
     if (!definition) throw new Error("Tool not found");
     const parsed = typeof input === "string" ? JSON.parse(input) as Record<string, unknown> : input;
-    const signal = this.dropExecutionSignal ? new AbortController().signal : options?.signal ?? new AbortController().signal;
+    if (this.executionDelayMs > 0 && tool.name === webMcpRuntimeProbeName) await new Promise((resolve) => setTimeout(resolve, this.executionDelayMs));
+    if (this.dropExecutionSignal) return definition.execute(parsed, undefined as unknown as { signal: AbortSignal });
+    const signal = options?.signal ?? new AbortController().signal;
     return definition.execute(parsed, { signal });
   }
 }
 
 test("one-click runtime acceptance covers registration, execution, cancellation, toolchange, and cleanup", async () => {
-  const context = new MockModelContext(true) as unknown as WebMCP.ModelContext;
+  const context = new MockModelContext(true, false, true, 40) as unknown as WebMCP.ModelContext;
   const result = await runWebMcpRuntimeAcceptance(context, "https://trialbridge.example", 250);
   assert.equal(result.state, "passed");
   assert.equal(result.checks.length, webMcpRuntimeAcceptanceChecks.length);
@@ -63,6 +72,14 @@ test("one-click runtime acceptance covers registration, execution, cancellation,
   assert.equal(result.containsHealthInformation, false);
   assert.equal(result.storesToolPayloads, false);
   assert.doesNotMatch(JSON.stringify(result), /toolArgument|toolOutput|rawText|maskedText|confirmedProfile|trialResult/i);
+});
+
+test("runtime acceptance falls back to object input for draft implementations", async () => {
+  const context = new MockModelContext(false, false, false, 10, true) as unknown as WebMCP.ModelContext;
+  const result = await runWebMcpRuntimeAcceptance(context, "https://trialbridge.example", 250);
+  assert.equal(result.state, "passed");
+  assert.equal(result.checks.find((check) => check.id === "execution_cancellation")?.status, "pass");
+  assert.equal((await context.getTools()).some((tool) => tool.name === webMcpRuntimeProbeName), false);
 });
 
 test("runtime acceptance reports missing execution cancellation but still removes the probe", async () => {

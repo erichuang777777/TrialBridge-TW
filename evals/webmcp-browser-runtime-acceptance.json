@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "1.0",
+  "artifactClass": "recorded_live_browser_runtime_acceptance",
+  "recordedAt": "2026-09-01T23:48:17.423Z",
+  "auditedLocalDate": "2026-09-02",
+  "browser": {
+    "product": "Chrome for Testing",
+    "channel": "Beta",
+    "version": "153.0.8010.12",
+    "headless": true,
+    "localTestingFeatures": [
+      "WebMCP",
+      "WebMCPTesting"
+    ],
+    "versionSource": "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json",
+    "flagInstructionsSource": "https://developer.chrome.com/docs/ai/webmcp"
+  },
+  "target": {
+    "origin": "http://localhost:3001",
+    "route": "/webmcp",
+    "secureContext": true
+  },
+  "result": {
+    "consoleErrors": 0,
+    "postRunToolNames": [
+      "search_public_cancer_trials",
+      "trialbridge_method"
+    ],
+    "probePresentAfter": false,
+    "receipt": {
+      "schemaVersion": "1.1",
+      "generatedAt": "2026-09-01T23:48:17.423Z",
+      "origin": "http://localhost:3001",
+      "persistence": "download-only",
+      "containsHealthInformation": false,
+      "browserState": "ready",
+      "publicToolDiscovery": {
+        "expected": [
+          "search_public_cancer_trials",
+          "trialbridge_method"
+        ],
+        "discovered": [
+          "search_public_cancer_trials",
+          "trialbridge_method"
+        ],
+        "complete": true
+      },
+      "securityHeaders": {
+        "permissionsPolicy": true,
+        "openerPolicy": true,
+        "noSniff": true
+      },
+      "safeExecution": {
+        "available": true,
+        "state": "passed",
+        "authority": "trialbridge_method only; read-only and no input"
+      },
+      "lifecycleAcceptance": {
+        "state": "passed",
+        "probeToolName": "trialbridge_runtime_probe",
+        "checks": [
+          {
+            "id": "probe_registration",
+            "status": "pass"
+          },
+          {
+            "id": "probe_contract",
+            "status": "pass"
+          },
+          {
+            "id": "public_execution",
+            "status": "pass"
+          },
+          {
+            "id": "execution_cancellation",
+            "status": "pass"
+          },
+          {
+            "id": "toolchange_events",
+            "status": "pass"
+          },
+          {
+            "id": "probe_cleanup",
+            "status": "pass"
+          }
+        ],
+        "toolchangeEvents": 2,
+        "containsHealthInformation": false,
+        "storesToolPayloads": false
+      },
+      "cloudProbe": {
+        "state": "not-run",
+        "containsHealthInformation": false,
+        "storesModelContent": false
+      },
+      "evidenceBoundary": "Runtime metadata only. This receipt does not prove natural-language selection, permission transitions, Inspector validation, or clinical accuracy."
+    }
+  },
+  "evidenceBoundary": "Recorded local-browser runtime metadata. This is not an Origin Trial production deployment, Model Context Tool Inspector natural-language acceptance, or clinical validation."
+}

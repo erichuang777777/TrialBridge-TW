@@ -61,6 +61,11 @@ export default function WebMcpProofPage() {
       <h1>WebMCP, visible and testable.</h1>
       <p className="lead">TrialBridge TW combines one declarative form tool with up to seven imperative tools. The human interface remains complete when WebMCP is unavailable, while compatible browser agents receive typed, origin-scoped, read-only capabilities that follow visible page state.</p>
       <div className="proof-summary" aria-label="WebMCP implementation summary"><span><strong>1</strong> declarative tool</span><span><strong>7</strong> maximum imperative tools</span><span><strong>{baselineJourneyCount}</strong> journey eval cases</span><span><strong>19</strong> bilingual cancer groups</span><span><strong>0</strong> send or enrollment tools</span></div>
+      <aside className="recorded-runtime-proof" aria-label="Recorded Chrome WebMCP runtime evidence">
+        <span><i aria-hidden="true" />Recorded Chrome evidence</span>
+        <div><strong>{webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/{webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} lifecycle checks passed in Chrome for Testing {webMcpJudgeBundle.recordedBrowserRuntime.browser.version}</strong><p>Two public tools remained after cleanup · temporary probe absent · {webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors} console errors · no health information.</p></div>
+        <a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-browser-runtime-acceptance.json" target="_blank" rel="noreferrer">Inspect receipt</a>
+      </aside>
     </header>
 
     <section className="judge-runbook" aria-labelledby="judge-runbook-title">
@@ -102,9 +107,10 @@ export default function WebMcpProofPage() {
     <CapabilityStateSimulator />
 
     <section className="proof-section conformance-evidence" aria-labelledby="conformance-title">
-      <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, the recorded cloud-model eval, and the remaining manual Inspector gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>
+      <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, recorded browser lifecycle evidence, the cloud-model eval, and the remaining manual Inspector gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>
       <div className="conformance-summary" aria-label="Conformance evidence summary">
         <article><strong>{webMcpJudgeBundle.summary.repositoryVerified}</strong><span>Repository verified</span></article>
+        <article><strong>{webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/{webMcpJudgeBundle.recordedBrowserRuntime.checksTotal}</strong><span>Recorded browser runtime</span></article>
         <article><strong>{webMcpJudgeBundle.summary.recordedModelEval}</strong><span>Recorded model eval</span></article>
         <article><strong>{webMcpJudgeBundle.summary.manualGate}</strong><span>Manual Inspector gate</span></article>
       </div>

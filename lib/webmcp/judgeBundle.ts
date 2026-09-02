@@ -1,4 +1,5 @@
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json" with { type: "json" };
+import recordedBrowserRuntime from "../../evals/webmcp-browser-runtime-acceptance.json" with { type: "json" };
 import { webMcpCapabilityInventory } from "./capabilityInventory.ts";
 import { webMcpCriticalJourney } from "./criticalJourney.ts";
 import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
@@ -24,7 +25,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "Typed imperative discovery",
     implementation: "Seven schema-bounded tools use registerTool(), getTools(), and executeTool() without write authority.",
-    evidence: ["lib/webmcp/tools.ts", "lib/webmcp/runtimeAcceptance.ts", "scripts/verify-webmcp.ts"],
+    evidence: ["lib/webmcp/tools.ts", "lib/webmcp/runtimeAcceptance.ts", "evals/webmcp-browser-runtime-acceptance.json", "scripts/verify-webmcp.ts"],
   },
   {
     id: "C-03",
@@ -56,7 +57,7 @@ export const webMcpConformanceMatrix = [
     evidenceLabel: "Repository verified",
     requirement: "Execution lifecycle and cancellation",
     implementation: "The execution signal reaches browser fetch, Next.js, matching, and every registry adapter with payload-free status.",
-    evidence: ["lib/webmcp/runtimeAcceptance.ts", "lib/webmcp/tools.ts", "lib/trials/search.ts", "tests/webmcp-runtime-acceptance.test.ts"],
+    evidence: ["lib/webmcp/runtimeAcceptance.ts", "lib/webmcp/tools.ts", "lib/trials/search.ts", "evals/webmcp-browser-runtime-acceptance.json", "tests/webmcp-runtime-acceptance.test.ts"],
   },
   {
     id: "C-07",
@@ -123,6 +124,7 @@ export const webMcpJudgeBundle = {
     toolContracts: webMcpToolContractBundle.summary.tools,
     capabilityStates: webMcpCapabilityStateBundle.states.length,
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
+    recordedBrowserRuntimeChecksPassed: recordedBrowserRuntime.result.receipt.lifecycleAcceptance.checks.filter((item) => item.status === "pass").length,
     ...evidenceCounts,
   },
   capabilities: webMcpCapabilityInventory,
@@ -141,6 +143,20 @@ export const webMcpJudgeBundle = {
     privacyBoundary: { containsHealthInformation: false, storesToolPayloads: false, networkRequests: false },
     evidenceBoundary: "Static suite definition only. A downloaded current-browser receipt is required to claim a live pass, and Inspector remains separate.",
   },
+  recordedBrowserRuntime: {
+    artifactClass: recordedBrowserRuntime.artifactClass,
+    receiptPath: "evals/webmcp-browser-runtime-acceptance.json",
+    recordedAt: recordedBrowserRuntime.recordedAt,
+    browser: recordedBrowserRuntime.browser,
+    target: recordedBrowserRuntime.target,
+    checksPassed: recordedBrowserRuntime.result.receipt.lifecycleAcceptance.checks.filter((item) => item.status === "pass").length,
+    checksTotal: recordedBrowserRuntime.result.receipt.lifecycleAcceptance.checks.length,
+    consoleErrors: recordedBrowserRuntime.result.consoleErrors,
+    probePresentAfter: recordedBrowserRuntime.result.probePresentAfter,
+    postRunToolNames: recordedBrowserRuntime.result.postRunToolNames,
+    containsHealthInformation: recordedBrowserRuntime.result.receipt.containsHealthInformation,
+    evidenceBoundary: recordedBrowserRuntime.evidenceBoundary,
+  },
   conformance: webMcpConformanceMatrix,
   recordedSelectionEval: {
     evaluatedAt: selectionBaseline.evaluatedAt,
@@ -157,5 +173,5 @@ export const webMcpJudgeBundle = {
     containsPatientData: selectionBaseline.containsPatientData,
   },
   implementationLandscape: webMcpImplementationLandscape,
-  evidenceBoundary: "Repository checks and a recorded model-selection eval do not replace Chrome Model Context Tool Inspector or clinical validation.",
+  evidenceBoundary: "Repository checks, recorded browser lifecycle evidence, and a recorded model-selection eval do not replace Chrome Model Context Tool Inspector natural-language acceptance or clinical validation.",
 } as const;

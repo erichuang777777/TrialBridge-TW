@@ -60,21 +60,24 @@ function waitFor(check: () => boolean | Promise<boolean>, timeoutMs: number) {
   });
 }
 
-function createProbeTool(onExecutionAbort: () => void, executionTimeoutMs: number): WebMCP.ModelContextTool {
+function createProbeTool(onExecutionStart: () => void, onExecutionAbort: () => void, executionTimeoutMs: number): WebMCP.ModelContextTool {
   return {
     name: webMcpRuntimeProbeName,
     title: "TrialBridge runtime probe",
     description: probeDescription,
     inputSchema: probeInputSchema,
     annotations: { readOnlyHint: true, untrustedContentHint: false },
-    execute: async (input, { signal }) => {
+    execute: async (input, options) => {
+      onExecutionStart();
       if (input.mode !== "wait_for_cancel") throw new Error("The runtime probe accepts only its fixed cancellation mode.");
-      return new Promise<never>((_resolve, reject) => {
+      const signal = options?.signal;
+      if (!signal) return "Execution AbortSignal is unavailable in this browser.";
+      return new Promise<string>((resolve, reject) => {
         let timeout: ReturnType<typeof setTimeout> | undefined;
         const stop = () => {
           if (timeout) clearTimeout(timeout);
           onExecutionAbort();
-          reject(signal.reason ?? new DOMException("Runtime probe cancelled.", "AbortError"));
+          resolve("Runtime probe observed execution cancellation.");
         };
         if (signal.aborted) return stop();
         signal.addEventListener("abort", stop, { once: true });
@@ -87,6 +90,26 @@ function createProbeTool(onExecutionAbort: () => void, executionTimeoutMs: numbe
   };
 }
 
+type RuntimeProbeSchema = {
+  type?: unknown;
+  properties?: { mode?: { type?: unknown; enum?: unknown } };
+  required?: unknown;
+  additionalProperties?: unknown;
+};
+
+function parseDiscoveredSchema(value: unknown): RuntimeProbeSchema | undefined {
+  if (typeof value === "string") {
+    if (value.length === 0 || value.length > 20_000) return undefined;
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return parsed && typeof parsed === "object" ? parsed as RuntimeProbeSchema : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return value && typeof value === "object" ? value as RuntimeProbeSchema : undefined;
+}
+
 async function executeProbeCompat(
   modelContext: Pick<WebMCP.ModelContext, "executeTool">,
   tool: WebMCP.RegisteredTool,
@@ -94,10 +117,10 @@ async function executeProbeCompat(
 ) {
   const input = { mode: "wait_for_cancel" };
   try {
-    return await modelContext.executeTool(tool, input, { signal });
+    return await modelContext.executeTool(tool, JSON.stringify(input), { signal });
   } catch (error) {
     if (signal.aborted) throw error;
-    return modelContext.executeTool(tool, JSON.stringify(input), { signal });
+    return modelContext.executeTool(tool, input, { signal });
   }
 }
 
@@ -111,10 +134,11 @@ export async function runWebMcpRuntimeAcceptance(
   const setOutcome = (id: WebMcpRuntimeAcceptanceCheckId, status: "pass" | "fail", detail: string) => outcomes.set(id, { status, detail });
   const registrationController = new AbortController();
   let toolchangeEvents = 0;
+  let executionStarted = false;
   let executionAbortObserved = false;
   let probeRegistered = false;
   const onToolchange = () => { toolchangeEvents += 1; };
-  const probeTool = createProbeTool(() => { executionAbortObserved = true; }, timeoutMs);
+  const probeTool = createProbeTool(() => { executionStarted = true; }, () => { executionAbortObserved = true; }, timeoutMs);
 
   modelContext.addEventListener("toolchange", onToolchange);
   try {
@@ -134,7 +158,7 @@ export async function runWebMcpRuntimeAcceptance(
     if (probeRegistered) {
       try {
         registeredProbe = (await modelContext.getTools({ fromOrigins: [origin] })).find((tool) => tool.name === webMcpRuntimeProbeName);
-        const schema = registeredProbe?.inputSchema as { type?: unknown; properties?: { mode?: { type?: unknown; enum?: unknown } }; required?: unknown; additionalProperties?: unknown } | undefined;
+        const schema = parseDiscoveredSchema(registeredProbe?.inputSchema);
         const contractMatches = Boolean(registeredProbe
           && registeredProbe.origin === origin
           && registeredProbe.description === probeDescription
@@ -169,9 +193,11 @@ export async function runWebMcpRuntimeAcceptance(
     if (registeredProbe) {
       const executionController = new AbortController();
       const execution = executeProbeCompat(modelContext, registeredProbe, executionController.signal);
-      setTimeout(() => executionController.abort(new DOMException("Acceptance check cancelled execution.", "AbortError")), 25);
+      const callbackStarted = await waitFor(() => executionStarted, timeoutMs);
+      executionController.abort(new DOMException("Acceptance check cancelled execution.", "AbortError"));
       try { await execution; } catch { /* Cancellation is the expected result. */ }
-      setOutcome("execution_cancellation", executionAbortObserved ? "pass" : "fail", executionAbortObserved ? "The probe execute callback received the caller AbortSignal." : "Execution cancellation did not reach the probe callback.");
+      if (callbackStarted && !executionAbortObserved) await waitFor(() => executionAbortObserved, timeoutMs);
+      setOutcome("execution_cancellation", callbackStarted && executionAbortObserved ? "pass" : "fail", callbackStarted && executionAbortObserved ? "The probe execute callback received the caller AbortSignal." : callbackStarted ? "Execution cancellation did not reach the probe callback." : "The probe callback did not start before the cancellation deadline.");
     } else {
       setOutcome("execution_cancellation", "fail", "The probe was unavailable for the execution-cancellation check.");
     }
