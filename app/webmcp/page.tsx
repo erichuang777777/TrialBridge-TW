@@ -107,6 +107,26 @@ export default function WebMcpProofPage() {
 
     <WebMcpDiagnostics />
 
+    <aside className="recorded-inspector-proof" aria-labelledby="recorded-inspector-title">
+      <div className="recorded-inspector-heading">
+        <span><i aria-hidden="true" />Recorded stock Inspector runtime</span>
+        <strong>{webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed}/{webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksTotal} · Partial</strong>
+      </div>
+      <div className="recorded-inspector-copy">
+        <h2 id="recorded-inspector-title">Real extension plumbing passed discovery and fixed safe execution.</h2>
+        <p>Unmodified Model Context Tool Inspector {webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.version} ran through its background and content scripts in isolated Chrome for Testing {webMcpJudgeBundle.recordedInspectorExtensionRuntime.browser.version}. This is stronger than a simulated tool list, but it is not a complete Inspector pass.</p>
+      </div>
+      <ul aria-label="Recorded Inspector outcome summary">
+        <li className="recorded-inspector-pass"><strong>Pass</strong><span>Two public tools discovered and both schemas parsed</span></li>
+        <li className="recorded-inspector-pass"><strong>Pass</strong><span><code>trialbridge_method</code> completed with fixed empty input</span></li>
+        <li className="recorded-inspector-pending"><strong>Not run</strong><span>Natural-language selection, permission transition, and cancellation/cleanup</span></li>
+      </ul>
+      <div className="recorded-inspector-boundary">
+        <p><strong>No Gemini call · no health information.</strong> The stock natural-language path requires a Gemini key, so it was not invoked under the <code>gpt-oss:120b-cloud</code>-only policy. The four remaining checks stay in the manual kit below.</p>
+        <div><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-inspector-extension-runtime.json" target="_blank" rel="noreferrer">Inspect metadata receipt</a><a href={webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.repository} target="_blank" rel="noreferrer">Open pinned Inspector source</a></div>
+      </div>
+    </aside>
+
     <InspectorAcceptanceKit />
 
     <section className="proof-section journey-evidence" aria-labelledby="critical-journey-title">
@@ -142,10 +162,11 @@ export default function WebMcpProofPage() {
     <CapabilityStateSimulator />
 
     <section className="proof-section conformance-evidence" aria-labelledby="conformance-title">
-      <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, recorded browser lifecycle evidence, the cloud-model eval, and the remaining manual Inspector gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>
+      <div className="proof-section-heading"><p className="eyebrow">Judge conformance bundle</p><h2 id="conformance-title">Every WebMCP claim carries an evidence class.</h2><p>Repository checks, recorded browser lifecycle evidence, partial stock Inspector evidence, the cloud-model eval, and the remaining manual gate stay visibly separate. This matrix is competition evidence—not a new WebMCP protocol endpoint.</p></div>
       <div className="conformance-summary" aria-label="Conformance evidence summary">
         <article><strong>{webMcpJudgeBundle.summary.repositoryVerified}</strong><span>Repository verified</span></article>
         <article><strong>{webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/{webMcpJudgeBundle.recordedBrowserRuntime.checksTotal}</strong><span>Recorded browser runtime</span></article>
+        <article><strong>{webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed}/{webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksTotal}</strong><span>Stock Inspector partial</span></article>
         <article><strong>{webMcpJudgeBundle.summary.recordedModelEval}</strong><span>Recorded model eval</span></article>
         <article><strong>{webMcpJudgeBundle.summary.manualGate}</strong><span>Manual Inspector gate</span></article>
       </div>

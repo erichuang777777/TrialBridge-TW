@@ -19,6 +19,8 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.summary.capabilityStates, 4);
   assert.equal(webMcpJudgeBundle.summary.runtimeAcceptanceChecks, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed, 6);
+  assert.equal(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksPassed, 2);
+  assert.equal(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksTotal, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedAgenticPagesPassed, 2);
   assert.equal(webMcpJudgeBundle.summary.specificationClauses, 8);
   assert.equal(webMcpJudgeBundle.summary.webMcpVisitorInstallRequired, false);
@@ -57,6 +59,18 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors, 0);
   assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.probePresentAfter, false);
   assert.equal(webMcpJudgeBundle.recordedBrowserRuntime.containsHealthInformation, false);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.artifactClass, "recorded_stock_inspector_extension_runtime_partial");
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.commit, "f164a9aa5c3f6083f5976ccae308257bdf86cb99");
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.stockSourceModified, false);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.browser.version, "153.0.8010.12");
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.status, "partial");
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed, 2);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksTotal, 6);
+  assert.deepEqual(webMcpJudgeBundle.recordedInspectorExtensionRuntime.checks.map((item) => item.status), ["pass", "pass", "not_run", "not_run", "not_run", "not_run"]);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.apiKeyConfigured, false);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.naturalLanguagePathInvoked, false);
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.providerBoundary.projectAllowedCloudModel, "gpt-oss:120b-cloud");
+  assert.equal(webMcpJudgeBundle.recordedInspectorExtensionRuntime.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.artifactClass, "recorded_lighthouse_agentic_browsing_acceptance");
   assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.lighthouse.version, "13.4.1");
   assert.equal(webMcpJudgeBundle.recordedAgenticLighthouse.pages.length, 2);
@@ -92,6 +106,7 @@ test("spec crosswalk pins exact upstream clauses without overstating declarative
 test("conformance matrix has unique evidence IDs and an explicit unclaimed Inspector gate", () => {
   assert.equal(new Set(webMcpConformanceMatrix.map((item) => item.id)).size, webMcpConformanceMatrix.length);
   assert.equal(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "repository_verified").length, 7);
+  assert.equal(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_browser_runtime").length, 1);
   assert.equal(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_model_eval").length, 1);
   assert.equal(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length, 1);
   assert.match(webMcpConformanceMatrix.find((item) => item.evidenceClass === "manual_gate")?.implementation ?? "", /must still verify/i);

@@ -1,6 +1,7 @@
 import selectionBaseline from "../../evals/webmcp-selection-baseline.json" with { type: "json" };
 import recordedBrowserRuntime from "../../evals/webmcp-browser-runtime-acceptance.json" with { type: "json" };
 import recordedAgenticLighthouse from "../../evals/webmcp-lighthouse-agentic-acceptance.json" with { type: "json" };
+import recordedInspectorExtensionRuntime from "../../evals/webmcp-inspector-extension-runtime.json" with { type: "json" };
 import { webMcpCapabilityInventory } from "./capabilityInventory.ts";
 import { webMcpCriticalJourney } from "./criticalJourney.ts";
 import { webMcpImplementationLandscape } from "./implementationLandscape.ts";
@@ -15,7 +16,7 @@ import { fixedPublicExecutionContract } from "./fixedPublicExecution.ts";
 import { quickJudgeDemoContract } from "./quickJudgeDemo.ts";
 import { agentDiscoveryContract } from "./agentDiscovery.ts";
 
-export type WebMcpEvidenceClass = "repository_verified" | "recorded_model_eval" | "manual_gate";
+export type WebMcpEvidenceClass = "repository_verified" | "recorded_browser_runtime" | "recorded_model_eval" | "manual_gate";
 
 export const webMcpConformanceMatrix = [
   {
@@ -84,10 +85,18 @@ export const webMcpConformanceMatrix = [
   },
   {
     id: "C-09",
+    evidenceClass: "recorded_browser_runtime",
+    evidenceLabel: "Recorded Inspector runtime",
+    requirement: "Stock Inspector discovery and fixed safe execution",
+    implementation: `${recordedInspectorExtensionRuntime.result.checksPassed}/${recordedInspectorExtensionRuntime.result.checksTotal} stock-extension checks passed: public discovery/schema parsing and fixed read-only method execution.`,
+    evidence: ["evals/webmcp-inspector-extension-runtime.json", "https://github.com/beaufortfrancois/model-context-tool-inspector"],
+  },
+  {
+    id: "C-10",
     evidenceClass: "manual_gate",
     evidenceLabel: "Manual Inspector gate",
-    requirement: "Browser natural-language selection",
-    implementation: "The in-product six-check kit standardizes discovery, selection, permission, cancellation, and cleanup evidence, but Chrome Model Context Tool Inspector must still verify every outcome.",
+    requirement: "Natural-language, permission, and cancellation completion",
+    implementation: "Four checks remain not run because the stock natural-language path requires Gemini; judges must still verify the interactive permission and cancellation checks manually in Chrome.",
     evidence: ["app/webmcp/_components/InspectorAcceptanceKit.tsx", "https://developer.chrome.com/docs/ai/webmcp", "docs/WEBMCP_VERIFICATION.md"],
   },
 ] as const satisfies ReadonlyArray<{
@@ -101,6 +110,7 @@ export const webMcpConformanceMatrix = [
 
 const evidenceCounts = {
   repositoryVerified: webMcpConformanceMatrix.filter((item) => item.evidenceClass === "repository_verified").length,
+  recordedBrowserRuntime: webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_browser_runtime").length,
   recordedModelEval: webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_model_eval").length,
   manualGate: webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length,
 };
@@ -138,6 +148,8 @@ export const webMcpJudgeBundle = {
     capabilityStates: webMcpCapabilityStateBundle.states.length,
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     recordedBrowserRuntimeChecksPassed: recordedBrowserRuntime.result.receipt.lifecycleAcceptance.checks.filter((item) => item.status === "pass").length,
+    recordedInspectorExtensionChecksPassed: recordedInspectorExtensionRuntime.result.checksPassed,
+    recordedInspectorExtensionChecksTotal: recordedInspectorExtensionRuntime.result.checksTotal,
     recordedAgenticPagesPassed: recordedAgenticLighthouse.pages.filter((page) => page.categoryScore === 1).length,
     ...evidenceCounts,
   },
@@ -177,6 +189,25 @@ export const webMcpJudgeBundle = {
     containsHealthInformation: recordedBrowserRuntime.result.receipt.containsHealthInformation,
     evidenceBoundary: recordedBrowserRuntime.evidenceBoundary,
   },
+  recordedInspectorExtensionRuntime: {
+    artifactClass: recordedInspectorExtensionRuntime.artifactClass,
+    receiptPath: "evals/webmcp-inspector-extension-runtime.json",
+    recordedAt: recordedInspectorExtensionRuntime.recordedAt,
+    inspector: recordedInspectorExtensionRuntime.inspector,
+    browser: recordedInspectorExtensionRuntime.browser,
+    target: recordedInspectorExtensionRuntime.target,
+    status: recordedInspectorExtensionRuntime.result.status,
+    checksPassed: recordedInspectorExtensionRuntime.result.checksPassed,
+    checksTotal: recordedInspectorExtensionRuntime.result.checksTotal,
+    checks: recordedInspectorExtensionRuntime.result.checks,
+    publicToolNames: recordedInspectorExtensionRuntime.result.publicToolNames,
+    schemasParsed: recordedInspectorExtensionRuntime.result.schemasParsed,
+    schemasExpected: recordedInspectorExtensionRuntime.result.schemasExpected,
+    safeExecution: recordedInspectorExtensionRuntime.result.safeExecution,
+    providerBoundary: recordedInspectorExtensionRuntime.providerBoundary,
+    privacyBoundary: recordedInspectorExtensionRuntime.privacyBoundary,
+    evidenceBoundary: recordedInspectorExtensionRuntime.evidenceBoundary,
+  },
   recordedAgenticLighthouse: {
     artifactClass: recordedAgenticLighthouse.artifactClass,
     receiptPath: "evals/webmcp-lighthouse-agentic-acceptance.json",
@@ -204,5 +235,5 @@ export const webMcpJudgeBundle = {
     containsPatientData: selectionBaseline.containsPatientData,
   },
   implementationLandscape: webMcpImplementationLandscape,
-  evidenceBoundary: "The quick judge route is a concise current-browser discovery and safe-method check. Repository checks, recorded browser lifecycle evidence, a recorded model-selection eval, and site-orchestrated fixed public execution do not replace Chrome Model Context Tool Inspector natural-language acceptance or clinical validation.",
+  evidenceBoundary: "The quick judge route is a concise current-browser discovery and safe-method check. Repository and partial recorded results do not replace Chrome Model Context Tool Inspector completion: natural-language selection, permission transition, cancellation/cleanup, production Origin Trial deployment, and clinical validation remain separate gates.",
 } as const;

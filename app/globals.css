@@ -1006,6 +1006,24 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .inspector-setup-note p { margin: 0; color: var(--ink-soft); font-size: 0.76rem; line-height: 1.55; }
 .inspector-setup-note code { color: var(--ink); font-size: 0.9em; overflow-wrap: anywhere; }
 .inspector-setup-note a { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 900; }
+.recorded-inspector-proof { margin-bottom: 28px; padding: 20px; border: 1px solid #e2c789; border-left: 4px solid var(--focus); border-radius: var(--radius); background: var(--warning); }
+.recorded-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.recorded-inspector-heading > span { display: inline-flex; align-items: center; gap: 8px; color: #70400d; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
+.recorded-inspector-heading i { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--focus); }
+.recorded-inspector-heading > strong { flex: 0 0 auto; padding: 6px 10px; border: 1px solid #d8ad57; border-radius: 999px; color: #70400d; background: var(--surface); font-size: 0.74rem; font-variant-numeric: tabular-nums; }
+.recorded-inspector-copy { max-width: 880px; margin-top: 12px; }
+.recorded-inspector-copy h2 { margin: 0; font-size: clamp(1.25rem, 2.4vw, 1.75rem); text-wrap: balance; }
+.recorded-inspector-copy p { margin: 7px 0 0; color: var(--ink-soft); font-size: 0.8rem; line-height: 1.6; }
+.recorded-inspector-proof ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 16px 0 0; padding: 0; list-style: none; }
+.recorded-inspector-proof li { min-width: 0; display: grid; gap: 5px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.recorded-inspector-proof li strong { width: fit-content; padding: 3px 7px; border-radius: 999px; font-size: 0.66rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.recorded-inspector-proof li span { color: var(--ink-soft); font-size: 0.76rem; line-height: 1.5; }
+.recorded-inspector-pass strong { color: var(--success-ink); background: var(--success-surface); }
+.recorded-inspector-pending strong { color: #70400d; background: var(--warning); }
+.recorded-inspector-boundary { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2c789; }
+.recorded-inspector-boundary p { max-width: 78ch; margin: 0; color: var(--ink-soft); font-size: 0.76rem; line-height: 1.55; }
+.recorded-inspector-boundary > div { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.recorded-inspector-boundary a { min-height: 44px; display: inline-flex; align-items: center; color: var(--primary-strong); font-size: 0.74rem; font-weight: 900; }
 .inspector-case-list { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
 .inspector-case + .inspector-case { border-top: 1px solid var(--line); }
 .inspector-case > summary { min-height: 66px; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 16px; list-style: none; cursor: pointer; }
@@ -1215,7 +1233,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .capability-state-tools li > strong { color: var(--ink-soft); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .capability-state-tools li.is-registered > strong { color: var(--success-ink); }
 .conformance-evidence .proof-section-heading > p:last-child { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.7; }
-.conformance-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
+.conformance-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-top: 24px; }
 .conformance-summary article { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
 .conformance-summary strong { color: var(--primary-strong); font-size: 1.25rem; }
 .conformance-summary span { color: var(--ink-soft); font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -1227,6 +1245,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .conformance-state strong { font-size: 0.74rem; line-height: 1.3; }
 .conformance-state small { color: var(--ink-soft); font-size: 0.68rem; font-weight: 900; }
 .matrix-recorded_model_eval > span { background: var(--focus); box-shadow: 0 0 0 3px var(--warning); }
+.matrix-recorded_browser_runtime > span { background: var(--focus); box-shadow: 0 0 0 3px var(--warning); }
 .matrix-manual_gate > span { background: var(--match-missing); box-shadow: 0 0 0 3px var(--paper); }
 .conformance-matrix > article > div:nth-child(2) { min-width: 0; text-align: left; }
 .conformance-matrix h3 { margin: 0; font-size: 0.9rem; }
@@ -1381,6 +1400,8 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .journey-contract { grid-template-columns: 1fr; }
   .runtime-acceptance-panel > .primary-action { width: 100%; }
   .standards-receipt, .selection-evidence-heading, .selection-receipt, .implementation-boundary, .inspector-kit-heading, .inspector-kit-download, .tool-contract-heading, .tool-contract-download, .capability-state-heading { align-items: stretch; flex-direction: column; }
+  .recorded-inspector-boundary { align-items: stretch; flex-direction: column; }
+  .recorded-inspector-proof ul { grid-template-columns: 1fr; }
   .inspector-kit-progress { width: 150px; min-height: 96px; flex-basis: auto; }
   .inspector-setup-note { grid-template-columns: 1fr; }
   .inspector-setup-note a { justify-self: start; }
@@ -1526,6 +1547,9 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
   .capability-state-tools li { grid-template-columns: 8px minmax(0, 1fr); }
   .capability-state-tools li > strong { grid-column: 2; }
   .inspector-case > summary { grid-template-columns: 38px minmax(0, 1fr); }
+  .recorded-inspector-heading { align-items: flex-start; flex-direction: column; }
+  .recorded-inspector-heading > strong { align-self: flex-start; }
+  .recorded-inspector-boundary > div { flex-direction: column; }
   .inspector-case-state { grid-column: 2; justify-self: start; }
   .inspector-prompt { grid-template-columns: 1fr; }
   .inspector-prompt button, .inspector-kit-download button { width: 100%; }

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0",
+  "artifactClass": "recorded_stock_inspector_extension_runtime_partial",
+  "recordedAt": "2026-09-02T04:33:47.904Z",
+  "auditedLocalDate": "2026-09-02",
+  "inspector": {
+    "name": "WebMCP - Model Context Tool Inspector",
+    "repository": "https://github.com/beaufortfrancois/model-context-tool-inspector",
+    "commit": "f164a9aa5c3f6083f5976ccae308257bdf86cb99",
+    "version": "1.9.14",
+    "installation": "isolated unpacked extension",
+    "stockSourceModified": false
+  },
+  "browser": {
+    "product": "Chrome for Testing",
+    "channel": "Beta",
+    "version": "153.0.8010.12",
+    "headless": true,
+    "localTestingFeatures": [
+      "WebMCP",
+      "WebMCPTesting"
+    ]
+  },
+  "target": {
+    "origin": "http://localhost:3001",
+    "route": "/webmcp",
+    "secureContext": true
+  },
+  "result": {
+    "status": "partial",
+    "checksPassed": 2,
+    "checksTotal": 6,
+    "checks": [
+      {
+        "id": "inspector-public-discovery",
+        "status": "pass",
+        "evidence": "Stock extension background and content scripts discovered both public tools and parsed both schemas."
+      },
+      {
+        "id": "inspector-safe-execution",
+        "status": "pass",
+        "evidence": "Stock extension manual execution invoked the fixed empty-input trialbridge_method tool successfully."
+      },
+      {
+        "id": "inspector-bilingual-selection",
+        "status": "not_run",
+        "reason": "The stock natural-language path requires a Gemini API key, which conflicts with the project cloud-model allowlist."
+      },
+      {
+        "id": "inspector-forbidden-abstention",
+        "status": "not_run",
+        "reason": "The stock natural-language path requires a Gemini API key, which conflicts with the project cloud-model allowlist."
+      },
+      {
+        "id": "inspector-permission-transition",
+        "status": "not_run",
+        "reason": "This check requires the interactive fictional protected workflow while Inspector remains open."
+      },
+      {
+        "id": "inspector-cancellation-cleanup",
+        "status": "not_run",
+        "reason": "This check requires interactive agent cancellation and navigation observation."
+      }
+    ],
+    "publicToolNames": [
+      "search_public_cancer_trials",
+      "trialbridge_method"
+    ],
+    "schemasParsed": 2,
+    "schemasExpected": 2,
+    "observedAnnotations": {
+      "search_public_cancer_trials": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      },
+      "trialbridge_method": {
+        "readOnlyHint": true
+      }
+    },
+    "safeExecution": {
+      "toolName": "trialbridge_method",
+      "inputPropertyCount": 0,
+      "completed": true,
+      "boundedReadOnlyResponse": true,
+      "changedWorkflowState": false,
+      "returnedContractKeys": [
+        "searchOrder",
+        "sources",
+        "privacy",
+        "limitation"
+      ]
+    }
+  },
+  "providerBoundary": {
+    "apiKeyConfigured": false,
+    "naturalLanguagePathInvoked": false,
+    "stockNaturalLanguageProvider": "Google GenAI",
+    "requiredCredential": "Gemini API key",
+    "projectAllowedCloudModel": "gpt-oss:120b-cloud",
+    "manualPathPolicyCompatible": true,
+    "reason": "Only stock discovery and manual fixed execution were used; the Gemini-backed natural-language path was not invoked."
+  },
+  "privacyBoundary": {
+    "containsHealthInformation": false,
+    "storesInvocationInputs": false,
+    "storesExecutionResults": false,
+    "storesToolDescriptions": false,
+    "storesRawSchemas": false,
+    "persistence": "repository metadata only"
+  },
+  "evidenceBoundary": "Actual stock extension background/content-script discovery and fixed manual execution through isolated Chrome for Testing and CDP. This partial artifact does not prove side-panel natural-language selection, permission transition, cancellation/cleanup, production Origin Trial deployment, or clinical validity."
+}

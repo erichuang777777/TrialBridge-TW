@@ -146,6 +146,43 @@ check(recordedBrowserRuntime.result.postRunToolNames.slice().sort().join("|") ==
 check(typeof recordedBrowserRuntime.evidenceBoundary === "string" && /not an Origin Trial production deployment/i.test(recordedBrowserRuntime.evidenceBoundary), "Recorded browser runtime evidence boundary is missing.");
 check(!/"(?:rawText|maskedText|medicalNote|confirmedProfile|profileFact|trialResult|prompt|toolArgument|toolOutput|content|thinking)"\s*:/i.test(recordedBrowserRuntimeSource), "Recorded browser runtime contains a forbidden payload field.");
 
+const recordedInspectorExtensionSource = readFileSync("evals/webmcp-inspector-extension-runtime.json", "utf8");
+const recordedInspectorExtension = JSON.parse(recordedInspectorExtensionSource) as {
+  artifactClass: string;
+  inspector: { repository: string; commit: string; version: string; stockSourceModified: boolean };
+  browser: { product: string; channel: string; version: string; headless: boolean; localTestingFeatures: string[] };
+  target: { origin: string; route: string; secureContext: boolean };
+  result: {
+    status: string;
+    checksPassed: number;
+    checksTotal: number;
+    checks: Array<{ id: string; status: string; evidence?: string; reason?: string }>;
+    publicToolNames: string[];
+    schemasParsed: number;
+    schemasExpected: number;
+    safeExecution: { toolName: string; inputPropertyCount: number; completed: boolean; boundedReadOnlyResponse: boolean; changedWorkflowState: boolean };
+  };
+  providerBoundary: { apiKeyConfigured: boolean; naturalLanguagePathInvoked: boolean; requiredCredential: string; projectAllowedCloudModel: string; manualPathPolicyCompatible: boolean };
+  privacyBoundary: { containsHealthInformation: boolean; storesInvocationInputs: boolean; storesExecutionResults: boolean; storesToolDescriptions: boolean; storesRawSchemas: boolean };
+  evidenceBoundary: string;
+};
+check(recordedInspectorExtension.artifactClass === "recorded_stock_inspector_extension_runtime_partial", "Recorded Inspector extension artifact class is invalid.");
+check(recordedInspectorExtension.inspector.repository === "https://github.com/beaufortfrancois/model-context-tool-inspector" && recordedInspectorExtension.inspector.commit === "f164a9aa5c3f6083f5976ccae308257bdf86cb99" && recordedInspectorExtension.inspector.version === "1.9.14" && recordedInspectorExtension.inspector.stockSourceModified === false, "Recorded Inspector extension source identity is invalid.");
+check(recordedInspectorExtension.browser.product === "Chrome for Testing" && recordedInspectorExtension.browser.channel === "Beta" && recordedInspectorExtension.browser.version === "153.0.8010.12" && recordedInspectorExtension.browser.headless === true, "Recorded Inspector extension browser identity is invalid.");
+check(["WebMCP", "WebMCPTesting"].every((feature) => recordedInspectorExtension.browser.localTestingFeatures.includes(feature)), "Recorded Inspector extension local-testing features are incomplete.");
+check(recordedInspectorExtension.target.origin === "http://localhost:3001" && recordedInspectorExtension.target.route === "/webmcp" && recordedInspectorExtension.target.secureContext === true, "Recorded Inspector extension target is invalid.");
+check(recordedInspectorExtension.result.status === "partial" && recordedInspectorExtension.result.checksPassed === 2 && recordedInspectorExtension.result.checksTotal === webMcpInspectorAcceptanceCases.length, "Recorded Inspector extension result must remain an honest two-of-six partial result.");
+check(recordedInspectorExtension.result.checks.map((item) => item.id).join("|") === webMcpInspectorAcceptanceCases.map((item) => item.id).join("|"), "Recorded Inspector extension case IDs must match the manual acceptance kit.");
+check(recordedInspectorExtension.result.checks.map((item) => item.status).join("|") === "pass|pass|not_run|not_run|not_run|not_run", "Recorded Inspector extension outcome sequence is invalid.");
+check(recordedInspectorExtension.result.checks.every((item) => item.status === "pass" ? Boolean(item.evidence) : Boolean(item.reason)), "Recorded Inspector extension checks must explain every outcome.");
+check(recordedInspectorExtension.result.publicToolNames.slice().sort().join("|") === publicTools.map((tool) => tool.name).sort().join("|"), "Recorded Inspector extension must discover the exact public tools.");
+check(recordedInspectorExtension.result.schemasParsed === 2 && recordedInspectorExtension.result.schemasExpected === 2, "Recorded Inspector extension must report both schemas parsed.");
+check(recordedInspectorExtension.result.safeExecution.toolName === "trialbridge_method" && recordedInspectorExtension.result.safeExecution.inputPropertyCount === 0 && recordedInspectorExtension.result.safeExecution.completed === true && recordedInspectorExtension.result.safeExecution.boundedReadOnlyResponse === true && recordedInspectorExtension.result.safeExecution.changedWorkflowState === false, "Recorded Inspector extension safe execution contract is invalid.");
+check(recordedInspectorExtension.providerBoundary.apiKeyConfigured === false && recordedInspectorExtension.providerBoundary.naturalLanguagePathInvoked === false && recordedInspectorExtension.providerBoundary.requiredCredential === "Gemini API key" && recordedInspectorExtension.providerBoundary.projectAllowedCloudModel === requiredCloudModel && recordedInspectorExtension.providerBoundary.manualPathPolicyCompatible === true, "Recorded Inspector extension provider boundary must preserve the gpt-oss-only policy.");
+check(Object.entries(recordedInspectorExtension.privacyBoundary).every(([key, value]) => key === "containsHealthInformation" || key.startsWith("stores") ? value === false : true), "Recorded Inspector extension evidence must remain metadata-only and no-PHI.");
+check(/partial artifact does not prove/i.test(recordedInspectorExtension.evidenceBoundary), "Recorded Inspector extension evidence boundary is missing.");
+check(!/"(?:rawText|maskedText|medicalNote|confirmedProfile|profileFact|trialResult|prompt|toolArgument|toolOutput|description|inputSchema|outputSchema|content|thinking)"\s*:/i.test(recordedInspectorExtensionSource), "Recorded Inspector extension artifact contains a forbidden payload field.");
+
 const agenticLighthouseSource = readFileSync("evals/webmcp-lighthouse-agentic-acceptance.json", "utf8");
 const agenticLighthouse = JSON.parse(agenticLighthouseSource) as {
   artifactClass: string;
@@ -408,6 +445,7 @@ check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capa
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
 check(webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.networkRequests === false, "Judge runtime suite profile must remain no-PHI and no-network.");
 check(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksTotal === 6, "Judge bundle must carry the recorded six-of-six browser runtime result.");
+check(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksPassed === 2 && webMcpJudgeBundle.summary.recordedInspectorExtensionChecksTotal === 6 && webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksPassed === 2 && webMcpJudgeBundle.recordedInspectorExtensionRuntime.checksTotal === 6 && webMcpJudgeBundle.recordedInspectorExtensionRuntime.status === "partial", "Judge bundle must carry the honest recorded two-of-six stock Inspector result.");
 check(webMcpJudgeBundle.summary.recordedAgenticPagesPassed === 2 && webMcpJudgeBundle.recordedAgenticLighthouse.pages.length === 2, "Judge bundle must carry both passing Lighthouse Agentic Browsing page results.");
 check(webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors === 0 && webMcpJudgeBundle.recordedBrowserRuntime.probePresentAfter === false && webMcpJudgeBundle.recordedBrowserRuntime.containsHealthInformation === false, "Judge bundle recorded browser result must remain clean and no-PHI.");
 check(webMcpJudgeBundle.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState === false, "Judge bundle must be static and contain no health information.");
@@ -432,6 +470,7 @@ if (findings.length > 0) {
     browserDiagnosticReceipt: "download-only-no-health-data",
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     recordedBrowserRuntime: `${webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/${webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} Chrome ${recordedBrowserRuntime.browser.version}`,
+    recordedInspectorExtensionRuntime: `${recordedInspectorExtension.result.checksPassed}/${recordedInspectorExtension.result.checksTotal} stock Inspector ${recordedInspectorExtension.inspector.version}`,
     recordedAgenticLighthouse: `${agenticLighthouse.pages.filter((page) => page.categoryScore === 1).length}/${agenticLighthouse.pages.length} pages`,
     originTrialDeploymentContract: "local|configured-unverified|fail-closed-no-token-json",
     cloudProbeTimeoutMs,
