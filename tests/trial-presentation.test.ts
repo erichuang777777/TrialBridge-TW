@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { conditionBadges, phaseLabel, recruitmentLabel, regionLabel, trialMatchesFilters, trialPhaseFilter } from "../lib/trials/presentation.ts";
+import { conditionBadges, phaseLabel, publishedSiteRegion, recruitmentLabel, regionLabel, sourceScopeLabel, trialMatchesFilters, trialPhaseFilter } from "../lib/trials/presentation.ts";
 import { normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
-import { ctgovFixture } from "./fixtures/registry.ts";
+import { normalizeTfdaRecord } from "../lib/trials/adapters/tfda.ts";
+import { ctgovFixture, tfdaFixture } from "./fixtures/registry.ts";
 
 const trial = normalizeClinicalTrialsGovStudy(ctgovFixture, "2026-09-02T00:00:00.000Z");
 
@@ -38,4 +39,13 @@ test("location and recruitment labels do not imply unpublished facts", () => {
 test("phase, location, and recruitment filters combine deterministically", () => {
   assert.equal(trialMatchesFilters(trial, { phase: "phase3", region: "taiwan", recruitment: "open" }), true);
   assert.equal(trialMatchesFilters(trial, { phase: "phase2", region: "taiwan", recruitment: "open" }), false);
+});
+
+test("location filters use published sites rather than a registry's source scope", () => {
+  const tfdaOnly = normalizeTfdaRecord(tfdaFixture, "2026-09-02T00:00:00.000Z");
+  assert.equal(tfdaOnly.regionTier, "taiwan");
+  assert.equal(publishedSiteRegion(tfdaOnly), "unknown");
+  assert.equal(sourceScopeLabel(tfdaOnly), "TFDA · Taiwan record");
+  assert.equal(trialMatchesFilters(tfdaOnly, { phase: "all", region: "taiwan", recruitment: "all" }), false);
+  assert.equal(trialMatchesFilters(tfdaOnly, { phase: "all", region: "unknown", recruitment: "all" }), true);
 });

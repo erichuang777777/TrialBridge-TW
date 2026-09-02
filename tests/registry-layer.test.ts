@@ -14,6 +14,7 @@ const retrievedAt = "2026-09-01T00:00:00.000Z";
 test("TFDA normalization preserves source and Taiwan priority", () => {
   const trial = normalizeTfdaRecord(tfdaFixture, retrievedAt);
   assert.equal(trial.regionTier, "taiwan");
+  assert.equal(trial.locations.length, 0);
   assert.equal(trial.sources[0].registry, "TFDA");
   assert.equal(trial.recruitment.acceptingNewParticipants, true);
   assert.match(trial.title, /胃癌/);
@@ -59,6 +60,7 @@ test("deduplication merges only explicit shared identifiers and keeps both sourc
   assert.deepEqual(merged[0].sources.map((source) => source.registry).sort(), ["ClinicalTrials.gov", "TFDA"]);
   assert.equal(merged[0].eligibility.minimumAge, "18 Years");
   assert.equal(merged[0].contacts.some((contact) => contact.role === "investigator"), true);
+  assert.equal(merged[0].locations.length, 2);
 
   const unrelated = { ...ctgov, identifiers: ["NCT99999999"], canonicalId: "ctgov:nct99999999" };
   assert.equal(deduplicateTrials([tfda, unrelated]).length, 2);

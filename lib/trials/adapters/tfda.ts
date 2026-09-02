@@ -66,7 +66,10 @@ export function normalizeTfdaRecord(rawInput: unknown, retrievedAt: string): Nor
       inclusion: cleanText(raw.納入條件),
       exclusion: cleanText(raw.排除條件),
     },
-    locations: [{ country: "Taiwan" }],
+    // The current TFDA export identifies a Taiwan approval record, but does
+    // not publish a study-site field. Keep Taiwan priority in regionTier and
+    // leave locations empty so the UI never presents provenance as a site.
+    locations: [],
     contacts: [],
     regionTier: "taiwan",
   });

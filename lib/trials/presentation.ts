@@ -1,4 +1,5 @@
 import type { NormalizedTrial, RecruitmentCategory, RegionTier } from "./types.ts";
+import { regionTierForCountries } from "./regions.ts";
 
 export type TrialPhaseFilter = "all" | "phase1" | "phase1_2" | "phase2" | "phase2_3" | "phase3" | "phase4" | "na";
 export type TrialRegionFilter = "all" | RegionTier;
@@ -72,6 +73,19 @@ export function regionLabel(region: RegionTier, language: "en" | "zh-Hant" = "en
   return labels[region][language];
 }
 
+export function publishedSiteRegion(trial: Pick<NormalizedTrial, "locations">): RegionTier {
+  if (trial.locations.length === 0) return "unknown";
+  return regionTierForCountries(trial.locations.map((location) => location.country));
+}
+
+export function sourceScopeLabel(trial: Pick<NormalizedTrial, "sources" | "locations">, language: "en" | "zh-Hant" = "en"): string {
+  const publishedRegion = publishedSiteRegion(trial);
+  if (publishedRegion !== "unknown") return regionLabel(publishedRegion, language);
+  const hasTfda = trial.sources.some((source) => source.registry === "TFDA");
+  if (hasTfda) return language === "en" ? "TFDA · Taiwan record" : "TFDA · 台灣紀錄";
+  return regionLabel("unknown", language);
+}
+
 export function recruitmentLabel(trial: Pick<NormalizedTrial, "recruitment">, language: "en" | "zh-Hant" = "en"): string {
   const raw = trial.recruitment.raw.trim().toLocaleUpperCase("en");
   const rawLabels: Record<string, { en: string; "zh-Hant": string }> = {
@@ -101,6 +115,6 @@ export function trialMatchesFilters(trial: NormalizedTrial, filters: {
   recruitment: TrialRecruitmentFilter;
 }): boolean {
   return (filters.phase === "all" || trialPhaseFilter(trial) === filters.phase)
-    && (filters.region === "all" || trial.regionTier === filters.region)
+    && (filters.region === "all" || publishedSiteRegion(trial) === filters.region)
     && (filters.recruitment === "all" || trial.recruitment.category === filters.recruitment);
 }

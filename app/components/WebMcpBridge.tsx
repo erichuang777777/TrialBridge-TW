@@ -37,6 +37,8 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [copiedPrompt, setCopiedPrompt] = useState<number>();
+  const [setupCopied, setSetupCopied] = useState(false);
+  const [unsupportedReason, setUnsupportedReason] = useState<"preview" | "insecure">("preview");
   const [receiptDownloaded, setReceiptDownloaded] = useState(false);
   const [lastActivity, setLastActivity] = useState<WebMcpActivity>();
   const [receiptEvents, setReceiptEvents] = useState<WebMcpReceiptEvent[]>([]);
@@ -62,6 +64,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     setRegisteredNames([]);
     setErrorMessage("");
     if (!modelContext) {
+      setUnsupportedReason(window.isSecureContext ? "preview" : "insecure");
       setRegistrationState("unsupported");
       const metadata = nextReceiptMetadata();
       setReceiptEvents((current) => appendRuntimeState(current, "unsupported", metadata.occurredAt, metadata.id));
@@ -105,7 +108,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
   const copy = language === "en" ? {
     state: {
       checking: "Checking browser support",
-      unsupported: "Browser API not detected · website remains fully usable",
+      unsupported: "WebMCP preview is off or unsupported · matching still works",
       registering: `Registering ${tools.length} tools`,
       ready: `${registeredNames.length} of ${tools.length} tools verified in this browser`,
       error: "Tool registration needs attention",
@@ -129,6 +132,12 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     receiptDownload: "Download JSON receipt",
     receiptDownloaded: "Downloaded",
     setup: "Enable local WebMCP in Chrome",
+    setupTitle: "Turn on the WebMCP browser preview",
+    setupPreview: "This only affects AI-agent tool discovery. Trial search, matching, and chat still work normally.",
+    setupInsecure: "WebMCP requires a secure browser context. Open this site through HTTPS or localhost.",
+    setupSteps: "Open the address below in Chrome, choose Enabled, then relaunch Chrome and reopen TrialBridge.",
+    copySetup: "Copy setup address",
+    setupCopied: "Address copied",
     method: "Why WebMCP matters",
     activity: {
       running: "Agent tool is running",
@@ -139,7 +148,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
   } : {
     state: {
       checking: "正在檢查瀏覽器支援",
-      unsupported: "未偵測到瀏覽器 API · 網站仍可完整使用",
+      unsupported: "WebMCP 預覽未開啟或瀏覽器不支援 · 配對功能仍正常",
       registering: `正在註冊 ${tools.length} 項工具`,
       ready: `此瀏覽器已驗證 ${registeredNames.length}/${tools.length} 項工具`,
       error: "工具註冊需要處理",
@@ -163,6 +172,12 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     receiptDownload: "下載 JSON 收據",
     receiptDownloaded: "已下載",
     setup: "在 Chrome 啟用本機 WebMCP",
+    setupTitle: "開啟 WebMCP 瀏覽器預覽",
+    setupPreview: "這只影響 AI Agent 發現網站工具；試驗搜尋、配對與聊天仍可正常使用。",
+    setupInsecure: "WebMCP 需要安全的瀏覽器環境，請使用 HTTPS 或 localhost 開啟本站。",
+    setupSteps: "在 Chrome 開啟下列位址，選擇 Enabled，重新啟動 Chrome，再開啟 TrialBridge。",
+    copySetup: "複製設定位址",
+    setupCopied: "已複製位址",
     method: "為什麼 WebMCP 很重要",
     activity: {
       running: "Agent 工具執行中",
@@ -179,6 +194,16 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
       window.setTimeout(() => setCopiedPrompt((current) => current === index ? undefined : current), 2_000);
     } catch {
       setCopiedPrompt(undefined);
+    }
+  }
+
+  async function copySetupAddress() {
+    try {
+      await navigator.clipboard.writeText("chrome://flags/#enable-webmcp-testing");
+      setSetupCopied(true);
+      window.setTimeout(() => setSetupCopied(false), 2_000);
+    } catch {
+      setSetupCopied(false);
     }
   }
 
@@ -222,6 +247,10 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
         <ToolGroup title={copy.publicTitle} names={publicToolNames} getState={(name) => toolState(name, false)} />
         <ToolGroup title={copy.contextualTitle} names={contextualToolNames} getState={(name) => toolState(name, true)} />
       </div>
+      {registrationState === "unsupported" && <section className="webmcp-setup-note" aria-labelledby="webmcp-setup-title">
+        <div><strong id="webmcp-setup-title">{copy.setupTitle}</strong><p>{unsupportedReason === "insecure" ? copy.setupInsecure : copy.setupPreview}</p></div>
+        {unsupportedReason === "preview" && <><p>{copy.setupSteps}</p><div><code>chrome://flags/#enable-webmcp-testing</code><button type="button" onClick={() => void copySetupAddress()}>{setupCopied ? copy.setupCopied : copy.copySetup}</button></div></>}
+      </section>}
       {registrationState === "error" && <p className="webmcp-error" role="alert">{errorMessage}</p>}
       <p className="webmcp-safety-note">{copy.safety}</p>
       <div className="webmcp-judge-prompts">
@@ -268,7 +297,7 @@ function SessionCapabilityReceipt({ events, language, activityCopy, title, subti
         return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{language === "en" ? `${event.toolNames.length} tools verified` : `已驗證 ${event.toolNames.length} 項工具`}</strong><code>{change || (language === "en" ? "Capability set unchanged" : "能力集合未變更")}</code></div></li>;
       }
       if (event.kind === "tool_execution") return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{event.toolName}</strong><span>{activityCopy[event.state]}</span></div></li>;
-      return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{event.state === "unsupported" ? (language === "en" ? "Browser API unavailable" : "瀏覽器 API 不可用") : (language === "en" ? "Registration error" : "工具註冊錯誤")}</strong><span>{language === "en" ? "No medical content was recorded." : "未記錄任何病歷內容。"}</span></div></li>;
+      return <li key={event.id}><time dateTime={event.occurredAt}>{time}</time><div><strong>{event.state === "unsupported" ? (language === "en" ? "WebMCP preview unavailable" : "WebMCP 預覽不可用") : (language === "en" ? "Registration error" : "工具註冊錯誤")}</strong><span>{language === "en" ? "No medical content was recorded." : "未記錄任何病歷內容。"}</span></div></li>;
     })}</ol>}
   </section>;
 }

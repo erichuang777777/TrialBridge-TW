@@ -131,6 +131,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   const contractExplorer = await readFile(path.join(root, "app", "webmcp", "_components", "ToolContractExplorer.tsx"), "utf8");
   const capabilitySimulator = await readFile(path.join(root, "app", "webmcp", "_components", "CapabilityStateSimulator.tsx"), "utf8");
   const diagnostic = await readFile(path.join(root, "app", "webmcp", "_components", "WebMcpDiagnostics.tsx"), "utf8");
+  const bridge = await readFile(path.join(root, "app", "components", "WebMcpBridge.tsx"), "utf8");
   const runtimeAcceptance = await readFile(path.join(root, "lib", "webmcp", "runtimeAcceptance.ts"), "utf8");
   const database = await readFile(path.join(root, "app", "components", "TrialDatabase.tsx"), "utf8");
   const searchUrl = await readFile(path.join(root, "lib", "trials", "searchUrl.ts"), "utf8");
@@ -220,6 +221,10 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(css, /conformance-matrix > article > div:nth-child\(2\).*text-align: left/);
   assert.match(css, /\.conformance-matrix > article \{ grid-template-columns: 1fr/);
   assert.match(diagnostic, /document\.modelContext/);
+  assert.match(diagnostic, /WebMCP browser preview off or unsupported/);
+  assert.match(bridge, /WebMCP preview is off or unsupported · matching still works/);
+  assert.match(bridge, /chrome:\/\/flags\/#enable-webmcp-testing/);
+  assert.doesNotMatch(bridge, /Browser API not detected/);
   assert.match(diagnostic, /getTools/);
   assert.match(diagnostic, /runWebMcpRuntimeAcceptance/);
   assert.match(diagnostic, /One-click WebMCP lifecycle acceptance/);

@@ -5,7 +5,8 @@ import { createOutreachDraft } from "../lib/matching/outreach.ts";
 import { createTrialDiscussionBrief } from "../lib/matching/discussionBrief.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
-import { ctgovFixture } from "./fixtures/registry.ts";
+import { normalizeTfdaRecord } from "../lib/trials/adapters/tfda.ts";
+import { ctgovFixture, tfdaFixture } from "./fixtures/registry.ts";
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [
   { id: "fact_cancer_1", domain: "cancer_type", value: "gastric cancer", displayZhHant: "胃癌", displayEn: "Gastric cancer", source: "masked_note", confidence: 0.9, confirmed: false },
@@ -72,6 +73,22 @@ test("Taiwan and Asia travel preference aligns with an Asia-tier trial", () => {
   const travelProfile = confirmProfile(travelDraft, {}, "patient", "2026-09-01T00:00:00.000Z");
   const asiaTrial = { ...trial, regionTier: "asia" as const };
   assert.equal(assessTrial(travelProfile, asiaTrial).assessments.find((item) => item.key === "location")?.outcome, "possibly_met");
+});
+
+test("a Taiwan TFDA source without a published site remains missing for travel comparison", () => {
+  const travelDraft = profileDraftSchema.parse({
+    ...draft,
+    facts: [...draft.facts, {
+      id: "fact_travel_tfda", domain: "travel_preference", value: "Taiwan",
+      displayZhHant: "台灣", displayEn: "Taiwan", source: "user_statement",
+      confidence: 1, confirmed: false,
+    }],
+  });
+  const travelProfile = confirmProfile(travelDraft, {}, "patient", "2026-09-01T00:00:00.000Z");
+  const tfdaOnly = normalizeTfdaRecord(tfdaFixture, "2026-09-01T00:00:00.000Z");
+  const location = assessTrial(travelProfile, tfdaOnly).assessments.find((item) => item.key === "location");
+  assert.equal(location?.outcome, "missing");
+  assert.match(location?.explanationEn ?? "", /source region is not treated as a recruiting location/i);
 });
 
 test("closed recruitment is shown separately and does not create a clinical mismatch by itself", () => {

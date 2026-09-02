@@ -10,8 +10,10 @@ import { publicTrialFormContractCore } from "@/lib/webmcp/toolContractCore";
 import {
   conditionBadges,
   phaseLabel,
+  publishedSiteRegion,
   recruitmentLabel,
   regionLabel,
+  sourceScopeLabel,
   trialMatchesFilters,
   trialPhaseFilter,
   type TrialPhaseFilter,
@@ -256,7 +258,7 @@ function TrialDatabaseCard({ trial }: { trial: NormalizedTrial }) {
   const locations = [...trial.locations].sort((left, right) => Number(right.recruitmentStatus === "RECRUITING") - Number(left.recruitmentStatus === "RECRUITING"));
   const contacts = trial.contacts.filter((contact) => contact.name && (contact.role === "investigator" || contact.role === "site" || contact.role === "central")).slice(0, 2);
   return <article className="trial-card">
-    <div className="trial-card-top"><span className="region-badge">{regionLabel(trial.regionTier)}</span><span className={`recruitment-badge recruitment-${trial.recruitment.category}`}>{recruitmentLabel(trial)}</span></div>
+    <div className="trial-card-top"><span className="region-badge">{sourceScopeLabel(trial)}</span><span className={`recruitment-badge recruitment-${trial.recruitment.category}`}>{recruitmentLabel(trial)}</span></div>
     <h3>{trial.title}</h3>
     <div className="trial-taxonomy-badges" aria-label="Trial phase and registered conditions">
       <span className={`phase-badge phase-${phase}`}>{phaseLabel(phase)}</span>
@@ -264,7 +266,7 @@ function TrialDatabaseCard({ trial }: { trial: NormalizedTrial }) {
       {conditions.hiddenCount > 0 && <span className="condition-badge">+{conditions.hiddenCount}</span>}
     </div>
     <div className="trial-site-summary">
-      <strong>{locations.length > 0 ? "Published sites" : "Sites not published"}</strong>
+      <strong>{locations.length > 0 ? `Published sites · ${regionLabel(publishedSiteRegion(trial))}` : "Sites not published"}</strong>
       {locations.length > 0 ? <ul>{locations.slice(0, 3).map((location, index) => <li key={`${location.facility ?? "site"}:${location.city ?? index}`}><span>{[location.facility, location.city, location.country].filter(Boolean).join(" · ")}</span>{location.recruitmentStatus && <small>{location.recruitmentStatus.replaceAll("_", " ").toLocaleLowerCase("en")}</small>}</li>)}</ul> : <p>The registry record does not list a site. Check the source or central study contact before planning travel.</p>}
       {locations.length > 3 && <small>+{locations.length - 3} additional published sites</small>}
     </div>

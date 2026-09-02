@@ -157,7 +157,7 @@ export function WebMcpDiagnostics() {
 
   const supportLabel = {
     checking: "Checking this browser",
-    unsupported: "WebMCP API not detected",
+    unsupported: "WebMCP browser preview off or unsupported",
     ready: `${discoveredNames.length}/${publicToolNames.length} public tools discovered`,
     error: "WebMCP needs attention",
   }[state];
@@ -180,7 +180,7 @@ export function WebMcpDiagnostics() {
     </div>
 
     <div className="diagnostic-check-grid">
-      <DiagnosticCheck label="Browser API" passed={state === "ready"} pending={state === "checking"} detail={state === "unsupported" ? "Use a compatible Chrome build and enable WebMCP." : "document.modelContext"} />
+      <DiagnosticCheck label="WebMCP browser preview" passed={state === "ready"} pending={state === "checking"} detail={state === "unsupported" ? "Enable chrome://flags/#enable-webmcp-testing, relaunch Chrome, then reopen this page." : "document.modelContext"} />
       <DiagnosticCheck label="Public tools" passed={state === "ready"} pending={state === "checking"} detail={state === "ready" ? discoveredNames.join(" · ") : "Origin-scoped discovery"} />
       <DiagnosticCheck label="Tool permission" passed={headers.permissionsPolicy} pending={state === "checking"} detail="Permissions-Policy: tools=(self)" />
       <DiagnosticCheck label="Origin isolation" passed={headers.openerPolicy} pending={state === "checking"} detail="Cross-Origin-Opener-Policy: same-origin" />

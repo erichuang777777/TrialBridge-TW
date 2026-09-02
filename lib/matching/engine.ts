@@ -1,5 +1,6 @@
 import { confirmedProfileSchema, type ConfirmedProfile } from "../profile/schema.ts";
 import { searchTrialRegistries } from "../trials/search.ts";
+import { publishedSiteRegion } from "../trials/presentation.ts";
 import type { NormalizedTrial, TrialRegistryAdapter } from "../trials/types.ts";
 
 export type AssessmentOutcome = "possibly_met" | "possibly_not_met" | "unknown" | "missing";
@@ -105,14 +106,15 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
   const allowsWorldwide = /全球|world|global/.test(travelText);
   const allowsAsia = /亞洲|asia/.test(travelText);
   const allowsTaiwan = /台灣|taiwan/.test(travelText);
-  const locationOutcome: AssessmentOutcome = trial.regionTier === "unknown" || travelFacts.length === 0
+  const siteRegion = publishedSiteRegion(trial);
+  const locationOutcome: AssessmentOutcome = siteRegion === "unknown" || travelFacts.length === 0
     ? "missing"
     : allowsWorldwide
       ? "possibly_met"
       : allowsAsia
-        ? ["taiwan", "asia"].includes(trial.regionTier) ? "possibly_met" : "possibly_not_met"
+        ? ["taiwan", "asia"].includes(siteRegion) ? "possibly_met" : "possibly_not_met"
         : allowsTaiwan
-          ? trial.regionTier === "taiwan" ? "possibly_met" : "possibly_not_met"
+          ? siteRegion === "taiwan" ? "possibly_met" : "possibly_not_met"
           : "unknown";
   const eligibilityFacts = factsFor(profile, ["stage", "disease_extent", "biomarker", "prior_therapy", "current_therapy", "performance_status", "organ_function"]);
   const registryEligibility = [trial.eligibility.combined, trial.eligibility.inclusion, trial.eligibility.exclusion].filter(Boolean).join(" ");
@@ -131,7 +133,7 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
     { key: "recruitment", outcome: recruitmentOutcome, patientFactIds: [], registryField: "recruitment status", explanationZhHant: recruitmentOutcome === "possibly_met" ? "公開登錄狀態為招募中。" : recruitmentOutcome === "possibly_not_met" ? "公開登錄顯示目前未招募；此項與疾病條件是否相符分開呈現。" : recruitmentOutcome === "missing" ? "此來源未公開可靠的招募狀態，需向試驗團隊確認。" : "公開登錄狀態為尚未招募或僅限邀請，需向試驗團隊確認可否加入。", explanationEn: recruitmentOutcome === "possibly_met" ? "The public registry status is Recruiting." : recruitmentOutcome === "possibly_not_met" ? "The public registry is not recruiting; availability is shown separately from clinical fit." : recruitmentOutcome === "missing" ? "This source does not publish a reliable recruitment status; confirm with the study team." : "The public registry says not yet recruiting or invitation only; confirm availability with the study team." },
     { key: "age", outcome: !ageKnown ? "missing" : ageWithin ? "possibly_met" : "possibly_not_met", patientFactIds: age.factIds, registryField: "minimumAge/maximumAge", explanationZhHant: !ageKnown ? "病人摘要或登錄缺少可比較的年齡資料。" : ageWithin ? "確認年齡在公開年齡範圍內。" : "確認年齡不在公開年齡範圍內。", explanationEn: !ageKnown ? "The patient summary or registry is missing comparable age information." : ageWithin ? "The confirmed age is within the public age range." : "The confirmed age is outside the public age range." },
     { key: "sex", outcome: !registrySex || (!patientSex && !sexUnrestricted) ? "missing" : sexUnrestricted || sexWithin ? "possibly_met" : "possibly_not_met", patientFactIds: sexFacts.map((fact) => fact.id), registryField: "sex", explanationZhHant: !registrySex || (!patientSex && !sexUnrestricted) ? "病人摘要或登錄缺少可比較的性別條件。" : sexUnrestricted ? "公開登錄未限制性別。" : sexWithin ? "確認資料與公開性別條件一致。" : "確認資料與公開性別條件不一致。", explanationEn: !registrySex || (!patientSex && !sexUnrestricted) ? "The patient summary or registry is missing comparable sex information." : sexUnrestricted ? "The public registry does not restrict sex." : sexWithin ? "The confirmed information matches the public sex criterion." : "The confirmed information does not match the public sex criterion." },
-    { key: "location", outcome: locationOutcome, patientFactIds: travelFacts.map((fact) => fact.id), registryField: "locations", explanationZhHant: locationOutcome === "missing" ? "缺少旅行偏好或登錄地點資料。" : locationOutcome === "possibly_met" ? `旅行偏好與 ${trial.regionTier} 地區層級一致；未估算實際旅行時間。` : locationOutcome === "possibly_not_met" ? `旅行偏好與 ${trial.regionTier} 地區層級不同。` : "已有地點與旅行資訊，但仍無法可靠判定可行性。", explanationEn: locationOutcome === "missing" ? "Travel preference or registry location information is missing." : locationOutcome === "possibly_met" ? `Travel preference aligns with the ${trial.regionTier} region tier; actual travel time is not estimated.` : locationOutcome === "possibly_not_met" ? `Travel preference differs from the ${trial.regionTier} region tier.` : "Location and travel information exist, but feasibility remains uncertain." },
+    { key: "location", outcome: locationOutcome, patientFactIds: travelFacts.map((fact) => fact.id), registryField: "locations", explanationZhHant: locationOutcome === "missing" ? "缺少旅行偏好或公開試驗地點資料；來源地區不等於收案院所。" : locationOutcome === "possibly_met" ? `旅行偏好與已公開的 ${siteRegion} 試驗地點層級一致；未估算實際旅行時間。` : locationOutcome === "possibly_not_met" ? `旅行偏好與已公開的 ${siteRegion} 試驗地點層級不同。` : "已有地點與旅行資訊，但仍無法可靠判定可行性。", explanationEn: locationOutcome === "missing" ? "Travel preference or a published study site is missing; source region is not treated as a recruiting location." : locationOutcome === "possibly_met" ? `Travel preference aligns with the published ${siteRegion} site tier; actual travel time is not estimated.` : locationOutcome === "possibly_not_met" ? `Travel preference differs from the published ${siteRegion} site tier.` : "Location and travel information exist, but feasibility remains uncertain." },
     { key: "eligibility_details", outcome: eligibilityOutcome, patientFactIds: eligibilityFacts.map((fact) => fact.id), registryField: potentialExclusions.length > 0 ? "exclusion criteria" : "eligibility criteria", explanationZhHant: potentialExclusions.length > 0 ? "已確認的治療用語與公開排除條件有交集，可能是排除訊號；仍需人工確認。" : eligibilityOutcome === "missing" ? "病人摘要或公開登錄缺少其他可比較資格資料。" : "雙方都有其他資格資料，但需要逐條人工確認，不能僅靠用語交集判定。", explanationEn: potentialExclusions.length > 0 ? "A confirmed treatment term overlaps the public exclusion criteria and may be an exclusion signal; human review is still required." : eligibilityOutcome === "missing" ? "The patient summary or public registry is missing other comparable eligibility details." : "Both sides contain other eligibility details, but they require criterion-by-criterion review and cannot be decided by term overlap alone." },
   ];
   const clinicalAssessments = assessments.filter((item) => item.key !== "recruitment");
