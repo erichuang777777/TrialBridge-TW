@@ -7,7 +7,8 @@
 - Browser masking fixtures plus server-side identifier rejection.
 - Exact `gpt-oss:120b-cloud` allowlist, loopback-only proxy, and prohibition on local GPU or CPU inference.
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
-- Live TFDA zipped JSON parsing with bounded 24-hour fresh/seven-day stale-while-revalidate snapshot state, plus ClinicalTrials.gov API v2 retrieval. Visible and WebMCP source receipts distinguish live, fresh-cache, and stale-cache reads with the true snapshot time.
+- Live TFDA zipped JSON parsing plus a production-shaped scheduled snapshot command and reader. The schema-1.0 artifact is fixed-source, size/count/SHA-256 validated, atomically replaced with a bounded sidecar, fresh for 24 hours, stale through seven days, and then rejected. Visible, WebMCP, and health receipts distinguish request-time process memory from a scheduled file without exposing its path or records.
+- Recorded live TFDA ingestion evidence on 2026-09-02: 18,493 official public records produced a 175,674,023-byte artifact with SHA-256 `88bfe2a4e6e8258e9371fc722e2e180666b3ebcb0f5d12451675493ea2c9b0d1`; the scheduled-file adapter returned three bounded `胃癌` results while a throwing fetcher proved no network fallback. Only the metadata receipt remains in Git; the temporary large snapshot was removed.
 - Independent 20-second registry deadlines, upstream abort propagation for ClinicalTrials.gov, machine-readable timeout/unavailable codes, per-source latency receipts, and partial-result preservation when another source succeeds.
 - End-to-end imperative WebMCP cancellation from execution callback through browser fetch, Next.js request, matching, and both registry adapters, with exact abort-reason preservation and shared TFDA snapshot isolation covered by deterministic tests.
 - A visible, versioned bilingual query plan covering all 19 declared cancer groups, with exact-term mapping and non-inferential pass-through for unrecognized detail.
@@ -35,7 +36,7 @@
 - A responsive four-step judge runbook plus shareable broad-cancer search links that reopen the same visible declarative form. A fixed no-PHI synthetic-case deep link server-renders at the privacy boundary without skipping protected stages and removes itself when the anonymous conversation is cleared. URL state rejects direct identifiers, multiline content, and unrecognized detailed conditions; production Lighthouse verified default mobile, 375×667, and 844×390 landscape layouts.
 - A bounded, payload-free WebMCP session receipt that makes capability registration changes and tool lifecycle states visible and optionally downloadable without server persistence.
 - TypeScript, production build, dependency audit, HTTP routes, and security headers.
-- A payload-free configuration health endpoint and pre-body, process-local rate limits with machine-readable `429`/`Retry-After` responses.
+- A payload-free configuration health endpoint that degrades for a configured missing, invalid, or expired TFDA snapshot, plus pre-body process-local rate limits with machine-readable `429`/`Retry-After` responses.
 - Fail-closed public discovery: canonical and share metadata, local-font Open Graph/Twitter images, a manifest, and dynamic robots/sitemap routes. Indexing requires an explicit non-loopback HTTPS deployment profile and remains disabled by default.
 
 ## Not yet proven and required before public clinical use
@@ -44,7 +45,7 @@
 - The 19-group bilingual query lexicon is an engineering navigation aid and has not been adjudicated by an oncology terminologist; its visible mapping is not a clinical translation claim.
 - Deterministic masking cannot guarantee removal of every name or contextual identifier.
 - Provider retention, data-processing location, terms, outage behavior, and production latency for cloud extraction are not yet accepted.
-- A cold process still downloads and decompresses TFDA's full archive inside its first request. The bounded process-local snapshot improves availability but production still needs scheduled validation and shared durable snapshot storage.
+- The scheduled TFDA ingestion command and fail-closed reader are implemented, but no actual production scheduler, shared durable volume, backup/restore policy, stale/expiry alert, operator ownership, or recovery drill has been provisioned and verified. Without `TFDA_SNAPSHOT_PATH`, development still uses request-time cold loading by design.
 - Eligibility criteria beyond structured condition, recruitment, age, sex, and region are not yet atomically assessed.
 - No oncologist/research-nurse adjudicated gold set, false-eligible measurement, calibration, or subgroup fairness evaluation exists.
 - Taiwan privacy-law review, clinical governance, threat-model review, incident response, data-processing records, abuse controls, and user research are incomplete.

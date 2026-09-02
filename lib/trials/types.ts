@@ -67,16 +67,19 @@ export interface TrialSearchInput {
   includeNotOpen: boolean;
 }
 
+export interface TrialDataState {
+  mode: "live" | "fresh_cache" | "stale_cache";
+  loadedAt: string;
+  storage?: "process_memory" | "scheduled_file";
+}
+
 export interface TrialAdapterResult {
   registry: RegistryName;
   trials: NormalizedTrial[];
   retrievedAt: string;
   sourceVersion?: string;
   warning?: string;
-  dataState: {
-    mode: "live" | "fresh_cache" | "stale_cache";
-    loadedAt: string;
-  };
+  dataState: TrialDataState;
 }
 
 export interface TrialAdapterSearchOptions {

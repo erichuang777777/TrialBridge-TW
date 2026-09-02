@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceClass": "recorded_live_official_ingestion",
+  "recordedAt": "2026-09-02T00:37:16.286Z",
+  "source": {
+    "registry": "TFDA",
+    "url": "https://data.fda.gov.tw/data/opendata/export/205/json"
+  },
+  "command": "npm run sync:tfda-snapshot",
+  "result": {
+    "recordCount": 18493,
+    "snapshotBytes": 175674023,
+    "recordsDigestSha256": "88bfe2a4e6e8258e9371fc722e2e180666b3ebcb0f5d12451675493ea2c9b0d1",
+    "containsPatientData": false,
+    "artifactRetained": false
+  },
+  "validation": {
+    "deploymentStatus": "fresh",
+    "storage": "scheduled_file",
+    "adapterNetworkFallbackAttempted": false,
+    "publicQuery": "胃癌",
+    "boundedResultCount": 3
+  },
+  "limitations": [
+    "This records one local ingestion run and is not continuous production monitoring.",
+    "The generated registry snapshot was removed after validation and is not stored in Git.",
+    "The record count and digest will change when the official source changes."
+  ]
+}

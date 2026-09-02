@@ -77,7 +77,7 @@ test("one registry failure does not erase another source", async () => {
   };
   const result = await searchTrialRegistries({ condition: "胃癌", pageSize: 10, includeNotOpen: false }, [failing, healthy]);
   assert.equal(result.trials.length, 1);
-  assert.deepEqual(result.sources[0].dataState, { mode: "live", loadedAt: result.sources[0].retrievedAt });
+  assert.deepEqual(result.sources[0].dataState, { mode: "live", loadedAt: result.sources[0].retrievedAt, storage: "process_memory" });
   assert.equal(result.sources[0].durationMs >= 0, true);
   assert.equal(result.failures[0].registry, "ClinicalTrials.gov");
   assert.equal(result.failures[0].message, "Registry temporarily unavailable");

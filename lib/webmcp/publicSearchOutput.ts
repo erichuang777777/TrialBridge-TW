@@ -1,4 +1,4 @@
-import type { NormalizedTrial } from "../trials/types.ts";
+import type { NormalizedTrial, TrialDataState } from "../trials/types.ts";
 import type { RegistryQueryPlan } from "../trials/queryBridge.ts";
 import { capWebMcpOutput, maxWebMcpOutputChars } from "./output.ts";
 
@@ -13,7 +13,7 @@ export function createBoundedPublicSearchOutput({
   query: string;
   queryPlan?: RegistryQueryPlan;
   trials: NormalizedTrial[];
-  sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
+  sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number; dataState?: TrialDataState }>;
   failures?: Array<{ registry: string; message: string; code?: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs?: number }>;
   limitation?: string;
 }): unknown {

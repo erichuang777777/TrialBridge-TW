@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import type { NormalizedTrial, RegionTier } from "@/lib/trials/types";
+import type { NormalizedTrial, RegionTier, TrialDataState } from "@/lib/trials/types";
 import type { RegistryQueryPlan } from "@/lib/trials/queryBridge";
 import { formatRegistryDuration, registrySourceTimeoutMs } from "@/lib/trials/reliability";
 import { createPublicTrialSearchPath, defaultPublicTrialCondition, normalizePublicTrialCondition, normalizeShareablePublicTrialCondition, parsePublicTrialSearchParams } from "@/lib/trials/searchUrl";
@@ -11,7 +11,7 @@ import { publicTrialFormContractCore } from "@/lib/webmcp/toolContractCore";
 type SearchResponse = {
   trials?: NormalizedTrial[];
   queryPlan?: RegistryQueryPlan;
-  sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs: number; warning?: string; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>;
+  sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs: number; warning?: string; dataState?: TrialDataState }>;
   failures?: Array<{ registry: string; message: string; code: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs: number }>;
   disclaimer?: string;
   error?: string;
@@ -38,6 +38,11 @@ function regionLabel(region: RegionTier) {
 function sourceStateLabel(source: NonNullable<SearchResponse["sources"]>[number]) {
   if (!source.dataState) return `queried ${new Date(source.retrievedAt).toLocaleDateString("en-CA")}`;
   const date = new Date(source.dataState.loadedAt).toLocaleDateString("en-CA");
+  if (source.dataState.storage === "scheduled_file") {
+    return source.dataState.mode === "stale_cache"
+      ? `scheduled snapshot stale · ${date} · refresh job required`
+      : `scheduled snapshot · validated ${date}`;
+  }
   if (source.dataState.mode === "fresh_cache") return `fresh cache · snapshot ${date}`;
   if (source.dataState.mode === "stale_cache") return `stale cache · snapshot ${date} · refresh requested`;
   return `live source · loaded ${date}`;

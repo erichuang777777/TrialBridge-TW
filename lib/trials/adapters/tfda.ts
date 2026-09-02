@@ -4,6 +4,8 @@ import { normalizedTrialSchema } from "../schema.ts";
 import { waitForPromiseWithSignal } from "../../security/abort.ts";
 import { cleanText, containsCjk, normalizeIdentifier, uniqueText } from "../text.ts";
 import { StaleWhileRevalidateSnapshot, type SnapshotRead } from "../snapshotCache.ts";
+import { readTfdaSnapshotFile, tfdaSnapshotFreshMs, tfdaSnapshotMaxAgeMs } from "../tfdaSnapshot.ts";
+import { TFDA_DATASET_PAGE, TFDA_DATASET_URL, tfdaRecordSchema, type TfdaRecord } from "../tfdaRecord.ts";
 import type {
   NormalizedTrial,
   RecruitmentCategory,
@@ -13,29 +15,11 @@ import type {
   TrialSearchInput,
 } from "../types.ts";
 
-export const TFDA_DATASET_URL = "https://data.fda.gov.tw/data/opendata/export/205/json";
-export const TFDA_DATASET_PAGE = "https://data.gov.tw/dataset/177198";
+export { TFDA_DATASET_PAGE, TFDA_DATASET_URL } from "../tfdaRecord.ts";
 const MAX_ARCHIVE_BYTES = 64 * 1024 * 1024;
 const MAX_JSON_BYTES = 256 * 1024 * 1024;
 
-const tfdaRecordSchema = z.object({
-  臨床試驗申請者: z.string().nullish(),
-  臨床試驗計畫書編號: z.string().nullish(),
-  臨床試驗計畫中文名稱: z.string().nullish(),
-  臨床試驗期別: z.string().nullish(),
-  本臨床試驗規模: z.string().nullish(),
-  試驗目的: z.string().nullish(),
-  試驗預計執行期間起: z.string().nullish(),
-  試驗預計執行期間迄: z.string().nullish(),
-  適應症中文: z.string().nullish(),
-  納入條件: z.string().nullish(),
-  排除條件: z.string().nullish(),
-  執行狀態: z.string().nullish(),
-  TFDA收文號: z.string().nullish(),
-  資料更新時間: z.string().nullish(),
-}).passthrough();
-
-export type TfdaRecord = z.infer<typeof tfdaRecordSchema>;
+export type { TfdaRecord } from "../tfdaRecord.ts";
 
 function recruitmentCategory(status: string): RecruitmentCategory {
   const normalized = status.toLocaleLowerCase("zh-Hant");
@@ -96,8 +80,8 @@ function recordMatches(record: TfdaRecord, query: string): boolean {
   return query.split(/\s+/u).filter(Boolean).every((term) => haystack.includes(term));
 }
 
-async function loadOfficialRecords(fetcher: typeof fetch): Promise<TfdaRecord[]> {
-  const response = await fetcher(process.env.TFDA_TRIALS_DATA_URL ?? TFDA_DATASET_URL, {
+export async function loadOfficialTfdaRecords(fetcher: typeof fetch = fetch): Promise<TfdaRecord[]> {
+  const response = await fetcher(TFDA_DATASET_URL, {
     headers: { Accept: "application/json, application/zip" }, cache: "no-store",
   });
   if (!response.ok) throw new Error(`TFDA returned HTTP ${response.status}`);
@@ -106,10 +90,21 @@ async function loadOfficialRecords(fetcher: typeof fetch): Promise<TfdaRecord[]>
   const isZip = response.headers.get("content-type")?.includes("zip") || (bytes[0] === 0x50 && bytes[1] === 0x4b);
   let jsonBytes = bytes;
   if (isZip) {
-    const entries = unzipSync(bytes);
-    const jsonName = Object.keys(entries).find((name) => name.toLocaleLowerCase("en").endsWith(".json"));
-    if (!jsonName) throw new Error("TFDA archive contains no JSON file");
-    jsonBytes = entries[jsonName];
+    let jsonName: string | undefined;
+    let oversizedJson = false;
+    const entries = unzipSync(bytes, { filter: (file) => {
+      if (jsonName || !file.name.toLocaleLowerCase("en").endsWith(".json")) return false;
+      if (file.originalSize > MAX_JSON_BYTES) {
+        oversizedJson = true;
+        return false;
+      }
+      jsonName = file.name;
+      return true;
+    } });
+    if (oversizedJson) throw new Error("TFDA JSON exceeds the configured safety limit");
+    const extractedJson = jsonName ? entries[jsonName] : undefined;
+    if (!extractedJson) throw new Error("TFDA archive contains no JSON file");
+    jsonBytes = extractedJson;
   }
   if (jsonBytes.byteLength > MAX_JSON_BYTES) throw new Error("TFDA JSON exceeds the configured safety limit");
   const parsed = z.array(tfdaRecordSchema).parse(JSON.parse(strFromU8(jsonBytes)));
@@ -119,26 +114,29 @@ async function loadOfficialRecords(fetcher: typeof fetch): Promise<TfdaRecord[]>
   );
 }
 
-const TFDA_FRESH_MS = 24 * 60 * 60 * 1000;
-const TFDA_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 let officialSnapshot: StaleWhileRevalidateSnapshot<TfdaRecord[]> | undefined;
 
 export class TfdaAdapter implements TrialRegistryAdapter {
   readonly registry = "TFDA" as const;
   private readonly fetcher: typeof fetch;
   private readonly recordLoader?: () => Promise<TfdaRecord[]>;
+  private readonly snapshotPath?: string;
+  private readonly now?: () => number;
 
-  constructor(fetcher: typeof fetch = fetch, recordLoader?: () => Promise<TfdaRecord[]>) {
+  constructor(fetcher: typeof fetch = fetch, recordLoader?: () => Promise<TfdaRecord[]>, options: { snapshotPath?: string | null; now?: () => number } = {}) {
     this.fetcher = fetcher;
     this.recordLoader = recordLoader;
+    this.snapshotPath = options.snapshotPath === null ? undefined : options.snapshotPath ?? process.env.TFDA_SNAPSHOT_PATH;
+    this.now = options.now;
   }
 
   private async records(retrievedAt: string): Promise<SnapshotRead<TfdaRecord[]>> {
-    if (this.recordLoader) return { value: await this.recordLoader(), mode: "live", loadedAt: retrievedAt };
+    if (this.recordLoader) return { value: await this.recordLoader(), mode: "live", loadedAt: retrievedAt, storage: "process_memory" };
+    if (this.snapshotPath) return readTfdaSnapshotFile(this.snapshotPath, this.now?.() ?? Date.now());
     officialSnapshot ??= new StaleWhileRevalidateSnapshot({
-      load: () => loadOfficialRecords(this.fetcher),
-      freshForMs: TFDA_FRESH_MS,
-      maxAgeMs: TFDA_MAX_AGE_MS,
+      load: () => loadOfficialTfdaRecords(this.fetcher),
+      freshForMs: tfdaSnapshotFreshMs,
+      maxAgeMs: tfdaSnapshotMaxAgeMs,
     });
     return officialSnapshot.read();
   }
@@ -159,8 +157,8 @@ export class TfdaAdapter implements TrialRegistryAdapter {
       retrievedAt,
       sourceVersion: trials.map((trial) => trial.sources[0].lastUpdated ?? "").sort().at(-1),
       trials,
-      dataState: { mode: snapshot.mode, loadedAt: snapshot.loadedAt },
-      warning: `TFDA records identify approved Taiwan trials; recruitment status and sites must be reconfirmed with the study team.${snapshot.mode === "stale_cache" ? " A bounded stale snapshot is shown and a background refresh was requested; it is never used beyond seven days." : ""}`,
+      dataState: { mode: snapshot.mode, loadedAt: snapshot.loadedAt, storage: snapshot.storage },
+      warning: `TFDA records identify approved Taiwan trials; recruitment status and sites must be reconfirmed with the study team.${snapshot.mode === "stale_cache" ? snapshot.storage === "scheduled_file" ? " The scheduled snapshot is older than 24 hours and must be refreshed by the ingestion job; it is never used beyond seven days." : " A bounded stale snapshot is shown and a background refresh was requested; it is never used beyond seven days." : ""}`,
     };
   }
 }

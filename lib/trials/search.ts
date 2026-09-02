@@ -3,7 +3,7 @@ import { TfdaAdapter } from "./adapters/tfda.ts";
 import { deduplicateTrials } from "./dedupe.ts";
 import { rankTrials } from "./regions.ts";
 import { formatRegistryDuration, registrySourceTimeoutMs } from "./reliability.ts";
-import type { NormalizedTrial, RegistryName, TrialAdapterResult, TrialRegistryAdapter, TrialSearchInput } from "./types.ts";
+import type { NormalizedTrial, RegistryName, TrialAdapterResult, TrialDataState, TrialRegistryAdapter, TrialSearchInput } from "./types.ts";
 
 export interface RegistrySearchFailure {
   registry: string;
@@ -21,10 +21,7 @@ export interface FederatedTrialSearchResult {
     sourceVersion?: string;
     warning?: string;
     durationMs: number;
-    dataState: {
-      mode: "live" | "fresh_cache" | "stale_cache";
-      loadedAt: string;
-    };
+    dataState: TrialDataState;
   }>;
   failures: RegistrySearchFailure[];
 }

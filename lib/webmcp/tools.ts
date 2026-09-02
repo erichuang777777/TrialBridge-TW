@@ -4,6 +4,7 @@ import { createOutreachDraft } from "../matching/outreach.ts";
 import { createTrialDiscussionBrief } from "../matching/discussionBrief.ts";
 import type { FollowUpQuestion } from "../matching/followUp.ts";
 import type { TrialMatch } from "../matching/engine.ts";
+import type { TrialDataState } from "../trials/types.ts";
 import { maxShortlistTrials, resolveShortlistedMatches } from "../matching/shortlist.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
 import type { RegistryQueryPlan } from "../trials/queryBridge.ts";
@@ -60,7 +61,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
         const condition = typeof input.condition === "string" ? input.condition.trim() : "";
         if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
         const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: false }), signal: options.signal });
-        const payload = await response.json() as { trials?: TrialMatch["trial"][]; queryPlan?: RegistryQueryPlan; sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number; dataState?: { mode: "live" | "fresh_cache" | "stale_cache"; loadedAt: string } }>; failures?: Array<{ registry: string; message: string; code?: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs?: number }>; disclaimer?: string };
+        const payload = await response.json() as { trials?: TrialMatch["trial"][]; queryPlan?: RegistryQueryPlan; sources?: Array<{ registry: string; count: number; retrievedAt: string; durationMs?: number; dataState?: TrialDataState }>; failures?: Array<{ registry: string; message: string; code?: "SOURCE_TIMEOUT" | "SOURCE_UNAVAILABLE"; durationMs?: number }>; disclaimer?: string };
         if (!response.ok && (payload.failures?.length ?? 0) === 0) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
         return createBoundedPublicSearchOutput({ query: condition, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
       },

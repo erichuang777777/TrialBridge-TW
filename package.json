@@ -15,6 +15,7 @@
     "verify:cloud": "node scripts/verify-cloud.ts",
     "eval:webmcp:live": "node scripts/eval-webmcp-selection.ts",
     "verify:registries": "node scripts/verify-registries.ts",
+    "sync:tfda-snapshot": "node scripts/sync-tfda-snapshot.ts",
     "verify:http": "node scripts/verify-http.ts",
     "audit:clean-room": "node scripts/audit-clean-room.ts"
   },

@@ -16,8 +16,8 @@ test("snapshot cache serves fresh data without another load", async () => {
   const live = await cache.read();
   now += hour;
   const fresh = await cache.read();
-  assert.deepEqual(live, { value: "snapshot-1", mode: "live", loadedAt: "2026-09-01T00:00:00.000Z" });
-  assert.deepEqual(fresh, { value: "snapshot-1", mode: "fresh_cache", loadedAt: live.loadedAt });
+  assert.deepEqual(live, { value: "snapshot-1", mode: "live", loadedAt: "2026-09-01T00:00:00.000Z", storage: "process_memory" });
+  assert.deepEqual(fresh, { value: "snapshot-1", mode: "fresh_cache", loadedAt: live.loadedAt, storage: "process_memory" });
   assert.equal(loads, 1);
 });
 
@@ -46,7 +46,7 @@ test("stale snapshot returns immediately while one shared refresh runs", async (
   releaseRefresh("snapshot-2");
   await new Promise((resolve) => setImmediate(resolve));
   const refreshed = await cache.read();
-  assert.deepEqual(refreshed, { value: "snapshot-2", mode: "fresh_cache", loadedAt: new Date(now).toISOString() });
+  assert.deepEqual(refreshed, { value: "snapshot-2", mode: "fresh_cache", loadedAt: new Date(now).toISOString(), storage: "process_memory" });
 });
 
 test("snapshot older than the maximum age fails closed when refresh fails", async () => {

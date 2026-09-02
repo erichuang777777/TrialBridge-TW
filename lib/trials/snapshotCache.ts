@@ -4,6 +4,7 @@ export interface SnapshotRead<T> {
   value: T;
   mode: SnapshotCacheMode;
   loadedAt: string;
+  storage?: "process_memory" | "scheduled_file";
 }
 
 interface StoredSnapshot<T> {
@@ -56,7 +57,7 @@ export class StaleWhileRevalidateSnapshot<T> {
   }
 
   private result(snapshot: StoredSnapshot<T>, mode: SnapshotCacheMode): SnapshotRead<T> {
-    return { value: snapshot.value, mode, loadedAt: new Date(snapshot.loadedAtMs).toISOString() };
+    return { value: snapshot.value, mode, loadedAt: new Date(snapshot.loadedAtMs).toISOString(), storage: "process_memory" };
   }
 
   async read(): Promise<SnapshotRead<T>> {
