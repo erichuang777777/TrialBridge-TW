@@ -19,7 +19,7 @@ The MVP applies fixed-window, per-process limits before parsing bodies on cloud 
 
 WebMCP and ordinary HTTP cancellation propagate through `request.signal` to registry work. ClinicalTrials.gov receives the abort directly. A cancelled TFDA caller stops waiting immediately, but does not terminate the process-wide single-flight snapshot refresh because other requests may depend on the same load. Public monitoring must record cancellation as payload-free lifecycle metadata and must not classify a caller abort as a source timeout.
 
-`GET /api/health` exposes only service/version and configuration-class checks. It does not call the model, reveal the loopback URL or token, or include patient data. A `200` proves configuration shape, not live provider availability; a `503` means the allowlisted cloud model or loopback proxy setting is invalid.
+`GET /api/health` exposes only service/version and configuration-class checks. It does not call the model, reveal the loopback URL or Origin Trial token, or include patient data. Its bounded Origin Trial object distinguishes `local_testing_only`, `configured_unverified`, and `misconfigured`, always keeps `containsToken=false`, and never turns token presence into a Chrome success claim. A `200` proves configuration shape, not live provider or Origin Trial availability; a `503` means the allowlisted cloud model, loopback proxy, or token/origin pairing is malformed.
 
 `POST /api/cloud/probe` is the separate opt-in availability check. It accepts no request body, uses only a fixed repository-owned synthetic prompt, calls `gpt-oss:120b-cloud` through the loopback Ollama proxy, and stops after 30 seconds. It returns requested/reported model, transport class, latency, and UTC check time; it never returns or stores model content. The MVP allows three provider calls per process/address per 10 minutes. A successful probe proves only that this server reached a provider response at that moment—it does not establish provider retention terms, legal acceptance, production SLA, clinical accuracy, or Chrome WebMCP Inspector behavior.
 
@@ -32,6 +32,15 @@ WebMCP and ordinary HTTP cancellation propagate through `request.signal` to regi
 The live diagnostic first creates a schema-1.1 browser receipt only after an explicit download. Its lifecycle section contains the fixed six check IDs/outcomes, bounded `toolchange` count, and no tool arguments or outputs. The adjacent six-check Inspector kit keeps outcomes only in the current React tab and can create a second, download-only manual receipt. It stores case IDs and outcomes, the exact origin, Chrome major version, and summary counts; it excludes prompts, tool arguments/outputs, and health information. `npm run verify:webmcp:receipts -- <runtime.json> [manual.json]` validates both structures, while preserving `manual_self_attestation` as a separate evidence class. Do not ingest either local receipt into application telemetry or patient records.
 
 Before release, resolve every item in `READINESS.md`, host TFDA snapshots outside request-time decompression, replace process-local limits with distributed rate limiting and payload-free monitoring, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
+
+For the exact registered first-party origin, provide both variables during the production build:
+
+```text
+SITE_URL=https://the-exact-registered-origin.example
+WEBMCP_ORIGIN_TRIAL_TOKEN=the-unmodified-token-from-Chrome
+```
+
+The token is public by design once emitted in `<head>`, but the server-only variable prevents accidental duplication in client JavaScript. The build fails closed for whitespace, invalid shape, HTTP/loopback origins, or a path-bearing `SITE_URL`. Configuration can only reach `configured_unverified`; verify origin match, expiry, status, and feature availability in Chrome DevTools before making any production Origin Trial claim.
 
 ### Public discovery profile
 

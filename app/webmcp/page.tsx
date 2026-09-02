@@ -4,6 +4,7 @@ import { createPageMetadata } from "@/lib/site/metadata";
 import { webMcpCriticalJourney } from "@/lib/webmcp/criticalJourney";
 import { webMcpImplementationLandscape } from "@/lib/webmcp/implementationLandscape";
 import { webMcpConformanceMatrix, webMcpJudgeBundle } from "@/lib/webmcp/judgeBundle";
+import { getWebMcpOriginTrialDeploymentState } from "@/lib/webmcp/originTrial";
 import { WebMcpDiagnostics } from "./_components/WebMcpDiagnostics";
 import { CompetitionPreflight } from "./_components/CompetitionPreflight";
 import { InspectorAcceptanceKit } from "./_components/InspectorAcceptanceKit";
@@ -54,6 +55,17 @@ const standardsProfile = [
 ] as const;
 
 export default function WebMcpProofPage() {
+  const originTrial = getWebMcpOriginTrialDeploymentState();
+  const originTrialTitle = originTrial.status === "configured_unverified"
+    ? `Token configured for ${originTrial.siteOrigin}`
+    : originTrial.status === "misconfigured"
+      ? "Origin Trial configuration needs attention"
+      : "Local testing profile · no production token";
+  const originTrialDetail = originTrial.status === "configured_unverified"
+    ? "The first-party token is emitted before WebMCP code runs. Chrome DevTools validation and Inspector acceptance are still required before claiming production Origin Trial success."
+    : originTrial.status === "misconfigured"
+      ? "The token or SITE_URL does not meet the fail-closed deployment contract. No production readiness claim is made."
+      : "The recorded 6/6 Chrome run used local testing features. Set one exact non-loopback HTTPS SITE_URL and its registered token during the production build.";
   return <main className="webmcp-proof-page" id="main-content" tabIndex={-1}>
     <header className="proof-header">
       <Link className="back-link" href="/">← Back home</Link>
@@ -66,6 +78,10 @@ export default function WebMcpProofPage() {
         <div><strong>{webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/{webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} lifecycle checks passed in Chrome for Testing {webMcpJudgeBundle.recordedBrowserRuntime.browser.version}</strong><p>Two public tools remained after cleanup · temporary probe absent · {webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors} console errors · no health information.</p></div>
         <a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-browser-runtime-acceptance.json" target="_blank" rel="noreferrer">Inspect receipt</a>
       </aside>
+      <details id="origin-trial-readiness" className={`origin-trial-readiness origin-trial-${originTrial.status}`}>
+        <summary><span><i aria-hidden="true" />Origin Trial deployment</span><strong>{originTrialTitle}</strong><small>Inspect boundary</small></summary>
+        <div><p>{originTrialDetail}</p><dl><div><dt>Delivery</dt><dd>Server-rendered first-party meta</dd></div><div><dt>Token in JSON</dt><dd>Never</dd></div><div><dt>Browser validation</dt><dd>Required</dd></div></dl><p className="origin-trial-links"><a href="https://developer.chrome.com/blog/ai-webmcp-origin-trial" target="_blank" rel="noreferrer">WebMCP Origin Trial</a><a href="https://developer.chrome.com/docs/web-platform/origin-trial-troubleshooting" target="_blank" rel="noreferrer">Chrome validation guide</a></p></div>
+      </details>
     </header>
 
     <section className="judge-runbook" aria-labelledby="judge-runbook-title">

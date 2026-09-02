@@ -172,6 +172,10 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /recordedBrowserRuntime\.checksPassed/);
   assert.match(page, /Two public tools remained after cleanup/);
   assert.match(page, /Inspect receipt/);
+  assert.match(page, /Origin Trial deployment/);
+  assert.match(page, /Local testing profile · no production token/);
+  assert.match(page, /Chrome DevTools validation and Inspector acceptance are still required/);
+  assert.match(page, /Token in JSON/);
   assert.match(page, /product execution cancellation also reaches browser fetch, Next request, and each registry adapter/);
   assert.match(page, /webmachinelearning\.github\.io\/webmcp/);
   assert.match(page, /Four-step judge path/);
@@ -210,6 +214,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(css, /\.judge-runbook ol/);
   assert.match(css, /\.standards-grid/);
   assert.match(css, /\.recorded-runtime-proof/);
+  assert.match(css, /\.origin-trial-readiness/);
   assert.match(css, /\.conformance-matrix > article \{ display: grid/);
   assert.match(css, /\.conformance-state > span/);
   assert.match(css, /conformance-matrix > article > div:nth-child\(2\).*text-align: left/);

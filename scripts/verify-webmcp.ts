@@ -21,6 +21,7 @@ import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webm
 import { publicTrialFormContractCore } from "../lib/webmcp/toolContractCore.ts";
 import { webMcpCapabilityStateBundle, webMcpCapabilityStates } from "../lib/webmcp/capabilityStates.ts";
 import { webMcpRuntimeAcceptanceChecks, webMcpRuntimeProbeName, type WebMcpRuntimeAcceptanceResult } from "../lib/webmcp/runtimeAcceptance.ts";
+import { getWebMcpOriginTrialDeploymentState, getWebMcpOriginTrialMetaToken, webMcpOriginTrialEnvironmentKey } from "../lib/webmcp/originTrial.ts";
 
 const findings: string[] = [];
 const draft = profileDraftSchema.parse({
@@ -45,6 +46,7 @@ const publicTools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false
 const allTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
 const shortlistTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true, shortlistedTrialIds: ["synthetic:trial-001", "synthetic:trial-002"] });
 const names = shortlistTools.map((tool) => tool.name);
+const syntheticOriginTrialToken = "A".repeat(128);
 
 function check(condition: boolean, message: string) {
   if (!condition) findings.push(message);
@@ -263,6 +265,21 @@ const headers = readFileSync("next.config.ts", "utf8");
 check(headers.includes("tools=(self)"), "Permissions-Policy must restrict WebMCP tools to this origin.");
 check(headers.includes("Cross-Origin-Opener-Policy"), "Cross-Origin-Opener-Policy header is required.");
 
+const localOriginTrial = getWebMcpOriginTrialDeploymentState({});
+const configuredOriginTrialEnvironment = { SITE_URL: "https://trialbridge.example", [webMcpOriginTrialEnvironmentKey]: syntheticOriginTrialToken };
+const configuredOriginTrial = getWebMcpOriginTrialDeploymentState(configuredOriginTrialEnvironment);
+const invalidOriginTrial = getWebMcpOriginTrialDeploymentState({ SITE_URL: "http://localhost:3001", [webMcpOriginTrialEnvironmentKey]: syntheticOriginTrialToken });
+check(localOriginTrial.status === "local_testing_only" && localOriginTrial.tokenConfigured === false, "Default Origin Trial state must remain local-testing only.");
+check(configuredOriginTrial.status === "configured_unverified" && configuredOriginTrial.originEligible === true && configuredOriginTrial.browserValidation === "required", "Production-shaped Origin Trial state must remain configured but externally unverified.");
+check(configuredOriginTrial.containsToken === false && !JSON.stringify(configuredOriginTrial).includes(syntheticOriginTrialToken), "Origin Trial readiness metadata must never expose the token.");
+check(getWebMcpOriginTrialMetaToken(configuredOriginTrialEnvironment) === syntheticOriginTrialToken, "A valid exact-origin token must be available only to server-rendered meta delivery.");
+check(invalidOriginTrial.status === "misconfigured", "Origin Trial deployment must fail closed for a loopback or non-HTTPS SITE_URL.");
+const layoutSource = readFileSync("app/layout.tsx", "utf8");
+const healthSource = readFileSync("app/api/health/route.ts", "utf8");
+check(layoutSource.includes("getWebMcpOriginTrialMetaToken") && layoutSource.includes('httpEquiv="origin-trial"'), "Root layout must emit the validated first-party token before WebMCP access.");
+check(healthSource.includes("getWebMcpOriginTrialDeploymentState") && healthSource.includes("containsToken"), "Health must expose bounded Origin Trial readiness without the token.");
+check(!`${layoutSource}\n${healthSource}`.includes("NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN"), "Origin Trial configuration must stay out of client JavaScript environment variables.");
+
 const productSources = [declarative, bridge, readFileSync("lib/webmcp/tools.ts", "utf8")].join("\n");
 check(!productSources.includes("navigator.modelContext"), "Deprecated navigator.modelContext must not be used.");
 check(productSources.includes("queryPlan") && productSources.includes("registryConditions"), "Public WebMCP search must return bilingual registry query provenance.");
@@ -326,6 +343,7 @@ if (findings.length > 0) {
     browserDiagnosticReceipt: "download-only-no-health-data",
     runtimeAcceptanceChecks: webMcpRuntimeAcceptanceChecks.length,
     recordedBrowserRuntime: `${webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/${webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} Chrome ${recordedBrowserRuntime.browser.version}`,
+    originTrialDeploymentContract: "local|configured-unverified|fail-closed-no-token-json",
     cloudProbeTimeoutMs,
     cloudProbeRateLimit: "3/10m",
     cloudProbeEvidence: "metadata-only-no-health-data",

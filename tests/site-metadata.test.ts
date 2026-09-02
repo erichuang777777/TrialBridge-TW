@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { createPageMetadata, getSiteConfig, publicSiteRoutes } from "../lib/site/metadata.ts";
+import { createPageMetadata, getSiteConfig, isNonLoopbackHttpsOrigin, publicSiteRoutes } from "../lib/site/metadata.ts";
 
 test("public discovery is fail-closed by default", () => {
   assert.deepEqual(getSiteConfig({}), { origin: "http://localhost:3000", indexingEnabled: false });
@@ -15,6 +15,10 @@ test("indexing requires an explicit non-loopback HTTPS deployment origin", () =>
   assert.throws(() => getSiteConfig({ SITE_URL: "http://trialbridge.example", SITE_INDEXING_ENABLED: "true" }), /non-loopback HTTPS SITE_URL/);
   assert.throws(() => getSiteConfig({ SITE_URL: "https://trialbridge.example/path" }), /without a path/);
   assert.throws(() => getSiteConfig({ SITE_URL: "not a URL" }), /absolute http\(s\) origin/);
+  assert.equal(isNonLoopbackHttpsOrigin("https://trialbridge.example"), true);
+  assert.equal(isNonLoopbackHttpsOrigin("http://trialbridge.example"), false);
+  assert.equal(isNonLoopbackHttpsOrigin("https://localhost"), false);
+  assert.equal(isNonLoopbackHttpsOrigin("https://trialbridge.example/path"), false);
 });
 
 test("every public route can declare a canonical and shareable page identity", () => {

@@ -26,13 +26,28 @@ function isLoopback(hostname: string): boolean {
   return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "[::1]" || normalized.endsWith(".localhost");
 }
 
+export function isNonLoopbackHttpsOrigin(value: string): boolean {
+  try {
+    const origin = new URL(value);
+    return origin.protocol === "https:"
+      && !isLoopback(origin.hostname)
+      && origin.pathname === "/"
+      && !origin.search
+      && !origin.hash
+      && !origin.username
+      && !origin.password;
+  } catch {
+    return false;
+  }
+}
+
 export function getSiteConfig(environment: SiteEnvironment = process.env as SiteEnvironment): {
   origin: string;
   indexingEnabled: boolean;
 } {
   const origin = parseSiteOrigin(environment.SITE_URL);
   const indexingRequested = environment.SITE_INDEXING_ENABLED === "true";
-  if (indexingRequested && (origin.protocol !== "https:" || isLoopback(origin.hostname))) {
+  if (indexingRequested && !isNonLoopbackHttpsOrigin(origin.origin)) {
     throw new Error("SITE_INDEXING_ENABLED=true requires a non-loopback HTTPS SITE_URL.");
   }
   return { origin: origin.origin, indexingEnabled: indexingRequested };

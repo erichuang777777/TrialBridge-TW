@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { createPageMetadata, getSiteConfig, siteDescription, siteName } from "@/lib/site/metadata";
+import { getWebMcpOriginTrialMetaToken } from "@/lib/webmcp/originTrial";
 import "./globals.css";
 
 const siteConfig = getSiteConfig();
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const originTrialToken = process.env.NEXT_PUBLIC_WEBMCP_ORIGIN_TRIAL_TOKEN;
+  const originTrialToken = getWebMcpOriginTrialMetaToken();
   return (
     <html lang="en">
       <head>{originTrialToken ? <meta httpEquiv="origin-trial" content={originTrialToken} /> : null}</head>
