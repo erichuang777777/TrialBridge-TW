@@ -2,6 +2,9 @@ import { confirmedProfileSchema, type ConfirmedProfile } from "../profile/schema
 import { searchTrialRegistries } from "../trials/search.ts";
 import { publishedSiteRegion } from "../trials/presentation.ts";
 import type { NormalizedTrial, TrialRegistryAdapter } from "../trials/types.ts";
+import { deriveDetailedCriterionEvidence, derivePotentialInterventionExclusions, type DetailedCriterionEvidence, type PotentialExclusionSignal } from "./criterionEvidence.ts";
+
+export type { DetailedCriterionEvidence, DetailedCriterionKey, DetailedCriterionState, PotentialExclusionSignal } from "./criterionEvidence.ts";
 
 export type AssessmentOutcome = "possibly_met" | "possibly_not_met" | "unknown" | "missing";
 export interface CriterionAssessment {
@@ -17,15 +20,7 @@ export interface TrialMatch {
   status: "discuss" | "needs_review" | "needs_information" | "unlikely_based_on_public_record";
   assessments: CriterionAssessment[];
   potentialExclusions: PotentialExclusionSignal[];
-}
-export interface PotentialExclusionSignal {
-  patientFactId: string;
-  confirmedIntervention: string;
-  matchedTerms: string[];
-  registryField: "exclusion criteria";
-  registryExcerpt: string;
-  explanationEn: string;
-  explanationZhHant: string;
+  detailedCriteria: DetailedCriterionEvidence[];
 }
 
 function factsFor(profile: ConfirmedProfile, domains: string[]) {
@@ -53,35 +48,6 @@ function parseAge(profile: ConfirmedProfile): { age?: number; factIds: string[] 
 function parseRegistryAge(value?: string): number | undefined {
   const match = value?.match(/\d{1,3}/);
   return match ? Number(match[0]) : undefined;
-}
-
-const interventionStopTerms = new Set(["cancer", "patient", "patients", "prior", "previous", "received", "treatment", "therapy", "chemotherapy", "radiotherapy", "immunotherapy", "current", "with", "without", "and", "the"]);
-
-function potentialInterventionExclusions(profile: ConfirmedProfile, trial: NormalizedTrial): PotentialExclusionSignal[] {
-  const exclusion = trial.eligibility.exclusion;
-  if (!exclusion) return [];
-  const exclusionTerms = new Set(normalizedTerms(exclusion));
-  return factsFor(profile, ["prior_therapy", "current_therapy"]).flatMap((fact) => {
-    const matchedPairs = normalizedTerms(fact.value).flatMap((term) => {
-      if (term.length < 4 || interventionStopTerms.has(term)) return [];
-      const registryTerm = [...exclusionTerms].find((candidate) => candidate === term || (Math.min(candidate.length, term.length) >= 5 && (candidate.includes(term) || term.includes(candidate))));
-      return registryTerm ? [{ patientTerm: term, registryTerm }] : [];
-    });
-    const matchedTerms = [...new Set(matchedPairs.map((pair) => pair.patientTerm))];
-    if (matchedTerms.length === 0) return [];
-    const firstTerm = matchedPairs[0].registryTerm;
-    const index = exclusion.toLocaleLowerCase("en").indexOf(firstTerm);
-    const excerpt = exclusion.slice(Math.max(0, index - 80), Math.min(exclusion.length, index + firstTerm.length + 140));
-    return [{
-      patientFactId: fact.id,
-      confirmedIntervention: fact.value,
-      matchedTerms,
-      registryField: "exclusion criteria" as const,
-      registryExcerpt: excerpt,
-      explanationEn: "A confirmed treatment term also appears in the public exclusion criteria. The study team must confirm the treatment name, timing, and context.",
-      explanationZhHant: "已確認的治療用語也出現在公開排除條件中；仍需由試驗團隊確認治療名稱、時間與上下文。",
-    }];
-  });
 }
 
 export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTrial): TrialMatch {
@@ -118,7 +84,8 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
           : "unknown";
   const eligibilityFacts = factsFor(profile, ["stage", "disease_extent", "biomarker", "prior_therapy", "current_therapy", "performance_status", "organ_function"]);
   const registryEligibility = [trial.eligibility.combined, trial.eligibility.inclusion, trial.eligibility.exclusion].filter(Boolean).join(" ");
-  const potentialExclusions = potentialInterventionExclusions(profile, trial);
+  const potentialExclusions = derivePotentialInterventionExclusions(profile, trial);
+  const detailedCriteria = deriveDetailedCriterionEvidence(profile, trial, potentialExclusions);
   const eligibilityOutcome: AssessmentOutcome = potentialExclusions.length > 0 ? "possibly_not_met" : eligibilityFacts.length === 0 || !registryEligibility ? "missing" : "unknown";
   const recruitmentOutcome: AssessmentOutcome = trial.recruitment.category === "open"
     ? "possibly_met"
@@ -142,7 +109,7 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
     : clinicalAssessments.some((item) => item.outcome === "missing")
       ? "needs_information"
       : clinicalAssessments.some((item) => item.outcome === "unknown") ? "needs_review" : "discuss";
-  return { trial, status, assessments, potentialExclusions };
+  return { trial, status, assessments, potentialExclusions, detailedCriteria };
 }
 
 export async function matchConfirmedProfile(profileInput: ConfirmedProfile, adapters?: TrialRegistryAdapter[], signal?: AbortSignal) {

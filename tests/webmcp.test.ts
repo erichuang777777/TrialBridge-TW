@@ -22,6 +22,7 @@ function syntheticMatch(id: string, title: string): TrialMatch {
     status: "needs_review",
     assessments: assessmentKeys.map((key) => ({ key, outcome: key === "eligibility_details" ? "unknown" : "possibly_met", patientFactIds: [], registryField: key, explanationEn: `Synthetic ${key} comparison.`, explanationZhHant: `虛構 ${key} 比較。` })),
     potentialExclusions: [],
+    detailedCriteria: [],
   };
 }
 

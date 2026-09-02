@@ -23,6 +23,18 @@ const statusLabels = {
   needs_information: { en: "Needs information", "zh-Hant": "需要更多資訊" },
   unlikely_based_on_public_record: { en: "Public mismatch found", "zh-Hant": "公開資料發現差異" },
 } as const;
+const detailedCriterionLabels = {
+  subtype: { en: "Subtype", "zh-Hant": "亞型" },
+  stage: { en: "Stage", "zh-Hant": "分期" },
+  biomarker: { en: "Biomarker", "zh-Hant": "生物標記" },
+  prior_treatment: { en: "Prior treatment", "zh-Hant": "既往治療" },
+} as const;
+const detailedStateLabels = {
+  shared_term: { en: "Shared term", "zh-Hant": "用語相同" },
+  possible_difference: { en: "Possible difference", "zh-Hant": "可能不同" },
+  uncertain: { en: "Needs review", "zh-Hant": "需要複核" },
+  missing: { en: "Missing", "zh-Hant": "缺乏資訊" },
+} as const;
 
 export function MatchLegend({ language }: { language: "en" | "zh-Hant" }) {
   return <div className="match-legend" aria-label={language === "en" ? "Comparison color legend" : "比較色彩圖例"}>{Object.entries(outcomeLabels).map(([outcome, labels]) => <span key={outcome}><i className={`legend-swatch assessment-${outcome}`} aria-hidden="true" />{labels[language]}</span>)}</div>;
@@ -73,6 +85,20 @@ export function TrialMatchCard({ match, profile, language, view, shortlisted, sh
       {match.potentialExclusions.length > 0 && <div className="potential-exclusion" role="note"><strong>{language === "en" ? "Potential exclusion signal" : "可能排除訊號"}</strong>{match.potentialExclusions.map((signal) => <p key={signal.patientFactId}>{language === "en" ? "Confirmed treatment" : "已確認治療"}: {signal.confirmedIntervention}. {language === "en" ? signal.explanationEn : signal.explanationZhHant}<small>{language === "en" ? "Public exclusion excerpt" : "公開排除條件節錄"}: {signal.registryExcerpt}</small></p>)}</div>}
     </div>
     <div className="patient-fact-strip" aria-label={language === "en" ? "Confirmed patient facts used in this comparison" : "此比較使用的病人確認資料"}>{patientFacts.map((fact) => <div key={fact.key} className={!fact.value ? "fact-missing" : ""}><span>{language === "en" ? fact.en : fact.zh}</span><strong>{fact.value || (language === "en" ? "Missing" : "缺少資料")}</strong></div>)}</div>
+    {(match.detailedCriteria ?? []).length > 0 && <section className="detailed-criteria-map" aria-label={language === "en" ? "Detailed public eligibility wording compared with confirmed facts" : "公開資格用語與確認資料的詳細比較"}>
+      <div className="detailed-criteria-heading"><strong>{language === "en" ? "Detailed criteria map" : "詳細條件對照"}</strong><span>{language === "en" ? "Term-level signals · not final eligibility" : "用語層級訊號 · 非最終資格判定"}</span></div>
+      <div className="detailed-criteria-grid" role="list">{match.detailedCriteria.map((criterion) => {
+        const label = detailedCriterionLabels[criterion.key][language];
+        const stateLabel = detailedStateLabels[criterion.state][language];
+        const patientValue = language === "en" ? criterion.patientValueEn : criterion.patientValueZhHant;
+        const explanation = language === "en" ? criterion.explanationEn : criterion.explanationZhHant;
+        return <article className={`detailed-criterion criterion-${criterion.state}`} role="listitem" key={criterion.key}>
+          <div><span aria-hidden="true" /><strong>{label}</strong><b>{stateLabel}</b></div>
+          <dl><div><dt>{language === "en" ? "Confirmed fact" : "確認資料"}</dt><dd>{patientValue ?? (language === "en" ? "Not provided" : "尚未提供")}</dd></div><div><dt>{language === "en" ? "Public wording" : "公開條件"}</dt><dd>{criterion.registryExcerpt ?? (language === "en" ? "No comparable wording found" : "未找到可比較用語")}</dd></div></dl>
+          <p>{explanation}</p><small>{language === "en" ? "Registry field" : "登錄欄位"}: {criterion.registryField}</small>
+        </article>;
+      })}</div>
+    </section>}
     <div className="match-site-summary">
       <div><span>{language === "en" ? "Published site region" : "已公開試驗地點"}</span><strong>{regionLabel(publishedSiteRegion(match.trial), language)}</strong></div>
       {visibleLocations.length > 0 ? <ul>{visibleLocations.slice(0, 2).map((location, index) => <li key={`${location.facility ?? "site"}:${location.city ?? index}`}>{[location.facility, location.city, location.country].filter(Boolean).join(" · ")}{location.recruitmentStatus && <small>{location.recruitmentStatus.replaceAll("_", " ").toLocaleLowerCase("en")}</small>}</li>)}</ul> : <p>{language === "en" ? "No study site is published in this registry record. Check the source or central contact." : "此登錄紀錄未公開試驗地點，請查看來源或洽中央聯絡人。"}</p>}

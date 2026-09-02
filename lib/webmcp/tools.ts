@@ -88,7 +88,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
     },
   }, {
     ...webMcpImperativeContractCore.explain_confirmed_matches,
-    execute: () => capWebMcpOutput(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
+    execute: () => capWebMcpOutput(context.matches.slice(0, 5).map((match) => ({ id: match.trial.canonicalId, title: match.trial.title, status: match.status, assessments: match.assessments, detailedCriteria: Object.fromEntries((match.detailedCriteria ?? []).map((criterion) => [criterion.key, criterion.state])), potentialExclusions: match.potentialExclusions, sources: match.trial.sources }))),
   }, {
     ...webMcpImperativeContractCore.draft_trial_outreach,
     execute: (input) => {
@@ -121,6 +121,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
           status: match.status,
           region: match.trial.regionTier,
           criteria: Object.fromEntries(match.assessments.map((assessment) => [assessment.key, assessment.outcome])),
+          detailedCriteria: Object.fromEntries((match.detailedCriteria ?? []).map((criterion) => [criterion.key, criterion.state])),
           potentialExclusionSignal: match.potentialExclusions.length > 0,
           source: { registry: match.trial.sources[0].registry, id: match.trial.sources[0].registryId, url: match.trial.sources[0].url },
         })),

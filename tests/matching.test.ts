@@ -48,6 +48,8 @@ test("discussion brief separates registry facts, uncertainty, and patient questi
   assert.match(brief.markdown, /Gastric cancer/);
   assert.match(brief.markdown, /What this brief does not prove/);
   assert.match(brief.markdown, /Questions for your care or study team/);
+  assert.match(brief.markdown, /Detailed criterion wording signals/);
+  assert.match(brief.markdown, /does not affect overall status/);
   assert.doesNotMatch(brief.markdown, /study@example\.test/);
 });
 

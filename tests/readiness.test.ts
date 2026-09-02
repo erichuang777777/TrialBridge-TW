@@ -253,7 +253,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.doesNotMatch(diagnostic, /rawText|maskedText|ConfirmedProfile/);
 });
 
-test("trial cards expose five useful comparison blocks, hover details, and patient facts without relying on color alone", async () => {
+test("trial cards expose public comparison blocks and detailed criterion evidence without relying on color alone", async () => {
   const root = process.cwd();
   const component = await readFile(path.join(root, "app", "components", "TrialMatchCard.tsx"), "utf8");
   const css = await readFile(path.join(root, "app", "globals.css"), "utf8");
@@ -272,6 +272,16 @@ test("trial cards expose five useful comparison blocks, hover details, and patie
   assert.match(component, /Subtype/);
   assert.match(component, /Stage/);
   assert.match(component, /criterion-tooltip/);
+  assert.match(component, /Detailed criteria map/);
+  assert.match(component, /Term-level signals · not final eligibility/);
+  assert.match(component, /Shared term/);
+  assert.match(component, /Possible difference/);
+  assert.match(component, /Needs review/);
+  assert.match(component, /No comparable wording found/);
+  for (const criterion of ["subtype", "stage", "biomarker", "prior_treatment"]) assert.match(component, new RegExp(`\\b${criterion}\\b`));
+  for (const state of ["shared_term", "possible_difference", "uncertain", "missing"]) assert.match(css, new RegExp(`criterion-${state}`));
+  assert.match(css, /\.detailed-criteria-grid \{ display: grid/);
+  assert.match(css, /\.detailed-criteria-grid \{ grid-template-columns: 1fr/);
   assert.doesNotMatch(component, /en: "Other"/);
 });
 

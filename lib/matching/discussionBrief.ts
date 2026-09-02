@@ -1,5 +1,5 @@
 import { confirmedProfileSchema, type ConfirmedProfile } from "../profile/schema.ts";
-import type { AssessmentOutcome, TrialMatch } from "./engine.ts";
+import type { AssessmentOutcome, DetailedCriterionState, TrialMatch } from "./engine.ts";
 
 export interface TrialDiscussionBrief {
   title: string;
@@ -28,6 +28,10 @@ const statusCopy = {
 const outcomeCopy: Record<"en" | "zh-Hant", Record<AssessmentOutcome, string>> = {
   en: { possibly_met: "appears aligned", possibly_not_met: "appears different", unknown: "uncertain", missing: "missing" },
   "zh-Hant": { possibly_met: "看起來一致", possibly_not_met: "看起來不同", unknown: "不確定", missing: "缺少資料" },
+};
+const detailedStateCopy: Record<"en" | "zh-Hant", Record<DetailedCriterionState, string>> = {
+  en: { shared_term: "shared normalized term", possible_difference: "possible difference", uncertain: "needs review", missing: "missing comparable information" },
+  "zh-Hant": { shared_term: "標準化用語相同", possible_difference: "可能不同", uncertain: "需要複核", missing: "缺少可比較資訊" },
 };
 
 function markdownCell(value: string) {
@@ -58,6 +62,7 @@ export function createTrialDiscussionBrief(
   const trialSections = matches.map((match, index) => {
     const trial = match.trial;
     const assessments = match.assessments.map((assessment) => `- **${markdownCell(assessment.key.replaceAll("_", " "))} — ${outcomeCopy[language][assessment.outcome]}:** ${markdownCell(en ? assessment.explanationEn : assessment.explanationZhHant)} _(registry field: ${markdownCell(assessment.registryField)})_`).join("\n");
+    const detailedCriteria = (match.detailedCriteria ?? []).map((criterion) => `- **${markdownCell(criterion.key.replaceAll("_", " "))} — ${detailedStateCopy[language][criterion.state]}:** ${markdownCell(en ? criterion.explanationEn : criterion.explanationZhHant)}${criterion.registryExcerpt ? ` Public excerpt: “${markdownCell(criterion.registryExcerpt)}”` : ""} _(registry field: ${markdownCell(criterion.registryField)}; does not affect overall status)_`).join("\n") || (en ? "- No detailed criterion map is available." : "- 尚無詳細條件對照。");
     const exclusions = match.potentialExclusions.length > 0
       ? match.potentialExclusions.map((signal) => `- ${markdownCell(en ? signal.explanationEn : signal.explanationZhHant)} Confirmed intervention: ${markdownCell(signal.confirmedIntervention)}. Public excerpt: “${markdownCell(signal.registryExcerpt)}”`).join("\n")
       : (en ? "- No treatment-term overlap with the available public exclusion text was detected. This does not prove eligibility." : "- 在目前可取得的公開排除文字中，未偵測到治療用語交集；這不代表符合資格。");
@@ -73,6 +78,10 @@ export function createTrialDiscussionBrief(
 #### ${en ? "Public-record comparison" : "公開資料比較"}
 
 ${assessments}
+
+#### ${en ? "Detailed criterion wording signals" : "詳細條件用語訊號"}
+
+${detailedCriteria}
 
 #### ${en ? "Potential exclusion signals" : "可能排除訊號"}
 
