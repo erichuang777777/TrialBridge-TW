@@ -48,7 +48,7 @@ export function removeSyntheticDemoSearch(search: string): string {
 export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
   switch (event.type) {
     case "SET_LANGUAGE":
-      return state.stage === "mode" ? { ...state, language: event.language } : state;
+      return { ...state, language: event.language };
     case "START_INTAKE":
       return state.stage === "mode" ? { ...state, stage: "privacy" } : state;
     case "START_SYNTHETIC_DEMO":

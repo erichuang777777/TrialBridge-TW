@@ -29,8 +29,11 @@ Use a system font stack led by Atkinson Hyperlegible, Noto Sans TC, PingFang TC,
 - Never encode match status by color alone.
 - Plain-language summaries lead; registry facts and eligibility criteria remain inspectable.
 - A generated statement must visually distinguish source fact, model interpretation, and patient confirmation.
-- The primary product shell uses three coordinated regions on desktop: a compact progress rail, the active review/work area, and a persistent right-side assistant.
-- The first choice is Agent mode or Manual mode. Agent mode uses chat as the workflow controller; Manual mode exposes direct note, extraction, and confirmation controls. Switching modes preserves the shared intake note.
+- The primary product shell uses two coordinated regions on desktop: one active review/work area and a persistent right-side assistant. A compact horizontal Describe / Review / Compare indicator replaces the progress rail.
+- Agent mode or Manual mode is a compact segmented control rather than a standalone screen-sized choice. Agent mode uses chat as the workflow controller; Manual mode exposes direct note, extraction, and confirmation controls. Switching modes preserves the shared intake note.
+- The homepage may use one abstract Three.js eligibility constellation to explain patient facts to criteria to trials. It contains no health information, never competes with text, pauses off-screen, and falls back to static SVG for reduced motion, compact, data-saving, or low-memory contexts.
+- The landing page and protected workspace are separate routes. `/` explains hope, purpose, Taiwan-first scope, and public WebMCP discovery above the fold; its primary action navigates to `/match` instead of scrolling. `/match` contains the protected Describe / Review / Compare workflow and is not indexed.
+- The landing page mounts the public WebMCP capability layer. An arriving agent can call `trialbridge_method` first and `search_public_cancer_trials` without health context; contextual tools remain absent until the visible `/match` workflow has a confirmed profile and explicit permission.
 - Patient/caregiver identity is not an intake step or Agent question. The same workflow serves both, with a neutral internal default used only for schema compatibility.
 - Agent-filled declarative forms are never hidden duplicates: the agent uses the visible human form, the active form receives a strong focus treatment, and activation is announced in a nearby status message.
 - Public registry search displays the bilingual query plan before source receipts. Each registry term has an explicit registry label; mapped versus pass-through state uses text plus color, and the two-column plan stacks without horizontal scrolling on small screens.

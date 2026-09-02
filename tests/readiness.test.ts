@@ -181,7 +181,7 @@ test("the competition proof page exposes live WebMCP evidence without overstatin
   assert.match(page, /Four-step judge path/);
   assert.match(page, /About 5 minutes/);
   assert.match(page, /\/trials\?condition=%E8%83%83%E7%99%8C/);
-  assert.match(page, /\/\?demo=synthetic#private-chat/);
+  assert.match(page, /\/match\?demo=synthetic#private-chat/);
   assert.match(page, /steps 1–3 are built into TrialBridge TW/);
   assert.match(page, /Critical user journey/);
   assert.match(page, /webMcpCriticalJourney\.steps/);

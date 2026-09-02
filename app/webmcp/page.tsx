@@ -89,7 +89,7 @@ export default function WebMcpProofPage() {
       <ol>
         <li><span>01</span><h3>Check this browser</h3><p>Run six no-PHI lifecycle checks for discovery, execution, cancellation, toolchange, and cleanup.</p><a href="#live-diagnostic-title">Run live diagnostics</a></li>
         <li><span>02</span><h3>Run a bilingual search</h3><p>Open the same visible declarative form with a shareable Traditional Chinese condition.</p><Link href="/trials?condition=%E8%83%83%E7%99%8C">Search 胃癌</Link></li>
-        <li><span>03</span><h3>Walk the protected flow</h3><p>Open the fictional case directly; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/?demo=synthetic#private-chat">Open synthetic workflow</Link></li>
+        <li><span>03</span><h3>Walk the protected flow</h3><p>Open the fictional case directly; privacy, masking, confirmation, and questions cannot be skipped.</p><Link href="/match?demo=synthetic#private-chat">Open synthetic workflow</Link></li>
         <li><span>04</span><h3>Finish in Inspector</h3><p>Verify natural-language selection, manual calls, permission transitions, and cleanup.</p><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Inspector guide</a></li>
       </ol>
       <p className="judge-runbook-boundary"><strong>Evidence boundary:</strong> steps 1–3 are built into TrialBridge TW. Step 4 remains a manual Chrome Model Context Tool Inspector gate and is never inferred from static tests.</p>
@@ -177,7 +177,7 @@ export default function WebMcpProofPage() {
     <section className="proof-section receipt-proof" aria-labelledby="receipt-proof-title">
       <div className="proof-section-heading"><p className="eyebrow">Judge-visible lifecycle</p><h2 id="receipt-proof-title">Capability changes leave a payload-free session receipt.</h2><p>Open <strong>WebMCP Live</strong> in the guided workflow to watch public, permission-gated, and shortlist-dependent tools appear or disappear. The tab keeps only the latest 20 lifecycle events and can download them as a local JSON receipt.</p></div>
       <div className="method-proof-grid"><article><strong>What it records</strong><p>UTC time, verified tool names, additions, removals, and running/completed/failed/cancelled states.</p></article><article><strong>What it excludes</strong><p>No medical note, profile fact, trial result, prompt, tool argument, tool output, or registration error detail.</p></article><article><strong>Where it lives</strong><p>Volatile React state in the current tab. Download happens only after a visible user action; TrialBridge never uploads it.</p></article></div>
-      <Link className="secondary-action action-link" href="/#private-chat">Open the guided workflow receipt</Link>
+      <Link className="secondary-action action-link" href="/match#private-chat">Open the guided workflow receipt</Link>
     </section>
 
     <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation and current-browser lifecycle. Natural-language tool selection and permission transitions must still be demonstrated in Chrome Model Context Tool Inspector.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>

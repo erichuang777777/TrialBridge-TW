@@ -1,19 +1,11 @@
 import Link from "next/link";
 import { BrandMark } from "./components/BrandMark";
-import { TrialBridgeChat } from "./components/TrialBridgeChat";
-import { isSyntheticDemoValue } from "@/lib/chat/state";
+import { HeroConstellation } from "./components/HeroConstellation";
+import { WebMcpBridge } from "./components/WebMcpBridge";
 
-const regions = [
-  { step: "01", title: "Taiwan first", detail: "Start with trials and contact sites in Taiwan." },
-  { step: "02", title: "Then Asia", detail: "Expand to other Asian locations when needed." },
-  { step: "03", title: "Then worldwide", detail: "Finally review public registries worldwide." },
-];
-
-export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const query = await searchParams;
-  const initialSyntheticDemo = isSyntheticDemoValue(query.demo);
+export default function Home() {
   return (
-    <main id="main-content" tabIndex={-1}>
+    <main id="main-content" className="landing-page" tabIndex={-1}>
       <header className="site-header">
         <Link className="brand" href="/" aria-label="TrialBridge TW home">
           <BrandMark />
@@ -32,59 +24,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow">Cancer clinical-trial navigation</p>
-          <h1 id="hero-title">Turn complex trial information into questions you can discuss with your care team.</h1>
+          <p className="eyebrow">A chance called hope</p>
+          <h1 id="hero-title">Hope starts with knowing what trial options remain.</h1>
           <p className="lead">
-            Describe the situation in English or Chinese. Identifiers are masked before you actively send the reviewed content to gpt-oss:120b-cloud for organization. Searching starts only after you confirm every item.
+            Find source-linked cancer clinical trials that may be worth discussing—Taiwan first, then Asia and worldwide. TrialBridge TW compares only the medical facts you confirm and never decides eligibility.
           </p>
           <div className="trust-row" aria-label="Privacy and safety commitments">
             <span>No account required</span>
             <span>Original text is not saved by default</span>
             <span>Matching only after confirmation</span>
           </div>
-          <div className="hero-actions"><a className="primary-action action-link" href="#private-chat">Start guided matching</a><Link className="secondary-action action-link" href="/trials">Browse trial database</Link></div>
+          <div className="hero-actions"><Link className="primary-action action-link" href="/match">Explore my trial options</Link><Link className="secondary-action action-link" href="/trials">Browse public trial data</Link></div>
+          <p className="hero-path"><strong>Describe</strong><span aria-hidden="true">→</span><strong>Review your facts</strong><span aria-hidden="true">→</span><strong>Compare trials</strong></p>
+          <WebMcpBridge compact matches={[]} shortlistedTrialIds={[]} pendingQuestions={[]} matching={false} sensitiveConsent={false} language="en" />
         </div>
-
-        <aside className="route-card" aria-label="Trial search order">
-          <p className="eyebrow">Search order</p>
-          <ol>
-            {regions.map((region) => (
-              <li key={region.step}>
-                <span>{region.step}</span>
-                <div>
-                  <strong>{region.title}</strong>
-                  <p>{region.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </aside>
-      </section>
-
-      <TrialBridgeChat initialSyntheticDemo={initialSyntheticDemo} />
-
-      <section className="principles" aria-labelledby="principles-title">
-        <div>
-          <p className="eyebrow">You stay in control</p>
-          <h2 id="principles-title">Understand first. Confirm next. Search last.</h2>
-        </div>
-        <div className="principle-grid">
-          <article>
-            <span>1</span>
-            <h3>Enter the medical note</h3>
-            <p>Chat one answer at a time or paste an existing summary. Both entry methods build the same note.</p>
-          </article>
-          <article>
-            <span>2</span>
-            <h3>Confirm the summary</h3>
-            <p>The system creates an editable draft. Model interpretations do not become your medical facts.</p>
-          </article>
-          <article>
-            <span>3</span>
-            <h3>Discuss with your care team</h3>
-            <p>Results show sources, open questions and an unsent contact draft—never an eligibility or benefit claim.</p>
-          </article>
-        </div>
+        <HeroConstellation />
       </section>
 
       <footer>

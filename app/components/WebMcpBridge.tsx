@@ -32,7 +32,7 @@ const judgePrompts = {
   ],
 };
 
-export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language }: { profile?: ConfirmedProfile; matches: TrialMatch[]; shortlistedTrialIds: string[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; language: Language }) {
+export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language, compact = false }: { profile?: ConfirmedProfile; matches: TrialMatch[]; shortlistedTrialIds: string[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; language: Language; compact?: boolean }) {
   const [registrationState, setRegistrationState] = useState<RegistrationState>("checking");
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -203,6 +203,13 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     if (name === "compare_shortlisted_trials" && shortlistedTrialIds.length < 2) return { label: copy.shortlistLocked, className: "tool-locked" };
     return { label: copy.state[registrationState], className: "tool-pending" };
   }
+
+  if (compact) return <aside className={`webmcp-landing-entry webmcp-${registrationState}`} aria-label={language === "en" ? "WebMCP quick start for AI agents" : "AI Agent 的 WebMCP 快速入口"}>
+    <span className="webmcp-live-mark" aria-hidden="true" />
+    <span><strong>{language === "en" ? "For AI agents · WebMCP" : "提供 AI Agent 使用 · WebMCP"}</strong><small>{language === "en" ? "Call trialbridge_method first, then search_public_cancer_trials." : "先呼叫 trialbridge_method，再使用 search_public_cancer_trials。"}</small></span>
+    <a href="/webmcp">{language === "en" ? "Usage & proof" : "使用方法與證據"}</a>
+    <em role="status" aria-atomic="true">{lastActivity ? copy.activity[lastActivity.state] : copy.state[registrationState]}</em>
+  </aside>;
 
   return <><details className={`webmcp-live-panel webmcp-${registrationState}`}>
     <summary>
