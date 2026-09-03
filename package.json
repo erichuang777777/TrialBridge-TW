@@ -19,9 +19,11 @@
     "sync:trial-index": "node scripts/sync-trial-index.ts",
     "sync:nci-terminology": "node scripts/sync-nci-terminology.ts",
     "verify:http": "node scripts/verify-http.ts",
-    "audit:clean-room": "node scripts/audit-clean-room.ts"
+    "audit:clean-room": "node scripts/audit-clean-room.ts",
+    "export:trial-index-subset": "node scripts/export-trial-index-subset.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "fflate": "^0.8.3",
     "next": "^16.3.4",
     "postgres": "^3.4.9",

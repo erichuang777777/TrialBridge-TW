@@ -1,3 +1,4 @@
+import { getTrialIndexAccessState, tfdaLiveFallbackEnabled } from "@/lib/trials/index/catalog";
 import { getTrialIndexStore } from "@/lib/trials/index/store";
 import { registryIntegrationCatalog } from "@/lib/trials/sourceCatalog";
 import { inspectTfdaSnapshotDeployment } from "@/lib/trials/tfdaSnapshot";
@@ -13,6 +14,8 @@ export async function GET() {
     const integrations = registryIntegrationCatalog().map((source) => source.id === "ncit" && nciTerminology.status === "ready" ? { ...source, state: "active" as const } : source);
     return Response.json({
       generatedAt: new Date().toISOString(), index,
+      indexAccess: getTrialIndexAccessState(),
+      liveFallback: { tfda: tfdaLiveFallbackEnabled(), clinicalTrialsGov: true },
       tfdaSnapshot: await inspectTfdaSnapshotDeployment(),
       nciTerminology,
       integrations,

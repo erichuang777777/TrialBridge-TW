@@ -72,7 +72,7 @@ export interface TrialSearchInput {
 export interface TrialDataState {
   mode: "live" | "fresh_cache" | "stale_cache" | "indexed";
   loadedAt: string;
-  storage?: "process_memory" | "scheduled_file" | "sqlite" | "postgres";
+  storage?: "process_memory" | "scheduled_file" | "sqlite" | "libsql" | "postgres";
 }
 
 export interface TrialAdapterResult {
