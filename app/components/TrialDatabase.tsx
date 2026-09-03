@@ -133,7 +133,10 @@ export function TrialDatabase() {
       const response = await fetch("/api/trials/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ condition: normalized, pageSize: 40, includeNotOpen: includeClosed }),
+        // Keep the hosted libSQL query inside Netlify's synchronous budget.
+        // The visible surface can page/filter the compact result set; WebMCP
+        // remains separately bounded to five records.
+        body: JSON.stringify({ condition: normalized, pageSize: 5, includeNotOpen: includeClosed }),
       });
       const payload = await readSearchResponse(response);
       setResult(payload);
