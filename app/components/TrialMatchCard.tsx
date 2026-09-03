@@ -1,6 +1,7 @@
 import type { CriterionAssessment, TrialMatch } from "@/lib/matching/engine";
 import type { ConfirmedProfile } from "@/lib/profile/schema";
 import { conditionBadges, phaseLabel, publishedSiteRegion, recruitmentLabel, regionLabel, sourceScopeLabel, trialPhaseFilter } from "@/lib/trials/presentation";
+import { TrialRevalidation } from "./TrialRevalidation";
 
 const criterionOrder: CriterionAssessment["key"][] = ["condition", "recruitment", "age", "sex", "location"];
 const criterionLabels = {
@@ -121,6 +122,7 @@ export function TrialMatchCard({ match, profile, language, view, shortlisted, sh
       <summary>{language === "en" ? "Review comparison details" : "查看比較細節"}</summary>
       <ul>{match.assessments.filter((assessment) => assessment.key !== "eligibility_details" || assessment.outcome !== "unknown").map((assessment) => <li key={assessment.key}><strong>{criterionLabels[assessment.key][language]} — {outcomeLabels[assessment.outcome][language]}:</strong> {language === "en" ? assessment.explanationEn : assessment.explanationZhHant}<small>{language === "en" ? "Registry field" : "登錄欄位"}: {assessment.registryField}</small></li>)}</ul>
     </details>
+    <TrialRevalidation canonicalId={match.trial.canonicalId} language={language} />
     <div className="visual-card-actions">
       <a href={match.trial.sources[0].url} target="_blank" rel="noreferrer">{language === "en" ? "Open registry" : "查看登錄"}</a>
       <button className="shortlist-toggle" type="button" aria-pressed={shortlisted} disabled={shortlistDisabled} onClick={onToggleShortlist}>{shortlisted ? (language === "en" ? "Added to compare" : "已加入比較") : shortlistDisabled ? (language === "en" ? "Comparison full" : "比較已滿") : (language === "en" ? "Add to compare" : "加入比較")}</button>

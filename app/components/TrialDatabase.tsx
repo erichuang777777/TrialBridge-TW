@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { NormalizedTrial, RegionTier, TrialDataState } from "@/lib/trials/types";
 import type { RegistryQueryPlan } from "@/lib/trials/queryBridge";
-import { formatRegistryDuration, registrySourceTimeoutMs } from "@/lib/trials/reliability";
+import { formatRegistryDuration } from "@/lib/trials/reliability";
 import { createPublicTrialSearchPath, defaultPublicTrialCondition, normalizePublicTrialCondition, normalizeShareablePublicTrialCondition, parsePublicTrialSearchParams } from "@/lib/trials/searchUrl";
 import { createBoundedPublicSearchOutput } from "@/lib/webmcp/publicSearchOutput";
 import { publicTrialFormContractCore } from "@/lib/webmcp/toolContractCore";
+import { TrialRevalidation } from "./TrialRevalidation";
 import {
   conditionBadges,
   phaseLabel,
@@ -65,6 +66,7 @@ const recruitmentOptions: Array<{ value: TrialRecruitmentFilter; label: string }
 function sourceStateLabel(source: NonNullable<SearchResponse["sources"]>[number]) {
   if (!source.dataState) return `queried ${new Date(source.retrievedAt).toLocaleDateString("en-CA")}`;
   const date = new Date(source.dataState.loadedAt).toLocaleDateString("en-CA");
+  if (source.dataState.mode === "indexed") return `${source.dataState.storage ?? "local"} index · synchronized ${date}`;
   if (source.dataState.storage === "scheduled_file") {
     return source.dataState.mode === "stale_cache"
       ? `scheduled snapshot stale · ${date} · refresh job required`
@@ -223,7 +225,7 @@ export function TrialDatabase() {
       </form>
 
       <div className="database-results" aria-busy={loading}>
-        {loading && <div className="results-loading" role="status"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>Searching public registries in Taiwan-first order…</strong><span aria-hidden="true">Elapsed {searchElapsedSeconds}s</span></div><p>Each registry stops after {registrySourceTimeoutMs / 1_000} seconds. If one source is unavailable, verified results from the other source will still appear.</p></div>}
+        {loading && <div className="results-loading" role="status"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>Searching the Taiwan-first public trial index…</strong><span aria-hidden="true">Elapsed {searchElapsedSeconds}s</span></div><p>Indexed records normally return quickly. On a new installation with no index yet, TrialBridge may fall back to the public registries and clearly label that live result.</p></div>}
         {!loading && error && <div className="error-panel" role="alert"><strong>Search stopped</strong><p>{error}</p>{(result.failures?.length ?? 0) > 0 && <ul className="registry-error-sources">{result.failures!.map((failure) => <li key={failure.registry}><strong>{failure.registry}</strong><span>{failure.code === "SOURCE_TIMEOUT" ? "Timed out" : "Unavailable"} · {formatRegistryDuration(failure.durationMs)}</span></li>)}</ul>}<button onClick={() => void search(submittedQuery)}>Try again</button></div>}
         {!loading && !error && <>
           <div className="results-toolbar">
@@ -272,6 +274,7 @@ function TrialDatabaseCard({ trial }: { trial: NormalizedTrial }) {
     </div>
     {contacts.length > 0 && <div className="trial-contact-summary"><strong>Investigator / study contact</strong>{contacts.map((contact, index) => <span key={`${contact.role}:${contact.name}:${index}`}>{contact.name}{contact.affiliation ? ` · ${contact.affiliation}` : contact.facility ? ` · ${contact.facility}` : ""}<small>{contact.role === "investigator" ? contact.investigatorRole?.replaceAll("_", " ") || "registry investigator" : `${contact.role} contact`}</small></span>)}</div>}
     <details><summary>View registry details</summary>{trial.summary && <p>{trial.summary}</p>}{trial.interventions.length > 0 && <p><strong>Interventions:</strong> {trial.interventions.join(", ")}</p>}<p><strong>Eligibility:</strong> {[trial.eligibility.minimumAge, trial.eligibility.maximumAge, trial.eligibility.sex].filter(Boolean).join(" · ") || "See source registry"}</p><p><strong>Recruitment source text:</strong> {trial.recruitment.raw || "Not published"}</p></details>
+    <TrialRevalidation canonicalId={trial.canonicalId} />
     <div className="trial-sources">{trial.sources.map((source) => <a key={`${source.registry}:${source.registryId}`} href={source.url} target="_blank" rel="noreferrer">{source.registry}: {source.registryId}</a>)}</div>
   </article>;
 }

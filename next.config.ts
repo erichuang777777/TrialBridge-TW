@@ -11,7 +11,18 @@ const securityHeaders = [
   },
 ];
 
+const runtimeTrialIndexFiles = [
+  "./var/trial-index/trials.sqlite",
+  "./var/trial-index/trials.sqlite-wal",
+  "./var/trial-index/trials.sqlite-shm",
+];
+
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR?.trim() || ".next",
+  outputFileTracingExcludes: {
+    "/": runtimeTrialIndexFiles,
+    "/*": runtimeTrialIndexFiles,
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

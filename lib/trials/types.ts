@@ -1,4 +1,4 @@
-export type RegistryName = "TFDA" | "ClinicalTrials.gov";
+export type RegistryName = "TFDA" | "ClinicalTrials.gov" | "NCI CTS" | "WHO ICTRP" | "jRCT" | "JPRN" | "CRiS" | "CTIS" | "ANZCTR" | "ChiCTR";
 export type RegionTier = "taiwan" | "asia" | "world" | "unknown";
 export type RecruitmentCategory =
   | "open"
@@ -70,9 +70,9 @@ export interface TrialSearchInput {
 }
 
 export interface TrialDataState {
-  mode: "live" | "fresh_cache" | "stale_cache";
+  mode: "live" | "fresh_cache" | "stale_cache" | "indexed";
   loadedAt: string;
-  storage?: "process_memory" | "scheduled_file";
+  storage?: "process_memory" | "scheduled_file" | "sqlite" | "postgres";
 }
 
 export interface TrialAdapterResult {

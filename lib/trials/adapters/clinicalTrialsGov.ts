@@ -12,9 +12,9 @@ import type {
   TrialSearchInput,
 } from "../types.ts";
 
-const API_BASE = "https://clinicaltrials.gov/api/v2";
+export const CLINICAL_TRIALS_GOV_API_BASE = "https://clinicaltrials.gov/api/v2";
 const OPEN_STATUSES = ["RECRUITING"];
-const RESPONSE_FIELDS = [
+export const CLINICAL_TRIALS_GOV_RESPONSE_FIELDS = [
   "NCTId", "BriefTitle", "OfficialTitle", "OrgStudyIdInfo", "SecondaryIdInfo",
   "OverallStatus", "LastUpdatePostDate", "BriefSummary", "Condition", "StudyType", "Phase",
   "InterventionName", "InterventionType", "EligibilityCriteria", "MinimumAge", "MaximumAge", "Sex",
@@ -70,10 +70,31 @@ const rawStudySchema = z.object({
 const searchResponseSchema = z.object({
   studies: z.array(rawStudySchema),
   totalCount: z.number().optional(),
+  nextPageToken: z.string().optional(),
 });
 
 const versionSchema = z.object({ dataTimestamp: z.string().optional() });
 type RawStudy = z.infer<typeof rawStudySchema>;
+
+export interface ClinicalTrialsGovBulkLoadOptions {
+  condition?: string;
+  queryTerm?: string;
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+  maxPages?: number;
+  onPage?: (progress: { page: number; received: number; totalCount?: number }) => void;
+  onTrialsPage?: (trials: NormalizedTrial[], progress: { page: number; received: number; totalCount?: number }) => void | Promise<void>;
+  collectTrials?: boolean;
+}
+
+export interface ClinicalTrialsGovBulkLoadResult {
+  trials: NormalizedTrial[];
+  sourceVersion?: string;
+  totalCount?: number;
+  complete: boolean;
+  pages: number;
+  receivedCount: number;
+}
 
 function recruitmentCategory(status: string): RecruitmentCategory {
   if (status === "RECRUITING") return "open";
@@ -159,6 +180,57 @@ export function normalizeClinicalTrialsGovStudy(raw: RawStudy, retrievedAt: stri
   });
 }
 
+export async function fetchClinicalTrialsGovVersion(fetcher: typeof fetch = fetch, signal?: AbortSignal) {
+  const response = await fetcher(`${CLINICAL_TRIALS_GOV_API_BASE}/version`, { headers: { Accept: "application/json" }, cache: "no-store", signal });
+  if (!response.ok) throw new Error(`ClinicalTrials.gov version returned HTTP ${response.status}`);
+  return versionSchema.parse(await response.json()).dataTimestamp;
+}
+
+export async function loadClinicalTrialsGovCancerTrials(options: ClinicalTrialsGovBulkLoadOptions = {}): Promise<ClinicalTrialsGovBulkLoadResult> {
+  const fetcher = options.fetcher ?? fetch;
+  const retrievedAt = new Date().toISOString();
+  const sourceVersion = await fetchClinicalTrialsGovVersion(fetcher, options.signal);
+  const trials: NormalizedTrial[] = [];
+  let nextPageToken: string | undefined;
+  let totalCount: number | undefined;
+  let page = 0;
+  let receivedCount = 0;
+  const maxPages = Math.max(1, Math.min(options.maxPages ?? Number.POSITIVE_INFINITY, 10_000));
+  do {
+    options.signal?.throwIfAborted();
+    const url = new URL(`${CLINICAL_TRIALS_GOV_API_BASE}/studies`);
+    url.searchParams.set("query.cond", options.condition?.trim() || "cancer");
+    if (options.queryTerm?.trim()) url.searchParams.set("query.term", options.queryTerm.trim());
+    url.searchParams.set("pageSize", "1000");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("countTotal", page === 0 ? "true" : "false");
+    url.searchParams.set("fields", CLINICAL_TRIALS_GOV_RESPONSE_FIELDS.join(","));
+    if (nextPageToken) url.searchParams.set("pageToken", nextPageToken);
+    const response = await fetcher(url, { headers: { Accept: "application/json" }, cache: "no-store", signal: options.signal });
+    if (!response.ok) throw new Error(`ClinicalTrials.gov returned HTTP ${response.status}`);
+    const payload = searchResponseSchema.parse(await response.json());
+    page += 1;
+    totalCount ??= payload.totalCount;
+    const normalizedPage = payload.studies.map((study) => normalizeClinicalTrialsGovStudy(study, retrievedAt));
+    receivedCount += normalizedPage.length;
+    if (options.collectTrials !== false) trials.push(...normalizedPage);
+    nextPageToken = payload.nextPageToken;
+    const progress = { page, received: receivedCount, totalCount };
+    await options.onTrialsPage?.(normalizedPage, progress);
+    options.onPage?.(progress);
+  } while (nextPageToken && page < maxPages);
+  return { trials, sourceVersion, totalCount, complete: !nextPageToken, pages: page, receivedCount };
+}
+
+export async function revalidateClinicalTrialsGovTrial(nctId: string, fetcher: typeof fetch = fetch, signal?: AbortSignal) {
+  const normalized = normalizeIdentifier(nctId);
+  if (!/^NCT\d{8}$/i.test(normalized)) throw new Error("A valid NCT identifier is required");
+  const response = await fetcher(`${CLINICAL_TRIALS_GOV_API_BASE}/studies/${encodeURIComponent(normalized)}`, { headers: { Accept: "application/json" }, cache: "no-store", signal });
+  if (response.status === 404) return undefined;
+  if (!response.ok) throw new Error(`ClinicalTrials.gov returned HTTP ${response.status}`);
+  return normalizeClinicalTrialsGovStudy(rawStudySchema.parse(await response.json()), new Date().toISOString());
+}
+
 export class ClinicalTrialsGovAdapter implements TrialRegistryAdapter {
   readonly registry = "ClinicalTrials.gov" as const;
   private readonly fetcher: typeof fetch;
@@ -169,17 +241,17 @@ export class ClinicalTrialsGovAdapter implements TrialRegistryAdapter {
 
   async search(input: TrialSearchInput, options: TrialAdapterSearchOptions = {}): Promise<TrialAdapterResult> {
     const retrievedAt = new Date().toISOString();
-    const searchUrl = new URL(`${API_BASE}/studies`);
+    const searchUrl = new URL(`${CLINICAL_TRIALS_GOV_API_BASE}/studies`);
     searchUrl.searchParams.set("query.cond", input.condition);
     searchUrl.searchParams.set("pageSize", String(input.pageSize));
     searchUrl.searchParams.set("format", "json");
     searchUrl.searchParams.set("countTotal", "true");
-    searchUrl.searchParams.set("fields", RESPONSE_FIELDS.join(","));
+    searchUrl.searchParams.set("fields", CLINICAL_TRIALS_GOV_RESPONSE_FIELDS.join(","));
     if (!input.includeNotOpen) searchUrl.searchParams.set("filter.overallStatus", OPEN_STATUSES.join("|"));
 
     const [studiesResponse, versionResponse] = await Promise.all([
       this.fetcher(searchUrl, { headers: { Accept: "application/json" }, cache: "no-store", signal: options.signal }),
-      this.fetcher(`${API_BASE}/version`, { headers: { Accept: "application/json" }, cache: "no-store", signal: options.signal }),
+      this.fetcher(`${CLINICAL_TRIALS_GOV_API_BASE}/version`, { headers: { Accept: "application/json" }, cache: "no-store", signal: options.signal }),
     ]);
     if (!studiesResponse.ok) throw new Error(`ClinicalTrials.gov returned HTTP ${studiesResponse.status}`);
     const payload = searchResponseSchema.parse(await studiesResponse.json());

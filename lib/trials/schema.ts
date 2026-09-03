@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const trialSourceSchema = z.object({
-  registry: z.enum(["TFDA", "ClinicalTrials.gov"]),
+  registry: z.enum(["TFDA", "ClinicalTrials.gov", "NCI CTS", "WHO ICTRP", "jRCT", "JPRN", "CRiS", "CTIS", "ANZCTR", "ChiCTR"]),
   registryId: z.string().min(1),
   url: z.string().url(),
   retrievedAt: z.string().datetime(),
@@ -56,4 +56,8 @@ export const trialSearchRequestSchema = z.object({
   condition: z.string().trim().min(2).max(120),
   pageSize: z.number().int().min(1).max(100).default(30),
   includeNotOpen: z.boolean().default(false),
+}).strict();
+
+export const trialRevalidationRequestSchema = z.object({
+  canonicalId: z.string().trim().min(3).max(160).regex(/^(?:ctgov|tfda):[a-z0-9._-]+$/i),
 }).strict();

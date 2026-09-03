@@ -105,7 +105,8 @@ test("the public database exposes a deterministic bilingual registry query bridg
   assert.match(database, /fresh cache · snapshot/);
   assert.match(database, /stale cache · snapshot/);
   assert.match(database, /refresh requested/);
-  assert.match(database, /Each registry stops after/);
+  assert.match(database, /Searching the Taiwan-first public trial index/);
+  assert.match(database, /fall back to the public registries/);
   assert.match(database, /searchElapsedSeconds/);
   assert.match(database, /Partial registry results/);
   assert.match(database, /formatRegistryDuration/);

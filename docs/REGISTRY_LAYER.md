@@ -1,5 +1,19 @@
 # Registry layer
 
+## Persistent public Trial Index
+
+UI search, guided matching/chat, and `search_public_cancer_trials` now share one catalog service. The service reads the persistent public index when any synchronized records exist and retains the bounded live adapters only as first-run or recovery fallback. Patient-authored notes, masked text, confirmed profiles, prompts, and model output are outside this database.
+
+Local development defaults to `var/trial-index/trials.sqlite`. A deployed multi-instance service sets `TRIAL_INDEX_BACKEND=postgres` and `DATABASE_URL`; the equivalent PostgreSQL schema is recorded in `docs/sql/001_trial_index_postgres.sql`. Both backends store normalized source payloads, stable content hashes that exclude retrieval time, a narrow discovery projection (title, identifiers, conditions, interventions, and published locations), source state, and append-only ingestion receipts. Full eligibility text stays in the source-linked payload for comparison but is intentionally excluded from the scan field. TFDA uses an internal receipt-plus-protocol key because one receipt can contain multiple public protocol rows.
+
+`npm run sync:trial-index -- --source=all` performs the initial collection. ClinicalTrials.gov is streamed into a staging table in 1,000-record pages so the full cancer corpus is not held in memory. Only a complete final page commits; cancellation, truncation, or an upstream failure removes staging rows and preserves the last complete searchable index. A later run first reads `/api/v2/version`; an unchanged `dataTimestamp` is recorded as skipped. Changed versions use a two-day overlapping update-date query and merge only the returned records. The scheduled weekly `--force` load reconciles removals with a complete corpus. TFDA is downloaded and validated as one bounded full export, then atomically replaces that source inside the index. The supplied GitHub Actions schedules run at 02:00 Asia/Taipei and refuse to run without the durable `TRIAL_INDEX_DATABASE_URL` secret.
+
+`/data-health` and `/api/data-health` expose record counts, source versions, last success, changed/removed counts, failures, and recent runs without paths, credentials, registry payloads, or patient data. `/api/health` separately reports `patientPersistence=none` and `persistence=public_registry_index_only`.
+
+An exact displayed ClinicalTrials.gov record can be rechecked through `/api/trials/revalidate`; the result compares recruitment, published site/contact counts, and source update date with the index. TFDA returns an explicit manual-confirmation limitation because its current export has no dependable single-record recruitment/site endpoint. Neither result determines eligibility.
+
+NCI terminology is collected separately with `npm run sync:nci-terminology`. The small versioned, atomic no-patient-data snapshot is bundled under `data/public` so deployments do not need a request-time NCI call; it expands local public search terms only. The strict WHO Trial Registration Data Set normalizer is available as the contract boundary for jRCT/JPRN, CRiS, CTIS, ANZCTR, ChiCTR, and WHO ICTRP records; live ingestion remains disabled until each source's current API and reuse terms are approved. WHO ICTRP is shown as `rights_review`, not an active commercial feed.
+
 ## Official sources
 
 - TFDA Taiwan drug clinical-trial status dataset: <https://data.gov.tw/dataset/177198>. Monthly, Traditional Chinese, Taiwan-approved drug trials, Open Government Data License 1.0.

@@ -276,7 +276,7 @@ const quickJudgeSurface = readFileSync("app/webmcp/quickstart/_components/QuickJ
 for (const marker of ["Three-minute judge demo", "QuickJudgeConsole", "No patient data required", "/trials?condition=", "/match?demo=synthetic", "/webmcp/evidence.json"]) {
   check(quickJudgePage.includes(marker), `Three-minute judge route is missing ${marker}.`);
 }
-for (const marker of ["buildTrialBridgeTools", "exposedTo: [location.origin]", "getTools({ fromOrigins: [location.origin] })", "executeSafeMethodToolCompat", "quickJudgeDemoContract.executionTimeoutMs", 'role="status" aria-atomic="true"']) {
+for (const marker of ["buildTrialBridgeTools", "exposedTo: [location.origin]", "getTools({ fromOrigins: [location.origin] })", "executeSafeMethodToolCompat", "quickJudgeDemoContract.executionTimeoutMs", "navigator.clipboard.writeText(webMcpLocalTestingFlag)", "Copy Chrome flag", "choose Enabled, relaunch", 'role="status" aria-atomic="true"']) {
   check(quickJudgeSurface.includes(marker), `Three-minute judge console is missing ${marker}.`);
 }
 check(quickJudgeDemoContract.route === "/webmcp/quickstart" && quickJudgeDemoContract.targetMinutes === 3, "Three-minute judge route contract is invalid.");

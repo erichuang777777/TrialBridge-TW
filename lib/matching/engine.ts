@@ -1,5 +1,6 @@
 import { confirmedProfileSchema, type ConfirmedProfile } from "../profile/schema.ts";
 import { searchTrialRegistries } from "../trials/search.ts";
+import { searchTrialCatalog } from "../trials/index/catalog.ts";
 import { publishedSiteRegion } from "../trials/presentation.ts";
 import type { NormalizedTrial, TrialRegistryAdapter } from "../trials/types.ts";
 import { deriveDetailedCriterionEvidence, derivePotentialInterventionExclusions, type DetailedCriterionEvidence, type PotentialExclusionSignal } from "./criterionEvidence.ts";
@@ -116,14 +117,12 @@ export async function matchConfirmedProfile(profileInput: ConfirmedProfile, adap
   const profile = confirmedProfileSchema.parse(profileInput);
   const condition = deriveConditionQuery(profile);
   const cancerFacts = factsFor(profile, ["cancer_type", "primary_site", "histology"]);
-  const result = await searchTrialRegistries(
-    { condition, pageSize: 50, includeNotOpen: true },
-    adapters,
-    {
+  const registryConditions = {
       TFDA: cancerFacts.map((fact) => fact.displayZhHant).join(" ").slice(0, 120),
       "ClinicalTrials.gov": cancerFacts.map((fact) => fact.displayEn).join(" ").slice(0, 120),
-    },
-    { signal },
-  );
+  };
+  const result = adapters
+    ? await searchTrialRegistries({ condition, pageSize: 50, includeNotOpen: true }, adapters, registryConditions, { signal })
+    : await searchTrialCatalog({ condition, pageSize: 50, includeNotOpen: true }, registryConditions, { signal });
   return { ...result, matches: result.trials.map((trial) => assessTrial(profile, trial)) };
 }

@@ -1,0 +1,57 @@
+name: Sync public trial index
+
+on:
+  schedule:
+    # Tue-Sat 02:00 Asia/Taipei: incremental after the Mon-Fri CTG refresh.
+    - cron: "0 18 * * 1-5"
+    # Monday 02:00 Asia/Taipei: full reconciliation, including removals.
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Public registry to synchronize
+        required: true
+        default: all
+        type: choice
+        options: [all, tfda, ctgov]
+      force:
+        description: Ignore an unchanged ClinicalTrials.gov dataTimestamp
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: trial-index-production-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      TRIAL_INDEX_BACKEND: postgres
+      DATABASE_URL: ${{ secrets.TRIAL_INDEX_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Require durable production database
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "TRIAL_INDEX_DATABASE_URL is not configured; refusing an ephemeral scheduled sync."
+            exit 1
+          fi
+      - name: Synchronize public registries
+        shell: bash
+        env:
+          SELECTED_SOURCE: ${{ inputs.source || 'all' }}
+          FORCE_SYNC: ${{ inputs.force || false }}
+          SCHEDULE_EXPRESSION: ${{ github.event.schedule }}
+        run: |
+          args=("--source=$SELECTED_SOURCE")
+          if [ "$FORCE_SYNC" = "true" ] || [ "$SCHEDULE_EXPRESSION" = "0 18 * * 0" ]; then args+=("--force"); fi
+          npm run sync:trial-index -- "${args[@]}"

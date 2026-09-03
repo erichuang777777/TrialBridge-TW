@@ -2,6 +2,7 @@ import { requiredCloudModel, validatedCloudModel } from "../../../lib/llm/cloud.
 import { validatedLoopbackBaseUrl } from "../../../lib/llm/ollama.ts";
 import { inspectTfdaSnapshotDeployment } from "../../../lib/trials/tfdaSnapshot.ts";
 import { getWebMcpOriginTrialDeploymentState } from "../../../lib/webmcp/originTrial.ts";
+import { getTrialIndexStore } from "../../../lib/trials/index/store.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,12 +10,18 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const originTrial = getWebMcpOriginTrialDeploymentState();
   const tfdaSnapshot = await inspectTfdaSnapshotDeployment();
+  let trialIndex: Awaited<ReturnType<ReturnType<typeof getTrialIndexStore>["health"]>> | { status: "unavailable"; containsPatientData: false; message: string };
   let configuration: "ready" | "invalid" = "ready";
   try {
     validatedCloudModel();
     validatedLoopbackBaseUrl();
   } catch {
     configuration = "invalid";
+  }
+  try {
+    trialIndex = await getTrialIndexStore().health();
+  } catch {
+    trialIndex = { status: "unavailable", containsPatientData: false, message: "Public trial index health is temporarily unavailable." };
   }
   if (originTrial.status === "misconfigured") configuration = "invalid";
   if (["expired", "missing", "misconfigured"].includes(tfdaSnapshot.status)) configuration = "invalid";
@@ -28,7 +35,9 @@ export async function GET() {
       cloudModel: requiredCloudModel,
       inference: "remote-cloud-only",
       proxyBoundary: "loopback-server-proxy",
-      persistence: "none",
+      patientPersistence: "none",
+      persistence: "public_registry_index_only",
+      trialIndex,
       tfdaSnapshot,
       webmcp: "progressive-enhancement",
       originTrial: {

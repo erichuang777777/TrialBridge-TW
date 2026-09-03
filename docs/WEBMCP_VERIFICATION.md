@@ -2,7 +2,7 @@
 
 ## Concise judge route
 
-`/webmcp/quickstart` is a three-minute, no-PHI entry point. It constructs the same two public imperative definitions as the product, registers them with an AbortSignal and `exposedTo: [location.origin]`, discovers only from the current origin, and checks `Permissions-Policy`, opener isolation, and MIME protection. Its only executable action is `trialbridge_method`: no input, ten-second cancellation cap, no model or registry request, no patient context, no workflow mutation, and no persistence. The resulting receipt is bounded and tab-local. Deterministic tests and `npm run verify:webmcp` cover this contract; current-browser interaction and Inspector selection remain separate acceptance boundaries.
+`/webmcp/quickstart` is a three-minute, no-PHI entry point. It constructs the same two public imperative definitions as the product, registers them with an AbortSignal and `exposedTo: [location.origin]`, discovers only from the current origin, and checks `Permissions-Policy`, opener isolation, and MIME protection. When the native preview is absent, the same console provides one-click copy of the Chrome testing flag, explicit Enabled/relaunch/reopen recovery, and an atomic copy result; this guidance does not count as browser evidence. Its only executable action is `trialbridge_method`: no input, ten-second cancellation cap, no model or registry request, no patient context, no workflow mutation, and no persistence. The resulting receipt is bounded and tab-local. Deterministic tests and `npm run verify:webmcp` cover this contract; current-browser interaction and Inspector selection remain separate acceptance boundaries.
 
 ## Agent discovery and Lighthouse evidence
 

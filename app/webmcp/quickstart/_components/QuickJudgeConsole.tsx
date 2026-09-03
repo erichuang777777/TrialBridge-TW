@@ -17,6 +17,7 @@ export function QuickJudgeConsole() {
   const [executionState, setExecutionState] = useState<ExecutionState>("idle");
   const [receipt, setReceipt] = useState<QuickMethodReceipt>();
   const [elapsed, setElapsed] = useState(0);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const registeredTools = useRef<WebMCP.RegisteredTool[]>([]);
   const executionController = useRef<AbortController | null>(null);
 
@@ -102,6 +103,16 @@ export function QuickJudgeConsole() {
     executionController.current?.abort(new DOMException("Judge cancelled safe method.", "AbortError"));
   }
 
+  async function copyPreviewFlag() {
+    try {
+      await navigator.clipboard.writeText(webMcpLocalTestingFlag);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 2_000);
+    } catch {
+      setCopyState("failed");
+    }
+  }
+
   const headerCount = Object.values(headers).filter(Boolean).length;
   const browserStatus = browserState === "checking" ? "Checking this browser"
     : browserState === "registering" ? "Registering two public tools"
@@ -114,6 +125,11 @@ export function QuickJudgeConsole() {
         : executionState === "cancelled" ? "Cancelled. No page or workflow state changed."
           : executionState === "timed_out" ? "Stopped after 10 seconds. No result was retained."
             : "The safe method did not return a valid bounded receipt. Use the full lab for diagnostics.";
+  const copyStatus = copyState === "copied"
+    ? "Chrome flag address copied. Paste it into Chrome, choose Enabled, relaunch, then reopen this page."
+    : copyState === "failed"
+      ? "Copy is unavailable. Select and copy the visible Chrome flag address."
+      : "";
 
   return <section className={`quick-judge-console quick-browser-${browserState}`} aria-labelledby="quick-console-title">
     <div className="quick-console-heading"><div><p className="eyebrow">Live current-browser check</p><h2 id="quick-console-title">Discover, then execute one safe method.</h2></div><span role="status" aria-atomic="true">{browserStatus}</span></div>
@@ -122,7 +138,11 @@ export function QuickJudgeConsole() {
       <li className={registeredNames.length === quickJudgeDemoContract.publicToolNames.length ? "check-pass" : undefined}><i aria-hidden="true" /><small>Public capability</small><strong>{registeredNames.length}/2 origin-scoped tools</strong></li>
       <li className={headerCount === 3 ? "check-pass" : undefined}><i aria-hidden="true" /><small>Security headers</small><strong>{headerCount}/3 verified</strong></li>
     </ul>
-    {browserState === "unsupported" && <aside className="quick-browser-recovery"><strong>No visitor extension is required.</strong><p>For local Chrome testing, enable the native preview, relaunch, then reopen this page.</p><code>{webMcpLocalTestingFlag}</code><a href="/webmcp#browser-setup-title">Open setup details</a></aside>}
+    {browserState === "unsupported" && <aside className="quick-browser-recovery">
+      <div><strong>No visitor extension is required.</strong><p>Enable Chrome&apos;s native preview, relaunch, then reopen this page.</p><code>{webMcpLocalTestingFlag}</code></div>
+      <div className="quick-browser-recovery-actions"><button type="button" onClick={() => void copyPreviewFlag()}>{copyState === "copied" ? "Copied" : "Copy Chrome flag"}</button><a href="/webmcp#webmcp-browser-setup-title">Setup details</a></div>
+      <p className="quick-browser-copy-status" role="status" aria-atomic="true">{copyStatus}</p>
+    </aside>}
     <section className={`quick-method-check quick-method-${executionState}`} aria-labelledby="quick-method-title" aria-busy={executionState === "running"}>
       <div><span>Step 02 · Explicit execution</span><strong id="quick-method-title">Run <code>trialbridge_method</code></strong><p>No input, network request, model call, registry search, patient context, or write authority.</p></div>
       {receipt && <div className="quick-method-receipt"><dl><div><dt>Search order</dt><dd>{receipt.searchOrder.join(" → ")}</dd></div><div><dt>Sources</dt><dd>{receipt.sources.join(" + ")}</dd></div><div><dt>Privacy</dt><dd>{receipt.privacy}</dd></div><div><dt>Limit</dt><dd>{receipt.limitation}</dd></div></dl></div>}

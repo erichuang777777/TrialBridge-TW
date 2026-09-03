@@ -9,6 +9,8 @@
 5. Run `npm test`, `npm run typecheck`, `npm run build`, `npm run verify:registries`, `npm run verify:http`, and `npm run audit:clean-room`.
 6. With the application running, explicitly run `npm run verify:cloud` when a real provider-availability check is intended. This command is not part of CI and uses one cloud request.
 
+`npm run build` intentionally opts into Next.js's supported Webpack backend. Next.js 16.3.4 Turbopack output tracing can panic on Windows when a live local SQLite WAL sidecar is locked by the registry synchronizer. The mutable `var/trial-index` database files are explicitly excluded from server traces and must remain runtime storage rather than build artifacts.
+
 In `npm run dev`, a clearly marked shortcut bar can open the note, masking, summary-confirmation, or trial-card stages with synthetic fixture data. It exists only for interface development; the reducer rejects stage-jump events outside `NODE_ENV=development`, and the fixture must never contain patient data.
 
 ## Public deployment is intentionally gated
@@ -17,7 +19,25 @@ The server-side localhost proxy reaches the server machine, not a visitor's comp
 
 The MVP applies fixed-window, per-process limits before parsing bodies on cloud extraction, guided intake, result dialogue, matching, and public registry search. It hashes the trusted proxy address and never uses medical payloads as a key. A public multi-instance deployment must replace the process-local rate limiter with a reviewed shared store, configure the scheduled TFDA snapshot below, and configure the edge or trusted proxy to overwrite forwarded-address headers. Keep monitoring metadata-only.
 
-## Scheduled TFDA ingestion
+## Shared public Trial Index
+
+Patient-facing requests must read the same pre-collected public index for the UI, guided chat/matching, and WebMCP. Development defaults to the ignored `var/trial-index/trials.sqlite`; production must use a durable PostgreSQL service:
+
+```text
+TRIAL_INDEX_BACKEND=postgres
+DATABASE_URL=postgres://...
+TRIAL_INDEX_SYNC_SCHEDULE=0 2 * * * Asia/Taipei
+```
+
+Initialize and synchronize with `npm run sync:trial-index -- --source=all`. ClinicalTrials.gov checks its published `dataTimestamp` and skips an unchanged corpus; later runs fetch records whose public update date falls within an overlapping window and merge them atomically. The weekly `--force` load performs a complete reconciliation, including removals. TFDA uses stable content hashes. ClinicalTrials.gov pages first enter a run-scoped staging table, and only a completed run changes the visible source. A failed or cancelled run removes its staging rows and retains the previous complete public index.
+
+The included `.github/workflows/sync-trial-index.yml` runs daily at 02:00 Asia/Taipei and refuses to use an ephemeral runner database. Configure the `TRIAL_INDEX_DATABASE_URL` repository secret before enabling it. Provisioning the database, secret, backups, alerting, retention, and a restore drill remains a deployment responsibility.
+
+`GET /data-health` and `GET /api/data-health` expose record counts, source versions, freshness, and recent ingestion runs without paths, records, secrets, query terms, or patient data. Exact displayed ClinicalTrials.gov records can be rechecked through `POST /api/trials/revalidate`; revalidation reports public-record changes but never decides eligibility. TFDA exact-record revalidation remains explicitly unsupported until a dependable official endpoint is available.
+
+A versioned NCI Thesaurus cancer-group snapshot is bundled under `data/public` for request-time synonym expansion. Run `npm run sync:nci-terminology` as a deliberate source update and review the changed concepts before release. The WHO TRDS regional adapter is a normalization contract only: WHO ICTRP, jRCT/JPRN, CRiS, CTIS, ANZCTR, and ChiCTR live ingestion stays disabled until each source's access, attribution, freshness, and intended-use terms are reviewed.
+
+## Legacy scheduled TFDA artifact
 
 Set the same absolute file path in the ingestion job and every application instance. The location must be a shared durable volume, not the image layer or a temporary directory:
 
@@ -53,7 +73,7 @@ WebMCP and ordinary HTTP cancellation propagate through `request.signal` to regi
 
 The live diagnostic first creates a schema-1.1 browser receipt only after an explicit download. Its lifecycle section contains the fixed six check IDs/outcomes, bounded `toolchange` count, and no tool arguments or outputs. The adjacent six-check Inspector kit keeps outcomes only in the current React tab and can create a second, download-only manual receipt. It stores case IDs and outcomes, the exact origin, Chrome major version, and summary counts; it excludes prompts, tool arguments/outputs, and health information. `npm run verify:webmcp:receipts -- <runtime.json> [manual.json]` validates both structures, while preserving `manual_self_attestation` as a separate evidence class. Do not ingest either local receipt into application telemetry or patient records.
 
-Before release, resolve every item in `READINESS.md`, provision and exercise the scheduled TFDA job on shared durable storage, replace process-local limits with distributed rate limiting and payload-free monitoring, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
+Before release, resolve every item in `READINESS.md`, provision and exercise the PostgreSQL Trial Index synchronization and restore path, replace process-local limits with distributed rate limiting and payload-free monitoring, obtain the exact WebMCP origin-trial token, and complete Chrome Inspector plus accessibility/browser acceptance.
 
 For the exact registered first-party origin, provide both variables during the production build:
 

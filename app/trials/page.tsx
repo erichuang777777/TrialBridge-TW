@@ -21,6 +21,7 @@ export default function TrialsPage() {
         <nav aria-label="Main navigation">
           <Link href="/">Guided matching</Link>
           <Link href="/trials" aria-current="page">Trial database</Link>
+          <Link href="/data-health">Data health</Link>
           <Link className="nav-optional" href="/method">How it works</Link>
           <Link href="/privacy">Privacy</Link>
         </nav>
@@ -29,7 +30,7 @@ export default function TrialsPage() {
       <section className="database-hero" aria-labelledby="database-title">
         <p className="eyebrow">Public trial database · 公開試驗資料庫</p>
         <h1 id="database-title">Search trial registries directly.</h1>
-        <p className="lead">Browse TFDA and ClinicalTrials.gov without entering medical records. Enter a supported cancer term in English or Traditional Chinese; the visible query bridge sends each registry its corresponding language. Results are ordered Taiwan, Asia, then worldwide.</p>
+        <p className="lead">Browse a locally indexed TFDA and ClinicalTrials.gov cancer corpus without entering medical records. The visible bilingual query bridge and shared data layer serve UI, chat, and WebMCP; exact records can be rechecked live before action.</p>
       </section>
 
       <TrialDatabase />

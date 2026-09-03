@@ -23,6 +23,7 @@ export default async function MatchWorkspace({ searchParams }: { searchParams: P
         <nav aria-label="Workspace navigation">
           <Link href="/">Home</Link>
           <Link href="/trials">Trial database</Link>
+          <Link href="/data-health">Data health</Link>
           <Link href="/privacy">Privacy</Link>
         </nav>
       </header>

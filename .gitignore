@@ -13,6 +13,7 @@
 # generated public-registry snapshots belong on durable runtime storage
 /snapshots/
 /var/tfda/
+/var/trial-index/
 
 # misc
 .DS_Store
