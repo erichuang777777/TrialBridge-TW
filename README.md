@@ -9,8 +9,9 @@ This repository is a clean-room rebuild. Its product language, information archi
 - People may paste free-text medical information in Traditional Chinese or English.
 - Direct identifiers are masked in the browser before any model request.
 - The original free text is not persisted by default.
-- The reviewed masked note is sent through the localhost Ollama proxy to `gpt-oss:120b-cloud` only when the person selects the visible cloud-organization action; there is no redundant checkbox.
-- All LLM work uses `gpt-oss:120b-cloud`; local GPU and CPU inference are prohibited.
+- The reviewed masked note is sent to the hosted `gpt-oss:120b` model only when the person selects the visible cloud-organization action; there is no redundant checkbox.
+- All LLM work uses one hosted model on one of two explicit transports: the developer's loopback Ollama proxy (`gpt-oss:120b-cloud`, no key) or Ollama's HTTPS Cloud API (`gpt-oss:120b`, server-only `OLLAMA_API_KEY`). A key with any other host, or a non-loopback URL without a key, fails closed. Local GPU and CPU inference are prohibited on both transports, and the active transport is reported in health and extraction receipts without the key or URL.
+- Cloud extraction streams: the route answers immediately with server-sent events that carry only a character count, and the structured draft is Zod-validated before the final event. This keeps the request alive on hosts with short synchronous limits without exposing partial model text.
 - WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
 - The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, a downloadable tab-local capability receipt, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (55/55 recorded pass; all forbidden and shortlist cases passed).
 - `/webmcp/quickstart` is the three-minute evaluation entrance: it registers and discovers exactly the two public same-origin tools, verifies the three response headers, and lets a judge explicitly execute only the fixed no-input `trialbridge_method`. It accepts no free text, makes no model or registry call, reads no patient context, and persists no result. `/webmcp` remains the full technical appendix.

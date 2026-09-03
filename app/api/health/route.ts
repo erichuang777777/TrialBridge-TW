@@ -1,5 +1,5 @@
 import { requiredCloudModel, validatedCloudModel } from "../../../lib/llm/cloud.ts";
-import { validatedLoopbackBaseUrl } from "../../../lib/llm/ollama.ts";
+import { describeOllamaTransport, resolveOllamaEndpoint, type OllamaTransport } from "../../../lib/llm/ollama.ts";
 import { inspectTfdaSnapshotDeployment } from "../../../lib/trials/tfdaSnapshot.ts";
 import { getWebMcpOriginTrialDeploymentState } from "../../../lib/webmcp/originTrial.ts";
 import { getTrialIndexStore } from "../../../lib/trials/index/store.ts";
@@ -12,9 +12,11 @@ export async function GET() {
   const tfdaSnapshot = await inspectTfdaSnapshotDeployment();
   let trialIndex: Awaited<ReturnType<ReturnType<typeof getTrialIndexStore>["health"]>> | { status: "unavailable"; containsPatientData: false; message: string };
   let configuration: "ready" | "invalid" = "ready";
+  let transport: OllamaTransport | "invalid" = "invalid";
   try {
     validatedCloudModel();
-    validatedLoopbackBaseUrl();
+    // Resolves the endpoint shape only; the key and URL never leave the server.
+    transport = resolveOllamaEndpoint().transport;
   } catch {
     configuration = "invalid";
   }
@@ -34,7 +36,9 @@ export async function GET() {
       configuration,
       cloudModel: requiredCloudModel,
       inference: "remote-cloud-only",
-      proxyBoundary: "loopback-server-proxy",
+      transport,
+      proxyBoundary: transport === "invalid" ? "invalid" : describeOllamaTransport(transport).proxyBoundary,
+      containsProviderCredential: false,
       patientPersistence: "none",
       persistence: "public_registry_index_only",
       trialIndex,

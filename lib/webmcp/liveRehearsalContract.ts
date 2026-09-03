@@ -32,7 +32,7 @@ export const liveAgentRehearsalContract = {
   artifactClass: "live_model_selection_rehearsal_definition_not_browser_evidence",
   route: "/api/demo/webmcp-rehearsal",
   model: "gpt-oss:120b-cloud",
-  transport: "localhost_ollama_proxy",
+  transport: "localhost_ollama_proxy | ollama_cloud_api",
   fixedScenarioIds: liveAgentRehearsalScenarioIds,
   timeoutMs: 30_000,
   sharedRateLimit: { checks: 3, windowMinutes: 10, bucket: "cloud-probe" },

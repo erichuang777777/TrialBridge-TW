@@ -1,13 +1,64 @@
 import { z } from "zod";
 import { profileDraftSchema, type ProfileDraft } from "../profile/schema.ts";
 import { validatedCloudModel } from "./cloud.ts";
-import { validatedLoopbackBaseUrl } from "./ollama.ts";
+import { ollamaRequestHeaders, resolveOllamaEndpoint, type OllamaTransport } from "./ollama.ts";
 
-const ollamaResponseSchema = z.object({
+/** One Ollama chat chunk. A non-streamed reply is the same shape with the full content. */
+const ollamaChunkSchema = z.object({
   model: z.string().trim().min(1).max(200).optional(),
-  message: z.object({ content: z.string() }),
+  message: z.object({ content: z.string() }).optional(),
+  done: z.boolean().optional(),
   done_reason: z.string().optional(),
 });
+
+/** Default server ceiling; deployments with short function limits lower it. */
+export const cloudExtractionTimeoutMs = Math.max(10_000, Math.min(120_000, Number(process.env.CLOUD_EXTRACTION_TIMEOUT_MS) || 120_000));
+
+export interface CloudExtractionProgress {
+  /** Characters of structured draft received so far; never the text itself. */
+  characters: number;
+}
+
+/**
+ * Reads an Ollama chat response that may be newline-delimited JSON chunks
+ * (`stream: true`) or a single JSON object. Only the running character count
+ * leaves this function before validation, so partial model text is never
+ * surfaced to callers.
+ */
+async function readOllamaChatContent(response: Response, onProgress?: (progress: CloudExtractionProgress) => void) {
+  let content = "";
+  let model: string | undefined;
+  let doneReason: string | undefined;
+  const consume = (line: string) => {
+    if (!line.trim()) return;
+    const chunk = ollamaChunkSchema.parse(JSON.parse(line));
+    model ??= chunk.model;
+    content += chunk.message?.content ?? "";
+    if (chunk.done_reason) doneReason = chunk.done_reason;
+    onProgress?.({ characters: content.length });
+  };
+  if (!response.body) {
+    consume(await response.text());
+    return { content, model, doneReason };
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let newline = buffer.indexOf("\n");
+    while (newline >= 0) {
+      consume(buffer.slice(0, newline));
+      buffer = buffer.slice(newline + 1);
+      newline = buffer.indexOf("\n");
+    }
+  }
+  buffer += decoder.decode();
+  if (buffer.trim()) consume(buffer);
+  return { content, model, doneReason };
+}
 const factDomain = z.enum([
   "cancer_type", "primary_site", "histology", "stage", "disease_extent", "biomarker",
   "prior_therapy", "current_therapy", "treatment_date", "performance_status", "organ_function",
@@ -79,22 +130,27 @@ export async function extractProfileInCloud(
   input: CloudExtractionRequest,
   fetcher: typeof fetch = fetch,
   requestSignal?: AbortSignal,
-): Promise<{ draft: ProfileDraft; model: string; reportedModel: string | null; remote: true }> {
+  options: { onProgress?: (progress: CloudExtractionProgress) => void } = {},
+): Promise<{ draft: ProfileDraft; model: string; reportedModel: string | null; transport: OllamaTransport; remote: true }> {
   const parsedInput = cloudExtractionRequestSchema.parse(input);
+  const endpoint = resolveOllamaEndpoint();
   const model = validatedCloudModel();
-  const timeoutSignal = AbortSignal.timeout(120_000);
+  const timeoutSignal = AbortSignal.timeout(cloudExtractionTimeoutMs);
   const signal = requestSignal ? AbortSignal.any([requestSignal, timeoutSignal]) : timeoutSignal;
+  const timeoutMessage = `The cloud model did not finish before the ${Math.round(cloudExtractionTimeoutMs / 1_000)}-second limit.`;
   let response: Response;
   try {
-    response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
+    response = await fetcher(endpoint.chatUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: ollamaRequestHeaders(endpoint),
       body: JSON.stringify({
         model,
-        stream: false,
+        // Streamed chunks let the route answer before short function limits;
+        // the draft is still validated only once the full text has arrived.
+        stream: true,
         think: false,
         format: "json",
-        options: { temperature: 0.1, num_predict: 4096 },
+        options: { temperature: 0.1, num_predict: 3072 },
         messages: [
           { role: "system", content: extractionSystemPrompt(parsedInput.language, parsedInput.subjectRole) },
           { role: "user", content: parsedInput.maskedText },
@@ -104,7 +160,7 @@ export async function extractProfileInCloud(
     });
   } catch (error) {
     if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
-      throw new CloudExtractionError("The cloud model did not finish before the 120-second limit.", "CLOUD_TIMEOUT", model);
+      throw new CloudExtractionError(timeoutMessage, "CLOUD_TIMEOUT", model);
     }
     throw new CloudExtractionError("The Ollama cloud connection failed.", "CLOUD_MODEL_ERROR", model);
   }
@@ -115,12 +171,20 @@ export async function extractProfileInCloud(
   let extracted: z.infer<typeof modelExtractionSchema>;
   let reportedModel: string | null = null;
   try {
-    const payload = ollamaResponseSchema.parse(await response.json());
+    let payload: Awaited<ReturnType<typeof readOllamaChatContent>>;
+    try {
+      payload = await readOllamaChatContent(response, options.onProgress);
+    } catch (error) {
+      if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+        throw new CloudExtractionError(timeoutMessage, "CLOUD_TIMEOUT", model);
+      }
+      throw error;
+    }
     reportedModel = payload.model ?? null;
-    if (payload.done_reason === "length") {
+    if (payload.doneReason === "length") {
       throw new CloudExtractionError("The cloud response was cut off before the structured draft was complete. Please retry.", "CLOUD_OUTPUT_TRUNCATED", model);
     }
-    extracted = modelExtractionSchema.parse(parseJsonContent(payload.message.content));
+    extracted = modelExtractionSchema.parse(parseJsonContent(payload.content));
   } catch (error) {
     if (error instanceof CloudExtractionError) throw error;
     throw new CloudExtractionError("The cloud response could not be validated as a safe structured draft. Please retry.", "CLOUD_INVALID_DRAFT", model);
@@ -143,5 +207,5 @@ export async function extractProfileInCloud(
       ? "This is a draft for your correction, not medical advice or a final trial eligibility decision."
       : "這是供您修正的草稿，不是醫療建議，也不是最終臨床試驗資格判定。",
   });
-  return { draft, model, reportedModel, remote: true };
+  return { draft, model, reportedModel, transport: endpoint.transport, remote: true };
 }
