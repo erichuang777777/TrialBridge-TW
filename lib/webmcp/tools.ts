@@ -148,7 +148,7 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
         const condition = typeof normalizedInput.condition === "string" ? normalizedInput.condition.trim() : "";
         if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
         try {
-          const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: true }), signal: options.signal });
+          const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: true }), signal: options?.signal });
           const payload = await readPublicSearchResponse(response);
           if (!response.ok && (payload.failures?.length ?? 0) === 0) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
           return createBoundedPublicSearchOutput({ query: condition, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
