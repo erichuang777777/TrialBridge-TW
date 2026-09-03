@@ -1,6 +1,6 @@
 import type { NormalizedTrial, RegistryName, TrialSearchInput } from "../types.ts";
 
-export type TrialIndexBackend = "sqlite" | "postgres";
+export type TrialIndexBackend = "sqlite" | "libsql" | "postgres";
 export type TrialIndexSourceStatus = "ready" | "syncing" | "stale" | "failed" | "never_synced";
 
 export interface TrialIndexSourceState {

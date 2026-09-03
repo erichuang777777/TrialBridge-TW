@@ -24,9 +24,9 @@ const payload = await response.json() as {
 if (!response.ok) throw new Error(`${payload.code ?? "CLOUD_PROBE_FAILED"}: ${payload.error ?? `HTTP ${response.status}`}`);
 if (
   payload.status !== "ready"
-  || payload.requestedModel !== "gpt-oss:120b-cloud"
+  || !["gpt-oss:120b-cloud", "gpt-oss:120b"].includes(payload.requestedModel ?? "")
   || typeof payload.reportedModel !== "string"
-  || payload.transport !== "localhost_ollama_proxy"
+  || !["localhost_ollama_proxy", "ollama_cloud_api"].includes(payload.transport ?? "")
   || payload.inference !== "remote-cloud-only"
   || typeof payload.latencyMs !== "number"
   || payload.timeoutMs !== 30_000

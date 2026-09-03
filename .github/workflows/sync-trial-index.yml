@@ -29,20 +29,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
-      TRIAL_INDEX_BACKEND: postgres
-      DATABASE_URL: ${{ secrets.TRIAL_INDEX_DATABASE_URL }}
+      # Production index lives in Turso (libSQL). The read-write token is a
+      # repository secret; Netlify functions use a separate read-only token.
+      TRIAL_INDEX_BACKEND: libsql
+      TRIAL_INDEX_LIBSQL_URL: ${{ secrets.TRIAL_INDEX_LIBSQL_URL }}
+      TRIAL_INDEX_LIBSQL_AUTH_TOKEN: ${{ secrets.TRIAL_INDEX_LIBSQL_AUTH_TOKEN }}
+      TRIAL_INDEX_PROFILE: ${{ vars.TRIAL_INDEX_PROFILE || 'full' }}
+      TFDA_LIVE_FALLBACK: "false"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "22"
           cache: npm
       - run: npm ci
       - name: Require durable production database
         shell: bash
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "TRIAL_INDEX_DATABASE_URL is not configured; refusing an ephemeral scheduled sync."
+          case "$TRIAL_INDEX_LIBSQL_URL" in
+            libsql://*|https://*) ;;
+            *)
+              echo "TRIAL_INDEX_LIBSQL_URL is not a remote libsql:// database; refusing an ephemeral scheduled sync."
+              exit 1
+              ;;
+          esac
+          if [ -z "$TRIAL_INDEX_LIBSQL_AUTH_TOKEN" ]; then
+            echo "TRIAL_INDEX_LIBSQL_AUTH_TOKEN is not configured."
             exit 1
           fi
       - name: Synchronize public registries

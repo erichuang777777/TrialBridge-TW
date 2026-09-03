@@ -71,7 +71,64 @@ test("cloud extraction uses only gpt-oss:120b-cloud and validates its draft", as
   assert.equal(requestBody?.model, "gpt-oss:120b-cloud");
   assert.equal(requestBody?.think, false);
   assert.equal(requestBody?.format, "json");
-  assert.deepEqual((requestBody?.options as { num_predict: number }).num_predict, 4096);
+  assert.equal(requestBody?.stream, true);
+  assert.deepEqual((requestBody?.options as { num_predict: number }).num_predict, 3072);
+  assert.equal(result.transport, "localhost_ollama_proxy");
+});
+
+test("cloud extraction assembles streamed Ollama chunks and reports only character counts", async () => {
+  const content = JSON.stringify(draftFixture);
+  const chunks = [content.slice(0, 40), content.slice(40, 90), content.slice(90)];
+  const lines = chunks.map((piece, index) => JSON.stringify(index === chunks.length - 1
+    ? { model: "gpt-oss:120b", message: { content: piece }, done: true, done_reason: "stop" }
+    : { model: "gpt-oss:120b", message: { content: piece }, done: false }));
+  const mockFetch: typeof fetch = async () => new Response(new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      for (const line of lines) controller.enqueue(encoder.encode(`${line}\n`));
+      controller.close();
+    },
+  }), { headers: { "Content-Type": "application/x-ndjson" } });
+  const progress: number[] = [];
+  const result = await extractProfileInCloud({
+    maskedText: "Synthetic masked oncology note long enough for this test.",
+    subjectRole: "patient",
+    language: "en",
+    cloudUseApproved: true,
+  }, mockFetch, undefined, { onProgress: (update) => progress.push(update.characters) });
+  assert.equal(result.draft.facts[0].domain, "cancer_type");
+  assert.deepEqual(progress, [40, 90, content.length]);
+});
+
+test("an Ollama API key switches every model call to the HTTPS cloud API with a bearer header", async () => {
+  const previous = { key: process.env.OLLAMA_API_KEY, base: process.env.OLLAMA_BASE_URL };
+  process.env.OLLAMA_API_KEY = "test-cloud-api-key-0123456789";
+  delete process.env.OLLAMA_BASE_URL;
+  try {
+    let seenUrl = "";
+    let seenAuthorization: string | null = null;
+    let requestBody: Record<string, unknown> | undefined;
+    const mockFetch: typeof fetch = async (input, init) => {
+      seenUrl = input.toString();
+      seenAuthorization = new Headers(init?.headers).get("authorization");
+      requestBody = JSON.parse(String(init?.body));
+      return Response.json({ model: "gpt-oss:120b", message: { content: JSON.stringify(draftFixture) }, done_reason: "stop" });
+    };
+    const result = await extractProfileInCloud({
+      maskedText: "Synthetic masked oncology note long enough for this test.",
+      subjectRole: "patient",
+      language: "en",
+      cloudUseApproved: true,
+    }, mockFetch);
+    assert.equal(seenUrl, "https://ollama.com/api/chat");
+    assert.equal(seenAuthorization, "Bearer test-cloud-api-key-0123456789");
+    assert.equal(requestBody?.model, "gpt-oss:120b");
+    assert.equal(result.model, "gpt-oss:120b");
+    assert.equal(result.transport, "ollama_cloud_api");
+  } finally {
+    if (previous.key === undefined) delete process.env.OLLAMA_API_KEY; else process.env.OLLAMA_API_KEY = previous.key;
+    if (previous.base === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = previous.base;
+  }
 });
 
 test("cloud extraction tolerates an omitted provider model label", async () => {

@@ -24,26 +24,26 @@ type AssistantMessage = { id: string; role: "user" | "assistant"; content: strin
 const copy = {
   "zh-Hant": {
     heading: "Agent 引導或手動完成",
-    privacy: "您的原文只留在目前頁面。瀏覽器會先遮蔽可辨識資訊；只有在手動按下整理，或於代理模式明確要求整理時，遮蔽內容才會透過 localhost Ollama proxy 傳送至 gpt-oss:120b-cloud。遮蔽不可能百分之百準確。",
+    privacy: "您的原文只留在目前頁面。瀏覽器會先遮蔽可辨識資訊；只有在手動按下整理，或於代理模式明確要求整理時，遮蔽內容才會傳送至遠端雲端模型 gpt-oss:120b。遮蔽不可能百分之百準確。",
     accept: "我了解，繼續", prompt: "請貼上病歷摘要，或用自己的話描述目前狀況",
     helper: "請避免輸入姓名；系統會嘗試遮蔽身分證、電話、Email、病歷號與明確標示的生日或地址。",
     review: "整理病歷並產生確認清單", extract: "重新使用雲端模型整理", back: "返回修改原文",
     cloudNotice: "按下整理後，上方遮蔽內容會交給 gpt-oss:120b-cloud；原始病歷不會傳送。",
     cloudWorking: "gpt-oss:120b-cloud 正在整理內容",
-    waiting: "正在透過 localhost Ollama proxy 等待雲端回覆", timeoutHint: "仍在等待；120 秒後會停止，不會無限卡住。",
+    waiting: "正在等待遠端雲端模型回覆", timeoutHint: "仍在等待；120 秒後會停止，不會無限卡住。",
     expected: "短篇病歷通常約 30–90 秒；較長內容最晚 120 秒停止。", remaining: "距離自動停止最多還有", cancel: "取消並返回", elapsed: "已經過",
     confirm: "逐項確認整理結果", confirmAll: "每一項都要勾選；若不正確，請先修改。",
     finish: "全部確認並建立摘要", clear: "清除此匿名對話",
   },
   en: {
     heading: "Work with an agent or manually",
-    privacy: "Your original text stays on this page. The browser masks identifiers first. The masked content is sent through the localhost Ollama proxy to gpt-oss:120b-cloud only when you select organization in Manual mode or explicitly request it in Agent mode. Masking cannot be perfect.",
+    privacy: "Your original text stays on this page. The browser masks identifiers first. The masked content is sent to the remote cloud model gpt-oss:120b only when you select organization in Manual mode or explicitly request it in Agent mode. Masking cannot be perfect.",
     accept: "I understand — continue", prompt: "Paste a medical summary or describe the current situation",
     helper: "Avoid names. The browser attempts to mask IDs, phone numbers, email, record numbers, labelled birth dates and addresses.",
     review: "Organize note and create review list", extract: "Retry cloud organization", back: "Edit original text",
     cloudNotice: "Selecting organize sends the masked content above to gpt-oss:120b-cloud. The original note is not sent.",
     cloudWorking: "gpt-oss:120b-cloud is organizing the content",
-    waiting: "Waiting for the cloud response through the localhost Ollama proxy", timeoutHint: "Still waiting; the request will stop at 120 seconds instead of hanging indefinitely.",
+    waiting: "Waiting for the remote cloud model to respond", timeoutHint: "Still waiting; the request will stop at 120 seconds instead of hanging indefinitely.",
     expected: "Short notes usually take about 30–90 seconds; longer notes stop at 120 seconds.", remaining: "Automatic stop in no more than", cancel: "Cancel and go back", elapsed: "Elapsed",
     confirm: "Confirm each extracted fact", confirmAll: "Check every fact; edit anything that is not correct first.",
     finish: "Confirm all and create summary", clear: "Clear this anonymous conversation",
@@ -66,6 +66,41 @@ const syntheticDevDraft = profileDraftSchema.parse({
   safetyNote: "Synthetic development fixture. Not medical advice or an eligibility decision.",
 });
 
+/** Parses the extract route's server-sent events; only counts leave before the final validated event. */
+async function readExtractionEvents(body: ReadableStream<Uint8Array>, onProgress: (characters: number) => void): Promise<{ event: string; payload: Record<string, unknown> }> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let final: { event: string; payload: Record<string, unknown> } | undefined;
+  const handle = (block: string) => {
+    let event = "message";
+    const data: string[] = [];
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      else if (line.startsWith("data:")) data.push(line.slice(5).trim());
+    }
+    if (data.length === 0) return;
+    const payload = JSON.parse(data.join("\n")) as Record<string, unknown>;
+    if (event === "progress" && typeof payload.characters === "number") onProgress(payload.characters);
+    if (event === "result" || event === "failure") final = { event, payload };
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let separator = buffer.indexOf("\n\n");
+    while (separator >= 0) {
+      handle(buffer.slice(0, separator));
+      buffer = buffer.slice(separator + 2);
+      separator = buffer.indexOf("\n\n");
+    }
+  }
+  buffer += decoder.decode();
+  if (buffer.trim()) handle(buffer);
+  if (!final) throw new Error("The cloud extraction stream ended before a result arrived. Please retry.");
+  return final;
+}
+
 export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSyntheticDemo?: boolean }) {
   const entryState = initialSyntheticDemo ? chatReducer(initialChatState, { type: "START_SYNTHETIC_DEMO" }) : chatReducer(initialChatState, { type: "START_INTAKE" });
   const initialState = chatReducer(entryState, { type: "ACCEPT_PRIVACY" });
@@ -82,6 +117,8 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
   const [shortlistedTrialIds, setShortlistedTrialIds] = useState<string[]>([]);
   const [matching, setMatching] = useState(false);
   const [outreach, setOutreach] = useState<{ subject: string; body: string; sent: false }>();
+  const [matchError, setMatchError] = useState<string>();
+  const [matchesLoaded, setMatchesLoaded] = useState(false);
   const [discussionBrief, setDiscussionBrief] = useState<TrialDiscussionBrief>();
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<AssistantMessage[]>([]);
@@ -90,6 +127,7 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
   const [webMcpConsent, setWebMcpConsent] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [extractionReceipt, setExtractionReceipt] = useState<CloudExtractionReceipt>();
+  const [streamedCharacters, setStreamedCharacters] = useState(0);
   const extractionController = useRef<AbortController | null>(null);
   const t = copy[state.language];
   const allChecked = Boolean(state.draft?.facts.length) && state.draft!.facts.every((fact) => checked[fact.id]);
@@ -117,14 +155,26 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     setExtractionReceipt(undefined);
     if (maskResultOverride) dispatch({ type: "MASK_COMPLETE", result: maskResultOverride });
     dispatch({ type: "EXTRACTION_START" });
+    setStreamedCharacters(0);
     try {
       const response = await fetch("/api/cloud/extract", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
         body: JSON.stringify({ maskedText: maskResult.maskedText, subjectRole: state.subjectRole, language: state.language, cloudUseApproved: true }),
         signal: controller.signal,
       });
-      const payload = await response.json() as { draft?: unknown; error?: string; model?: string; remote?: true; receipt?: CloudExtractionReceipt };
-      if (!response.ok || !payload.draft) {
+      type ExtractionPayload = { draft?: unknown; error?: string; model?: string; remote?: true; receipt?: CloudExtractionReceipt; status?: number };
+      let payload: ExtractionPayload;
+      let ok = response.ok;
+      if (response.headers.get("content-type")?.includes("text/event-stream") && response.body) {
+        // Server-sent events: progress carries only a character count; the
+        // validated draft or a bounded failure arrives as the final event.
+        const final = await readExtractionEvents(response.body, (characters) => setStreamedCharacters(characters));
+        payload = final.payload;
+        ok = final.event === "result";
+      } else {
+        payload = await response.json() as ExtractionPayload;
+      }
+      if (!ok || !payload.draft) {
         if (payload.receipt) setExtractionReceipt(payload.receipt);
         throw new Error(payload.error ?? "The cloud model is unavailable or returned an invalid draft.");
       }
@@ -191,6 +241,8 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     setOutreach(undefined);
     setDiscussionBrief(undefined);
     setClarificationQuestions([]);
+    setMatchError(undefined);
+    setMatchesLoaded(false);
     try {
       const response = await fetch("/api/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profile }) });
       const payload = await response.json() as { matches?: TrialMatch[]; error?: string };
@@ -201,10 +253,11 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
         setClarificationQuestions(questions);
       } else {
         setMatches(payload.matches);
+        setMatchesLoaded(true);
       }
     } catch (error) {
       setMatches([]);
-      setOutreach({ subject: "Error", body: error instanceof Error ? error.message : "Matching failed.", sent: false });
+      setMatchError(error instanceof Error ? error.message : "Matching failed.");
     } finally { setMatching(false); }
   }
 
@@ -350,12 +403,14 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
       {state.stage === "privacy" && <div className="chat-turn"><p>{t.privacy}</p><button className="primary-action" onClick={() => dispatch({ type: "ACCEPT_PRIVACY" })}>{t.accept}</button></div>}
       {state.stage === "capture" && <div className="chat-turn intake-entry">{intakeMode === "agent" ? <div className="chat-intake-summary"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Agent mode · Chat is everything" : "代理模式 · 以對談完成全部流程"}</p><h3>{state.language === "en" ? "Build the note through the assistant" : "透過助手建立病況內容"}</h3></div><span>{state.rawText.trim().length} {state.language === "en" ? "characters collected" : "字已蒐集"}</span></div><div className="agent-note-preview" aria-live="polite">{state.rawText.trim() || (state.language === "en" ? "Start in the chat panel. Medical answers will appear here as one shared note." : "請從右側對談開始；醫療相關回答會整理成同一份病況內容。")}</div><p className="field-helper">{state.language === "en" ? "Tell the assistant when the note is complete. It can start masking and extraction for you." : "內容完整後請告訴助手；它可以為您啟動遮蔽與雲端整理。"}</p></div> : <div className="note-intake"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Manual mode" : "手動模式"}</p><h3>{state.language === "en" ? "Enter the note, then extract" : "輸入病歷後執行整理"}</h3></div><span>{state.language === "en" ? "You control each step" : "自行控制每一步"}</span></div><label htmlFor="medical-note">{t.prompt}</label><textarea id="medical-note" value={state.rawText} onChange={(event) => dispatch({ type: "SET_RAW_TEXT", value: event.target.value })} aria-describedby="note-helper" rows={9} /><p id="note-helper" className="field-helper">{t.helper}</p><button className="primary-action" disabled={state.rawText.trim().length < 20} onClick={() => void extract(maskDirectIdentifiers(state.rawText))}>{t.review}</button></div>}</div>}
       {state.stage === "mask_review" && state.maskResult && <div className="chat-turn"><h3>{state.language === "en" ? "Cloud organization needs attention" : "雲端整理需要處理"}</h3><pre className="masked-preview">{state.maskResult.maskedText}</pre><p className="field-helper">{state.language === "en" ? "Masked items" : "已遮蔽項目"}: {state.maskResult.findings.length}.</p><div className="cloud-transfer-note"><strong>{state.language === "en" ? "Cloud organization" : "雲端整理"}</strong><p>{t.cloudNotice}</p></div>{state.error && <div className="error-panel" role="alert"><strong>{state.language === "en" ? "Cloud extraction stopped" : "雲端整理已停止"}</strong><p>{state.error}</p>{extractionReceipt?.status === "failed" && <dl className="extraction-failure-receipt"><div><dt>{state.language === "en" ? "Code" : "代碼"}</dt><dd>{extractionReceipt.failureCode ?? "CLOUD_MODEL_ERROR"}</dd></div><div><dt>{state.language === "en" ? "Stopped after" : "停止時間"}</dt><dd>{(extractionReceipt.latencyMs / 1_000).toFixed(1)}s</dd></div><div><dt>{state.language === "en" ? "Next step" : "下一步"}</dt><dd>{state.language === "en" ? "Retry or edit the note" : "重試或修改內容"}</dd></div></dl>}</div>}<div className="action-row"><button onClick={() => dispatch({ type: "BACK_TO_CAPTURE" })}>{t.back}</button><button className="primary-action" onClick={() => void extract()}>{t.extract}</button></div></div>}
-      {state.stage === "extracting" && <div className="chat-turn extraction-progress" role="status" aria-live="polite" aria-atomic="true"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>{t.cloudWorking}</strong><span className="elapsed-time">{t.elapsed}: {elapsedSeconds}s</span></div><p>{elapsedSeconds < 30 ? t.waiting : t.timeoutHint}</p><p className="eta-copy">{t.expected}</p><p className="deadline-copy">{t.remaining} <strong>{Math.max(0, 120 - elapsedSeconds)}s</strong></p><p className="field-helper">gpt-oss:120b-cloud · Remote cloud via localhost proxy · 120s hard limit</p><button onClick={cancelExtraction}>{t.cancel}</button></div>}
+      {state.stage === "extracting" && <div className="chat-turn extraction-progress" role="status" aria-live="polite" aria-atomic="true"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>{t.cloudWorking}</strong><span className="elapsed-time">{t.elapsed}: {elapsedSeconds}s</span></div><p>{elapsedSeconds < 30 ? t.waiting : t.timeoutHint}</p><p className="eta-copy">{t.expected}</p>{streamedCharacters > 0 && <p className="stream-progress">{state.language === "en" ? `Structured draft arriving… ${streamedCharacters} characters received (validated before display).` : `整理結果傳送中… 已收到 ${streamedCharacters} 字元（顯示前會先驗證）。`}</p>}<p className="deadline-copy">{t.remaining} <strong>{Math.max(0, 120 - elapsedSeconds)}s</strong></p><p className="field-helper">gpt-oss:120b-cloud · Remote cloud via localhost proxy · 120s hard limit</p><button onClick={cancelExtraction}>{t.cancel}</button></div>}
       {(state.stage === "confirmation" || state.stage === "ready") && state.draft && state.maskResult && <SummaryConfirmation completed={state.stage === "ready"} draft={state.draft} maskResult={state.maskResult} language={state.language} receipt={extractionReceipt?.status === "completed" ? extractionReceipt : undefined} edits={edits} checked={checked} onEdit={(id, value) => { setEdits((current) => ({ ...current, [id]: value })); setChecked((current) => ({ ...current, [id]: false })); }} onCheck={(id, value) => setChecked((current) => ({ ...current, [id]: value }))} onCheckAll={() => setChecked(Object.fromEntries(state.draft!.facts.map((fact) => [fact.id, true])))} onBack={() => dispatch({ type: "BACK_TO_CAPTURE" })} onFinish={() => void finishConfirmation()} />}
       {state.stage === "ready" && state.confirmedProfile && <div className="chat-turn ready-stage">
         <div className="post-confirmation-controls"><label className="confirm-check webmcp-consent"><input type="checkbox" checked={webMcpConsent} onChange={(event) => setWebMcpConsent(event.target.checked)} />{state.language === "en" ? "Allow WebMCP to use the confirmed summary and current results." : "允許 WebMCP 使用確認摘要與目前結果。"}</label><button onClick={clearAnonymousConversation}>{t.clear}</button></div>
         {matching && <div className="matching-progress" role="status">{state.language === "en" ? "Checking public trial requirements…" : "正在檢查公開試驗條件…"}</div>}
         {clarificationQuestions.length > 0 && <ClarificationPanel questions={clarificationQuestions} language={state.language} answers={clarificationAnswers} onAnswersChange={setClarificationAnswers} onConfirm={confirmClarifications} />}
+        {matchError && <div className="error-panel" role="alert"><strong>{state.language === "en" ? "Matching stopped" : "配對已停止"}</strong><p>{matchError}</p><button type="button" onClick={() => void loadMatches(state.confirmedProfile!, false)}>{state.language === "en" ? "Try again" : "重試"}</button></div>}
+        {!matching && !matchError && matchesLoaded && matches.length === 0 && clarificationQuestions.length === 0 && <div className="empty-results" role="status"><strong>{state.language === "en" ? "No public record matched the confirmed summary" : "沒有公開紀錄符合已確認的摘要"}</strong><p>{state.language === "en" ? "The public index returned no trial for the confirmed cancer terms. This is a search limit, not an eligibility decision. Edit the summary to use a broader cancer type, or browse the public database directly." : "公開索引沒有找到符合已確認癌症用語的試驗。這是搜尋範圍限制，不是資格判定。可修改摘要改用較廣的癌症類型，或直接瀏覽公開資料庫。"}</p><div className="empty-results-actions"><button type="button" onClick={() => dispatch({ type: "BACK_TO_CAPTURE" })}>{state.language === "en" ? "Edit summary" : "修改摘要"}</button><a href="/trials">{state.language === "en" ? "Browse public trials" : "瀏覽公開試驗"}</a></div></div>}
         {matches.length > 0 && <div className="visual-results" aria-live="polite">
           <div className="results-title-row"><div><p className="eyebrow">Visual comparison</p><h3>{state.language === "en" ? "Source-traceable trial results" : "來源可追溯的試驗結果"}</h3></div><div className="results-controls"><MatchLegend language={state.language} /><div className="view-switcher" role="group" aria-label={state.language === "en" ? "Result view" : "結果顯示方式"}><button aria-pressed={resultView === "cards"} onClick={() => setResultView("cards")}>{state.language === "en" ? "Cards" : "卡片"}</button><button aria-pressed={resultView === "list"} onClick={() => setResultView("list")}>{state.language === "en" ? "List" : "條列"}</button></div></div></div>
           <details className="result-utilities"><summary><span><strong>{state.language === "en" ? "Saved trials and care-team tools" : "已儲存試驗與照護團隊工具"}</strong><small>{state.language === "en" ? "Compare saved trials or create a local discussion brief" : "比較已儲存試驗，或建立本機討論摘要"}</small></span><b>{shortlistedTrialIds.length}/3</b></summary><div className="result-utilities-body"><div className="results-export-row"><div><strong>{state.language === "en" ? "Take the comparison to your care team" : "將比較結果帶給照護團隊"}</strong><p>{state.language === "en" ? "Create a local brief in the current language from confirmed facts and up to five source-linked trials." : "使用已確認資料與最多五項可追溯試驗，以目前語言建立本機討論摘要。"}</p></div><button type="button" onClick={() => setDiscussionBrief(createTrialDiscussionBrief(state.confirmedProfile!, matches, state.language))}>{state.language === "en" ? "Create discussion brief" : "建立討論摘要"}</button></div><TrialShortlistPanel matches={resolveShortlistedMatches(matches, shortlistedTrialIds)} language={state.language} onRemove={toggleShortlist} onClear={() => setShortlistedTrialIds([])} /></div></details>

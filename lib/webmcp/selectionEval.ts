@@ -3,7 +3,7 @@ import { z } from "zod";
 import { webMcpJourneyCases, type WebMcpJourneyCase, type WebMcpJourneyState } from "../../evals/webmcp-journeys.ts";
 import { confirmedProfileSchema } from "../profile/schema.ts";
 import { validatedCloudModel } from "../llm/cloud.ts";
-import { validatedLoopbackBaseUrl } from "../llm/ollama.ts";
+import { ollamaRequestHeaders, resolveOllamaEndpoint, type OllamaTransport } from "../llm/ollama.ts";
 import { buildTrialBridgeTools } from "./tools.ts";
 
 const syntheticTrialId = "synthetic:trial-001";
@@ -46,7 +46,7 @@ export interface WebMcpSelectionBaseline {
   datasetDigestSha256: string;
   toolContractDigestSha256: string;
   requestedModel: string;
-  transport: "localhost_ollama_proxy";
+  transport: OllamaTransport;
   containsPatientData: false;
   storesModelContentOrThinking: false;
   repetitions: number;
@@ -152,6 +152,7 @@ export async function runWebMcpSelectionEval(options: {
   const repetitions = Math.max(1, Math.min(5, Math.trunc(options.repetitions ?? 1)));
   const timeoutMs = Math.max(5_000, Math.min(120_000, Math.trunc(options.timeoutMs ?? 60_000)));
   const fetcher = options.fetcher ?? fetch;
+  const endpoint = resolveOllamaEndpoint();
   const requestedModel = validatedCloudModel();
   const samples: WebMcpSelectionSample[] = [];
   const total = cases.length * repetitions;
@@ -165,9 +166,9 @@ export async function runWebMcpSelectionEval(options: {
       try {
         const timeoutSignal = AbortSignal.timeout(timeoutMs);
         const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
-        const response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
+        const response = await fetcher(endpoint.chatUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: ollamaRequestHeaders(endpoint),
           signal,
           body: JSON.stringify({
             model: requestedModel,
@@ -244,7 +245,7 @@ export async function runWebMcpSelectionEval(options: {
     datasetDigestSha256: webMcpSelectionDatasetDigest(cases),
     toolContractDigestSha256: webMcpSelectionToolContractDigest(),
     requestedModel,
-    transport: "localhost_ollama_proxy",
+    transport: endpoint.transport,
     containsPatientData: false,
     storesModelContentOrThinking: false,
     repetitions,

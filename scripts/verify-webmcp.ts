@@ -408,9 +408,11 @@ const registryReliability = [
   readFileSync("lib/webmcp/publicSearchOutput.ts", "utf8"),
   declarative,
 ].join("\n");
-for (const marker of ["registrySourceTimeoutMs = 20_000", "AbortController", "SOURCE_TIMEOUT", "durationMs", 'completeness: failures.length > 0', "Partial registry results", "Each registry stops after"]) {
+for (const marker of ["registrySourceTimeoutMs = 20_000", "AbortController", "SOURCE_TIMEOUT", "durationMs", 'completeness: failures.length > 0', "Partial registry results"]) {
   check(registryReliability.includes(marker), `Registry reliability contract is missing ${marker}.`);
 }
+check(readFileSync("lib/trials/search.ts", "utf8").includes("registrySourceTimeoutMs"), "Registry search must apply the shared per-source deadline.");
+check(declarative.includes("fall back to the public registries") && declarative.includes("formatRegistryDuration"), "Visible search must explain live fallback and show per-source latency.");
 
 const cancellationChain = [
   readFileSync("lib/webmcp/tools.ts", "utf8"),

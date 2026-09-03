@@ -14,7 +14,7 @@ export const metadata: Metadata = createPageMetadata({
 export default function WebMcpQuickstartPage() {
   return <main className="quickstart-page" id="main-content" tabIndex={-1}>
     <header className="quickstart-header">
-      <nav aria-label="Quickstart navigation"><Link className="brand" href="/"><BrandMark /><span><strong>TrialBridge TW</strong><small>試驗橋</small></span></Link><div><Link href="/webmcp">Full evidence lab</Link><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">GitHub CI</a></div></nav>
+      <nav aria-label="Quickstart navigation"><Link className="brand" href="/"><BrandMark /><span><strong>TrialBridge TW</strong><small>試驗橋</small></span></Link><div><Link href="/webmcp">Full evidence lab</Link><a href="https://github.com/erichuang777777/OpenAI-webMCP-hackthon/actions" target="_blank" rel="noreferrer">GitHub CI</a></div></nav>
       <p className="eyebrow">Three-minute judge demo</p>
       <h1>See why WebMCP matters—without reading the whole appendix.</h1>
       <p className="lead">TrialBridge turns the same visible clinical-trial interface into typed, state-scoped browser capabilities. The agent does less guessing; the person keeps control.</p>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { requiredCloudModel, validatedCloudModel } from "./cloud.ts";
-import { validatedLoopbackBaseUrl } from "./ollama.ts";
+import { ollamaRequestHeaders, resolveOllamaEndpoint } from "./ollama.ts";
 
 export const cloudProbeTimeoutMs = 30_000;
 
@@ -35,11 +35,12 @@ export async function probeCloudModel(options: {
   const startedAt = now();
   const timeoutSignal = AbortSignal.timeout(cloudProbeTimeoutMs);
   const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
+  const endpoint = resolveOllamaEndpoint();
   let response: Response;
   try {
-    response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
+    response = await fetcher(endpoint.chatUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: ollamaRequestHeaders(endpoint),
       signal,
       body: JSON.stringify({
         model: validatedCloudModel(),
@@ -57,7 +58,7 @@ export async function probeCloudModel(options: {
     if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
       throw new CloudProbeError("The cloud probe did not finish before its 30-second limit.", "CLOUD_PROBE_TIMEOUT");
     }
-    throw new CloudProbeError("The cloud model could not be reached through the localhost proxy.", "CLOUD_PROBE_UNAVAILABLE");
+    throw new CloudProbeError("The cloud model could not be reached through the configured Ollama endpoint.", "CLOUD_PROBE_UNAVAILABLE");
   }
   if (!response.ok) throw new CloudProbeError(`The cloud provider returned HTTP ${response.status}.`, "CLOUD_PROBE_UNAVAILABLE");
 
@@ -73,9 +74,9 @@ export async function probeCloudModel(options: {
 
   return {
     status: "ready" as const,
-    requestedModel: requiredCloudModel,
+    requestedModel: endpoint.transport === "localhost_ollama_proxy" ? requiredCloudModel : endpoint.model,
     reportedModel,
-    transport: "localhost_ollama_proxy" as const,
+    transport: endpoint.transport,
     inference: "remote-cloud-only" as const,
     latencyMs: Math.max(0, Math.round(now() - startedAt)),
     checkedAt: checkedAt().toISOString(),

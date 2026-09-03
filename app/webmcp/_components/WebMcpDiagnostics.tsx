@@ -8,7 +8,7 @@ import { webMcpLocalTestingFlag } from "@/lib/webmcp/browserSetup";
 
 type DiagnosticState = "checking" | "unsupported" | "ready" | "error";
 type HeaderChecks = { permissionsPolicy: boolean; openerPolicy: boolean; noSniff: boolean };
-type CloudProbeResult = { status: "ready"; requestedModel: string; reportedModel: string; transport: "localhost_ollama_proxy"; inference: "remote-cloud-only"; latencyMs: number; checkedAt: string; timeoutMs: number; persisted: false; containsHealthInformation: false; storesModelContent: false };
+type CloudProbeResult = { status: "ready"; requestedModel: string; reportedModel: string; transport: "localhost_ollama_proxy" | "ollama_cloud_api"; inference: "remote-cloud-only"; latencyMs: number; checkedAt: string; timeoutMs: number; persisted: false; containsHealthInformation: false; storesModelContent: false };
 type CloudProbeView = { state: "not-run" | "running" | "ready" | "failed" | "cancelled"; result?: CloudProbeResult; error?: string };
 type RuntimeAcceptanceView = { state: "idle" | "running" | "passed" | "failed"; result?: WebMcpRuntimeAcceptanceResult; error?: string };
 

@@ -1,6 +1,7 @@
 import { loadClinicalTrialsGovCancerTrials, fetchClinicalTrialsGovVersion } from "../adapters/clinicalTrialsGov.ts";
 import { loadOfficialTfdaRecords, normalizeTfdaRecord } from "../adapters/tfda.ts";
 import type { RegistryName } from "../types.ts";
+import { resolveTrialIndexProfile, trialMatchesIndexProfile, type TrialIndexProfile } from "./profile.ts";
 import { publicFailureMessage, type IndexedRegistryName } from "./shared.ts";
 import { getTrialIndexStore } from "./store.ts";
 import type { TrialIndexSourceState, TrialIndexStore } from "./types.ts";
@@ -11,6 +12,8 @@ export interface TrialIndexSyncOptions {
   signal?: AbortSignal;
   force?: boolean;
   clinicalTrialsMaxPages?: number;
+  /** Which records to keep; defaults to TRIAL_INDEX_PROFILE (full). */
+  profile?: TrialIndexProfile;
   onProgress?: (message: string) => void;
 }
 
@@ -35,7 +38,8 @@ async function syncTfda(options: TrialIndexSyncOptions): Promise<TrialIndexSyncR
     const raw = await loadOfficialTfdaRecords(fetcher);
     options.signal?.throwIfAborted();
     const retrievedAt = new Date().toISOString();
-    const trials = raw.map((record) => normalizeTfdaRecord(record, retrievedAt));
+    const profile = options.profile ?? resolveTrialIndexProfile();
+    const trials = raw.map((record) => normalizeTfdaRecord(record, retrievedAt)).filter((trial) => trialMatchesIndexProfile(trial, profile));
     const sourceVersion = latestTfdaVersion(trials);
     const finishedAt = new Date().toISOString();
     const source = await store.replaceSource({ registry: "TFDA", trials, sourceVersion, startedAt, finishedAt, durationMs: Math.round(performance.now() - startedMs) });
@@ -64,6 +68,7 @@ async function syncClinicalTrialsGov(options: TrialIndexSyncOptions): Promise<Tr
   }
   const runId = await store.markSyncing("ClinicalTrials.gov", startedAt);
   const startedMs = performance.now();
+  const profile = options.profile ?? resolveTrialIndexProfile();
   try {
     const lowerBound = incremental
       ? new Date(Date.parse(current!.lastSuccessAt!) - 2 * 24 * 60 * 60_000).toISOString().slice(0, 10)
@@ -74,7 +79,7 @@ async function syncClinicalTrialsGov(options: TrialIndexSyncOptions): Promise<Tr
     const loaded = await loadClinicalTrialsGovCancerTrials({
       fetcher, signal: options.signal, maxPages: options.clinicalTrialsMaxPages, collectTrials: false,
       queryTerm: lowerBound ? `AREA[LastUpdatePostDate]RANGE[${lowerBound}, MAX]` : undefined,
-      onTrialsPage: (trials) => store.stageSourceBatch("ClinicalTrials.gov", runId, trials, new Date().toISOString()),
+      onTrialsPage: (trials) => store.stageSourceBatch("ClinicalTrials.gov", runId, trials.filter((trial) => trialMatchesIndexProfile(trial, profile)), new Date().toISOString()),
       onPage: ({ page, received, totalCount }) => options.onProgress?.(`ClinicalTrials.gov · page ${page} · ${received.toLocaleString("en")}${totalCount ? `/${totalCount.toLocaleString("en")}` : ""}`),
     });
     if (!loaded.complete) throw new Error("ClinicalTrials.gov bulk load stopped before the final page; the existing complete index was retained");

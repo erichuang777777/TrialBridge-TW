@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { hasDirectIdentifiers } from "../privacy/mask.ts";
 import { requiredCloudModel, validatedCloudModel } from "./cloud.ts";
-import { validatedLoopbackBaseUrl } from "./ollama.ts";
+import { ollamaRequestHeaders, resolveOllamaEndpoint } from "./ollama.ts";
 
 const intakeStageSchema = z.enum(["mode", "privacy", "capture", "mask_review", "extracting", "confirmation", "ready"]);
 const workflowActionSchema = z.enum(["accept_privacy", "append_medical_note", "organize_medical_note", "confirm_all_facts", "continue_confirmed_summary", "answer_current_question", "show_results", "none"]);
@@ -61,8 +61,9 @@ function parseJsonObject(value: string): unknown {
 
 export async function answerGuidedIntake(input: z.infer<typeof guidedIntakeRequestSchema>, fetcher: typeof fetch = fetch) {
   const parsed = guidedIntakeRequestSchema.parse(input);
-  const response = await fetcher(new URL("/api/chat", validatedLoopbackBaseUrl()), {
-    method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(120_000),
+  const endpoint = resolveOllamaEndpoint();
+  const response = await fetcher(endpoint.chatUrl, {
+    method: "POST", headers: ollamaRequestHeaders(endpoint), signal: AbortSignal.timeout(120_000),
     body: JSON.stringify({ model: validatedCloudModel(), stream: false, think: false, format: "json", options: { temperature: 0.2, num_predict: 1200 }, messages: [
       { role: "system", content: [
         `You are the guided intake assistant for TrialBridge TW. Reply in ${parsed.language}.`,
@@ -78,5 +79,5 @@ export async function answerGuidedIntake(input: z.infer<typeof guidedIntakeReque
   if (!response.ok) throw new Error(`Guided intake returned HTTP ${response.status}`);
   const payload = z.object({ message: z.object({ content: z.string().min(1).max(8_000) }) }).parse(await response.json());
   const guided = guidedIntakeResponseSchema.parse(parseJsonObject(payload.message.content));
-  return { ...enforceIdentityFreeIntake(guided, parsed.stage, parsed.language), model: requiredCloudModel, persisted: false as const };
+  return { ...enforceIdentityFreeIntake(guided, parsed.stage, parsed.language), model: requiredCloudModel, transport: endpoint.transport, persisted: false as const };
 }

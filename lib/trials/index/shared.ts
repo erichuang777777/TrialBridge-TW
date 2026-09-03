@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { normalizedTrialSchema } from "../schema.ts";
+import { cjkBigrams } from "../text.ts";
 import type { NormalizedTrial, RegistryName } from "../types.ts";
 import type { TrialIndexSourceState, TrialIndexSourceStatus } from "./types.ts";
 
@@ -35,12 +36,8 @@ export function searchableText(trial: NormalizedTrial): string {
 }
 
 export function augmentCjkSearchText(value: string): string {
-  const bigrams = (value.match(/[\u3400-\u9fff]+/gu) ?? []).flatMap((run) => {
-    const characters = [...run];
-    if (characters.length < 2) return [];
-    return characters.slice(0, -1).map((character, index) => `${character}${characters[index + 1]}`);
-  });
-  return bigrams.length ? `${value} ${[...new Set(bigrams)].join(" ")}` : value;
+  const bigrams = cjkBigrams(value);
+  return bigrams.length ? `${value} ${bigrams.join(" ")}` : value;
 }
 
 export function normalizedSearchTerms(terms: string[]): string[] {

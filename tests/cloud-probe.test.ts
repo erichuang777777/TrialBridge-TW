@@ -38,3 +38,24 @@ test("cloud probe classifies bounded cancellation without leaking provider detai
   await assert.rejects(() => probeCloudModel({ fetcher: (async () => { throw new DOMException("cancelled", "AbortError"); }) as typeof fetch }),
     (error: unknown) => error instanceof CloudProbeError && error.code === "CLOUD_PROBE_TIMEOUT" && /30-second limit/.test(error.message));
 });
+
+test("cloud probe reports the Ollama Cloud API transport when a server-only key is configured", async () => {
+  const previous = process.env.OLLAMA_API_KEY;
+  process.env.OLLAMA_API_KEY = "test-cloud-api-key-0123456789";
+  try {
+    let authorization: string | null = null;
+    const result = await probeCloudModel({
+      fetcher: (async (input, init) => {
+        assert.equal(input.toString(), "https://ollama.com/api/chat");
+        authorization = new Headers(init?.headers).get("authorization");
+        return Response.json({ model: "gpt-oss:120b", message: { content: "{\"status\":\"ready\"}" }, done: true, done_reason: "stop" });
+      }) as typeof fetch,
+    });
+    assert.equal(authorization, "Bearer test-cloud-api-key-0123456789");
+    assert.equal(result.transport, "ollama_cloud_api");
+    assert.equal(result.requestedModel, "gpt-oss:120b");
+    assert.equal(JSON.stringify(result).includes("test-cloud-api-key"), false);
+  } finally {
+    if (previous === undefined) delete process.env.OLLAMA_API_KEY; else process.env.OLLAMA_API_KEY = previous;
+  }
+});
