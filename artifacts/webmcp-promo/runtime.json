@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-09-03T17:10:04.736Z",
+  "runtime": {
+    "origin": "https://trialbridge-tw.netlify.app",
+    "modelContext": "object",
+    "executeTool": "function",
+    "tools": [
+      "search_public_cancer_trials",
+      "trialbridge_method"
+    ]
+  },
+  "consoleLines": [
+    "[warning] Error with Permissions-Policy header: Origin trial controlled feature not enabled: 'tools'."
+  ]
+}
