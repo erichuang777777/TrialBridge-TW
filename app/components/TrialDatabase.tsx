@@ -30,6 +30,19 @@ type SearchResponse = {
   error?: string;
 };
 
+async function readSearchResponse(response: Response): Promise<SearchResponse> {
+  const body = await response.text();
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(`Search service returned HTTP ${response.status} instead of JSON. Please try again.`);
+  }
+  try {
+    return JSON.parse(body) as SearchResponse;
+  } catch {
+    throw new Error("Search service returned invalid JSON. Please try again.");
+  }
+}
+
 const suggestions = [
   { condition: "breast cancer", label: "Breast cancer" },
   { condition: "肺癌", label: "肺癌 · Lung cancer" },
@@ -122,7 +135,7 @@ export function TrialDatabase() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ condition: normalized, pageSize: 40, includeNotOpen: includeClosed }),
       });
-      const payload = await response.json() as SearchResponse;
+      const payload = await readSearchResponse(response);
       setResult(payload);
       const boundedOutput = createBoundedPublicSearchOutput({ query: normalized, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
       if (!response.ok && (payload.sources?.length ?? 0) === 0) {
