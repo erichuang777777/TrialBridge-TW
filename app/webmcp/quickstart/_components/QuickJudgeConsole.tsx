@@ -9,11 +9,29 @@ import { webMcpLocalTestingFlag } from "@/lib/webmcp/browserSetup";
 type BrowserState = "checking" | "unsupported" | "registering" | "ready" | "error";
 type ExecutionState = "idle" | "running" | "passed" | "failed" | "cancelled" | "timed_out";
 type HeaderState = { permissions: boolean; opener: boolean; mime: boolean };
+/**
+ * How this browser reached WebMCP. The token is server-rendered as a
+ * `<meta http-equiv="origin-trial">`; Chrome lists `tools` in the document's
+ * Permissions Policy only when the origin trial (or the local flag) actually
+ * enabled the feature, so the two together separate a working production
+ * token from a token Chrome rejected for this origin.
+ */
+type OriginTrialState = "checking" | "trial_active" | "token_rejected" | "local_flag" | "not_enabled";
+
+function detectOriginTrialState(): OriginTrialState {
+  const tokenServed = Boolean(document.querySelector('meta[http-equiv="origin-trial"]'));
+  const policy = (document as Document & { featurePolicy?: { features?: () => string[] }; permissionsPolicy?: { features?: () => string[] } });
+  const features = policy.featurePolicy?.features?.() ?? policy.permissionsPolicy?.features?.() ?? [];
+  const toolsRecognized = features.includes("tools");
+  if (tokenServed) return toolsRecognized ? "trial_active" : "token_rejected";
+  return toolsRecognized || document.modelContext ? "local_flag" : "not_enabled";
+}
 
 export function QuickJudgeConsole() {
   const [browserState, setBrowserState] = useState<BrowserState>("checking");
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [headers, setHeaders] = useState<HeaderState>({ permissions: false, opener: false, mime: false });
+  const [originTrial, setOriginTrial] = useState<OriginTrialState>("checking");
   const [executionState, setExecutionState] = useState<ExecutionState>("idle");
   const [receipt, setReceipt] = useState<QuickMethodReceipt>();
   const [elapsed, setElapsed] = useState(0);
@@ -25,6 +43,7 @@ export function QuickJudgeConsole() {
     let active = true;
     const registrationController = new AbortController();
     const modelContext = document.modelContext;
+    setOriginTrial(detectOriginTrialState());
     void fetch("/", { method: "HEAD", cache: "no-store", signal: registrationController.signal }).then((response) => {
       if (active) setHeaders({
         permissions: response.headers.get("permissions-policy")?.includes("tools=(self)") ?? false,
@@ -125,6 +144,11 @@ export function QuickJudgeConsole() {
         : executionState === "cancelled" ? "Cancelled. No page or workflow state changed."
           : executionState === "timed_out" ? "Stopped after 10 seconds. No result was retained."
             : "The safe method did not return a valid bounded receipt. Use the full lab for diagnostics.";
+  const originTrialStatus = originTrial === "trial_active" ? "Origin Trial token active"
+    : originTrial === "token_rejected" ? "Token served, not accepted for this origin"
+      : originTrial === "local_flag" ? "Local Chrome flag (no token served)"
+        : originTrial === "not_enabled" ? "No token, no flag"
+          : "Checking";
   const copyStatus = copyState === "copied"
     ? "Chrome flag address copied. Paste it into Chrome, choose Enabled, relaunch, then reopen this page."
     : copyState === "failed"
@@ -137,7 +161,9 @@ export function QuickJudgeConsole() {
       <li className={browserState === "ready" ? "check-pass" : undefined}><i aria-hidden="true" /><small>Native API</small><strong>{browserState === "ready" ? "document.modelContext" : browserState === "unsupported" ? "Preview not detected" : browserState === "error" ? "Needs attention" : "Checking"}</strong></li>
       <li className={registeredNames.length === quickJudgeDemoContract.publicToolNames.length ? "check-pass" : undefined}><i aria-hidden="true" /><small>Public capability</small><strong>{registeredNames.length}/2 origin-scoped tools</strong></li>
       <li className={headerCount === 3 ? "check-pass" : undefined}><i aria-hidden="true" /><small>Security headers</small><strong>{headerCount}/3 verified</strong></li>
+      <li className={originTrial === "trial_active" || originTrial === "local_flag" ? "check-pass" : undefined}><i aria-hidden="true" /><small>WebMCP enablement</small><strong>{originTrialStatus}</strong></li>
     </ul>
+    {originTrial === "token_rejected" && <p className="quick-console-boundary" role="status"><strong>Origin Trial note:</strong> the page served an origin-trial token, but this Chrome did not enable the <code>tools</code> feature from it. Check that the token was issued for this exact origin and has not expired; the visible check above may still pass through the local flag.</p>}
     {browserState === "unsupported" && <aside className="quick-browser-recovery">
       <div><strong>No visitor extension is required.</strong><p>Enable Chrome&apos;s native preview, relaunch, then reopen this page.</p><code>{webMcpLocalTestingFlag}</code></div>
       <div className="quick-browser-recovery-actions"><button type="button" onClick={() => void copyPreviewFlag()}>{copyState === "copied" ? "Copied" : "Copy Chrome flag"}</button><a href="/webmcp#webmcp-browser-setup-title">Setup details</a></div>
