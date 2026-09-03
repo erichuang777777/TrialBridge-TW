@@ -5,7 +5,7 @@
 - Clean-room replacement and tracked-file legacy scan.
 - Anonymous in-memory chat state with no browser persistence API.
 - Browser masking fixtures plus server-side identifier rejection.
-- Exact `gpt-oss:120b-cloud` allowlist, loopback-only proxy, and prohibition on local GPU or CPU inference.
+- One hosted model on two explicit transports: the loopback Ollama proxy (`gpt-oss:120b-cloud`) or Ollama's HTTPS Cloud API (`gpt-oss:120b`, server-only key). Any other host or model fails closed; local GPU and CPU inference remain prohibited.
 - Patient-confirmed profile boundary and separate cloud/WebMCP consent.
 - Live TFDA zipped JSON parsing plus a production-shaped scheduled snapshot command and reader. The schema-1.0 artifact is fixed-source, size/count/SHA-256 validated, atomically replaced with a bounded sidecar, fresh for 24 hours, stale through seven days, and then rejected. Visible, WebMCP, and health receipts distinguish request-time process memory from a scheduled file without exposing its path or records.
 - Recorded live TFDA ingestion evidence on 2026-09-02: 18,493 official public records produced a 175,674,023-byte artifact with SHA-256 `88bfe2a4e6e8258e9371fc722e2e180666b3ebcb0f5d12451675493ea2c9b0d1`; the scheduled-file adapter returned three bounded `胃癌` results while a throwing fetcher proved no network fallback. Only the metadata receipt remains in Git; the temporary large snapshot was removed.
@@ -60,7 +60,8 @@
 - Deterministic masking cannot guarantee removal of every name or contextual identifier.
 - Provider retention, data-processing location, terms, outage behavior, and production latency for cloud extraction are not yet accepted.
 - The scheduled TFDA ingestion command and fail-closed reader are implemented, but no actual production scheduler, shared durable volume, backup/restore policy, stale/expiry alert, operator ownership, or recovery drill has been provisioned and verified. Without `TFDA_SNAPSHOT_PATH`, development still uses request-time cold loading by design.
-- The PostgreSQL implementation and scheduled workflow are repository-verified but have not been connected to a production PostgreSQL instance. The `TRIAL_INDEX_DATABASE_URL` secret, scheduler execution, backup/restore, alert ownership, and recovery drill remain unverified.
+- The libSQL (Turso) store, per-source live fallback, and subset export are repository-verified against local `file:` databases, but the remote Turso database, the FTS5 write path over HTTPS used by the scheduled sync, the read-only token, backup/restore, alert ownership, and recovery drill remain unverified. The PostgreSQL store is implemented but not deployed.
+- The Netlify deployment (`netlify.toml`, Ollama Cloud API transport, streamed extraction) is configured but has not been exercised on the platform; whether the 10-second synchronous function limit cuts a streamed extraction is the first post-deploy check.
 - NCI terminology currently covers curated broad cancer groups, not comprehensive histology, stage, biomarker, or drug normalization. WHO ICTRP and regional live ingestion remain disabled pending source-specific rights and API review.
 - Detailed eligibility wording beyond subtype, stage, biomarker, and prior treatment is not atomically assessed. The four implemented domains are conservative term-level navigation signals, not protocol adjudication or final eligibility.
 - No oncologist/research-nurse adjudicated gold set, false-eligible measurement, calibration, or subgroup fairness evaluation exists.

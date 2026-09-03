@@ -34,9 +34,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "/tmp/claude-0/-home-user-OpenAI-webMCP-hackthon/e0a4571e-35ad-5336-8047-b8c6cb676c1f/scratchpad/.next-build/types/**/*.ts",
-    "/tmp/claude-0/-home-user-OpenAI-webMCP-hackthon/e0a4571e-35ad-5336-8047-b8c6cb676c1f/scratchpad/.next-build/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

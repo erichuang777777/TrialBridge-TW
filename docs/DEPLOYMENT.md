@@ -1,5 +1,16 @@
 # Local development and deployment gates
 
+## Two model transports
+
+`lib/llm/ollama.ts` resolves exactly one transport at startup:
+
+| Transport | When | Base URL | Model label | Credential |
+| --- | --- | --- | --- | --- |
+| `localhost_ollama_proxy` | No `OLLAMA_API_KEY` | loopback HTTP (`http://127.0.0.1:11434`) | `gpt-oss:120b-cloud` | none; the local Ollama is signed in with `ollama signin` |
+| `ollama_cloud_api` | `OLLAMA_API_KEY` set | `https://ollama.com` only | `gpt-oss:120b` | server-only bearer key |
+
+A key with any other host, or a non-loopback URL without a key, throws before any request. Inference is remote-cloud-only on both transports; health, receipts, preflight, and rehearsal report the transport name and never the key or URL. `POST /api/cloud/extract` streams server-sent events (`accepted`, `progress` with a character count only, then `result` or `failure`) when the client sends `Accept: text/event-stream`, and keeps the JSON response otherwise.
+
 ## Windows local run
 
 1. Install Ollama and ensure `gpt-oss:120b-cloud` is listed. Local GPU and CPU inference are prohibited.
@@ -13,6 +24,37 @@
 
 In `npm run dev`, a clearly marked shortcut bar can open the note, masking, summary-confirmation, or trial-card stages with synthetic fixture data. It exists only for interface development; the reducer rejects stage-jump events outside `NODE_ENV=development`, and the fixture must never contain patient data.
 
+## Netlify deployment (Personal plan)
+
+`netlify.toml` configures the build; the OpenNext adapter is auto-detected. Hosted functions have no durable disk and a 10-second synchronous limit on the Personal plan, so the deployment differs from a local run in four ways: the model transport is the Ollama Cloud API, the trial index is a remote Turso (libSQL) database queried with a read-only token, the TFDA live download is disabled, and extraction streams so headers go out immediately.
+
+Environment variables (secrets in the Netlify UI, never in `netlify.toml`):
+
+| Variable | Value | Notes |
+| --- | --- | --- |
+| `OLLAMA_API_KEY` | Ollama Cloud API key | Secret. Forces `https://ollama.com` and `gpt-oss:120b`. |
+| `TRIAL_INDEX_LIBSQL_URL` | `libsql://<db>-<org>.turso.io` | Same database the scheduled sync writes to. |
+| `TRIAL_INDEX_LIBSQL_AUTH_TOKEN` | Turso token created with `--read-only` | Secret. The read-write token lives only in GitHub secrets. |
+| `SITE_URL` | `https://<custom domain>` | Exact origin, no path; drives canonical links and the Origin Trial token. Leave unset on deploy previews. |
+| `WEBMCP_ORIGIN_TRIAL_TOKEN` | Chrome Origin Trial token for that origin | Optional until registered. |
+| `TRIAL_INDEX_BACKEND`, `TRIAL_INDEX_LIBSQL_READ_ONLY`, `TFDA_LIVE_FALLBACK`, `RATE_LIMIT_PROFILE`, `CLOUD_EXTRACTION_TIMEOUT_MS` | set in `netlify.toml` | `libsql`, `true`, `false`, `demo`, `55000`. |
+
+Publishing the local index:
+
+```bash
+npm run export:trial-index-subset -- --from=var/trial-index/trials.sqlite --to=var/trial-index/trials-demo.sqlite --profile=demo
+turso group create trialbridge --location nrt
+turso db import var/trial-index/trials-demo.sqlite --name trialbridge-index --group trialbridge
+turso db tokens create trialbridge-index --read-only      # Netlify
+turso db tokens create trialbridge-index                  # GitHub Actions
+```
+
+The export script requires the source to be at FTS schema version 3 (open it once with the sqlite backend to migrate), writes a single rollback-journal file with the FTS index already built, and prints counts only. `--profile=demo` keeps Taiwan and Asia records plus worldwide open records; `--profile=full` copies everything. Set the `TRIAL_INDEX_PROFILE` repository variable to the same profile so the daily sync does not refill a subset.
+
+After the first deploy, verify in this order: `curl -sI https://<domain>/` shows the three security headers; `GET /api/health` reports `transport: "ollama_cloud_api"` and `trialIndex.status: "ready"`; `GET /api/data-health` shows `indexAccess.status: "ok"` and `liveFallback.tfda: false`; `POST /api/trials/search` for `胃癌` returns indexed sources with no `SOURCE_TIMEOUT`; `POST /api/cloud/probe` succeeds; then run one synthetic extraction from `/match?demo=synthetic` and confirm the SSE stream is not cut at 10 seconds. If it is, the LLM routes must move to Netlify Edge Functions (see `docs/EXECUTION_PLAN.md`, Phase 1.6).
+
+Process-local rate limits apply per function instance on Netlify; `RATE_LIMIT_PROFILE=demo` widens only the model-backed buckets. Netlify's `x-nf-client-connection-ip` header is used as the client address before any forwarded chain.
+
 ## Public deployment is intentionally gated
 
 The server-side localhost proxy reaches the server machine, not a visitor's computer, and it does not make cloud inference local. Public deployment requires a reviewed proxy architecture, provider data-processing terms, explicit consent records, and a Taiwan privacy-law review.
@@ -21,17 +63,21 @@ The MVP applies fixed-window, per-process limits before parsing bodies on cloud 
 
 ## Shared public Trial Index
 
-Patient-facing requests must read the same pre-collected public index for the UI, guided chat/matching, and WebMCP. Development defaults to the ignored `var/trial-index/trials.sqlite`; production must use a durable PostgreSQL service:
+Patient-facing requests must read the same pre-collected public index for the UI, guided chat/matching, and WebMCP. Development defaults to the ignored `var/trial-index/trials.sqlite`; production uses a remote libSQL (Turso) database, and a PostgreSQL store remains implemented but not deployed:
 
 ```text
-TRIAL_INDEX_BACKEND=postgres
-DATABASE_URL=postgres://...
+TRIAL_INDEX_BACKEND=libsql
+TRIAL_INDEX_LIBSQL_URL=libsql://<db>-<org>.turso.io
+TRIAL_INDEX_LIBSQL_AUTH_TOKEN=<read-only token on the host; read-write token in GitHub secrets>
+TRIAL_INDEX_PROFILE=demo|full
 TRIAL_INDEX_SYNC_SCHEDULE=0 2 * * * Asia/Taipei
 ```
 
+The catalog falls back to a live registry only for a source the index cannot serve yet, and records a bounded, metadata-only reason on `/api/data-health` (`indexAccess`) whenever the index itself was unreachable, so a silent live-only deployment is visible. Set `TFDA_LIVE_FALLBACK=false` on hosts that cannot download the 175 MB export inside a request; the source is then reported as unavailable until the index carries it.
+
 Initialize and synchronize with `npm run sync:trial-index -- --source=all`. ClinicalTrials.gov checks its published `dataTimestamp` and skips an unchanged corpus; later runs fetch records whose public update date falls within an overlapping window and merge them atomically. The weekly `--force` load performs a complete reconciliation, including removals. TFDA uses stable content hashes. ClinicalTrials.gov pages first enter a run-scoped staging table, and only a completed run changes the visible source. A failed or cancelled run removes its staging rows and retains the previous complete public index.
 
-The included `.github/workflows/sync-trial-index.yml` runs daily at 02:00 Asia/Taipei and refuses to use an ephemeral runner database. Configure the `TRIAL_INDEX_DATABASE_URL` repository secret before enabling it. Provisioning the database, secret, backups, alerting, retention, and a restore drill remains a deployment responsibility.
+The included `.github/workflows/sync-trial-index.yml` runs daily at 02:00 Asia/Taipei and refuses to use an ephemeral runner database. Configure the `TRIAL_INDEX_LIBSQL_URL` and read-write `TRIAL_INDEX_LIBSQL_AUTH_TOKEN` repository secrets before enabling it. Provisioning the database, secret, backups, alerting, retention, and a restore drill remains a deployment responsibility.
 
 `GET /data-health` and `GET /api/data-health` expose record counts, source versions, freshness, and recent ingestion runs without paths, records, secrets, query terms, or patient data. Exact displayed ClinicalTrials.gov records can be rechecked through `POST /api/trials/revalidate`; revalidation reports public-record changes but never decides eligibility. TFDA exact-record revalidation remains explicitly unsupported until a dependable official endpoint is available.
 
