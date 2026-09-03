@@ -1,56 +1,51 @@
-# TrialBridge TW 試驗橋
+# TrialBridge TW
 
-TrialBridge TW is a Taiwan-first, chat-first navigator that helps people with cancer and their caregivers understand and discuss clinical-trial options in Taiwan, Asia, and worldwide.
+**A Taiwan-first clinical-trial search experience that people and AI agents can use together.**
 
-This repository is a clean-room rebuild. Its product language, information architecture, design, schemas, workflows, and WebMCP contracts are original to TrialBridge TW.
+TrialBridge helps people find public cancer-trial records across Taiwan, Asia, and worldwide registries. Its WebMCP layer gives compatible browser agents small, typed, read-only tools instead of making them guess from the DOM.
 
-## Product boundaries
+## Try the live demo
 
-- People may paste free-text medical information in Traditional Chinese or English.
-- Direct identifiers are masked in the browser before any model request.
-- The original free text is not persisted by default.
-- The reviewed masked note is sent to the hosted `gpt-oss:120b` model only when the person selects the visible cloud-organization action; there is no redundant checkbox.
-- All LLM work uses one hosted model on one of two explicit transports: the developer's loopback Ollama proxy (`gpt-oss:120b-cloud`, no key) or Ollama's HTTPS Cloud API (`gpt-oss:120b`, server-only `OLLAMA_API_KEY`). A key with any other host, or a non-loopback URL without a key, fails closed. Local GPU and CPU inference are prohibited on both transports, and the active transport is reported in health and extraction receipts without the key or URL.
-- Cloud extraction streams: the route answers immediately with server-sent events that carry only a character count, and the structured draft is Zod-validated before the final event. This keeps the request alive on hosts with short synchronous limits without exposing partial model text.
-- WebMCP tools never receive raw medical records and expose only confirmed, minimized data.
-- The WebMCP layer includes one visible declarative form, up to seven read-only imperative tools, payload-free execution status, a downloadable tab-local capability receipt, eleven deterministic journey cases, and a no-PHI 55-sample `gpt-oss:120b-cloud` selection baseline (55/55 recorded pass; all forbidden and shortlist cases passed).
-- `/webmcp/quickstart` is the three-minute evaluation entrance: it registers and discovers exactly the two public same-origin tools, verifies the three response headers, and lets a judge explicitly execute only the fixed no-input `trialbridge_method`. It accepts no free text, makes no model or registry call, reads no patient context, and persists no result. `/webmcp` remains the full technical appendix.
-- Root `/llms.txt` and `/webmcp/agent-guide.md` give agents a concise, canonical path to the runtime, contracts, evidence, state gates, and authority limits. They are generated from the tool catalog where applicable, linked with `rel="describedby"`, contain no health data, and are explicitly discovery guidance rather than WebMCP protocol endpoints.
-- Recorded Chrome Lighthouse 13.4.1 Agentic Browsing audits passed 2/2 page states at 1.00: `/webmcp/quickstart` exposed both public imperative tools and `/trials` exposed the visible declarative tool. Both had valid WebMCP schemas, well-formed accessibility trees, `llms.txt` pass, and CLS 0. The metadata-only artifact is `evals/webmcp-lighthouse-agentic-acceptance.json`; raw page reports are not committed.
-- The `/webmcp` evidence page adds a five-stage critical-user-journey map aligned with Chrome's current goal/state/role-play/recovery framework, an explicit body-free `gpt-oss:120b-cloud` smoke test using fixed synthetic text, and a one-click browser diagnostic JSON receipt containing metadata only and no health information.
-- The flat `/webmcp/quickstart` keeps missing-preview recovery inside the three-minute judge route: copy the native Chrome testing flag in one click, enable it, relaunch, and reopen. Copy success or failure is announced without treating setup as runtime evidence.
-- Its explicit live lifecycle suite briefly registers one fixed read-only, no-network probe and verifies `registerTool`, same-origin discovery, bounded public execution, execution cancellation, `toolchange`, AbortSignal unregistration, and final cleanup. The probe is removed before results appear; downloaded receipts store check outcomes only and remain separate from Inspector evidence.
-- A recorded no-PHI Chrome for Testing 153.0.8010.12 run passed all 6/6 lifecycle checks with zero console errors, left only the two expected public tools, and confirmed the temporary probe was absent after cleanup. The exact receipt is stored at `evals/webmcp-browser-runtime-acceptance.json`; this is browser API evidence, not natural-language Inspector or production Origin Trial evidence.
-- Imperative WebMCP human titles follow the current English or Traditional Chinese page language. Stable tool names, descriptions, schemas, annotations, consent boundaries, and read-only authority do not change when the interface language changes.
-- A second recorded run pinned the unmodified stock Model Context Tool Inspector at commit `f164a9aa5c3f6083f5976ccae308257bdf86cb99` / version 1.9.14. Its real background/content-script path discovered both public tools, parsed both schemas, manually executed the fixed empty-input method tool, and observed the fictional permission lifecycle as `2 → 2 → 6 → 2`: 3/6 Inspector cases passed. The two natural-language cases stay not run because they require Gemini. Pinned-source audit also found no stock agent cancel control and no execution `AbortSignal`, so cancellation/cleanup remains not run. TrialBridge separately exposes a visible human cancel that reaches the active request; it is not counted as an Inspector pass. No Gemini key, model call, health information, raw schema, or execution result is stored in `evals/webmcp-inspector-extension-runtime.json`.
-- Production Origin Trial configuration is fail-closed: one server-only token is accepted only with an exact non-loopback HTTPS `SITE_URL`, emitted before WebMCP access, omitted from health/evidence JSON, and reported as configured-but-unverified until Chrome DevTools and Inspector acceptance are complete.
-- The same page includes a six-check Chrome Inspector acceptance kit with fixed no-PHI prompts, explicit expected boundaries, Pass/Needs attention recording, and a download-only manual self-attestation receipt. It never presents that receipt as automatic or cryptographic Chrome evidence.
-- The `/webmcp` Tool Contract Explorer exposes all eight canonical contracts with searchable availability filters, exact JSON Schemas, security hints, input/output budgets, human-control boundaries, and recovery paths. `/webmcp/contracts.json` serves the same static no-health-data catalog; runtime tools and the visible declarative form import the same canonical definitions so judge evidence cannot drift from execution.
-- A no-PHI Capability State Simulator makes dynamic registration visible as `2 → 2 → 6 → 7`: public tools, confirmed summary with permission still off, permission-enabled context, and two user-shortlisted trials. Every state is tested against the real runtime tool builder, but remains explicitly separate from current-browser Inspector evidence.
-- Results are informational navigation aids, not medical advice, proof of benefit, or a final eligibility decision.
-- Each result includes a traceable four-domain wording map for subtype, stage, biomarker, and prior treatment. Shared terms, possible differences, uncertainty, and missing information are shown with text plus color and do not alter overall status; explicit treatment wording in a published exclusion section remains a separate review signal.
-- Overseas-site outreach is prepared as a draft and is never sent automatically.
-- After results, a person can explicitly create a local care-team Markdown brief with confirmed facts, source links, uncertainty, and a health-information storage warning; TrialBridge TW never uploads or sends it.
-- A person can visibly shortlist two or three result cards for aligned side-by-side comparison. Only then can the permission-gated, read-only WebMCP comparison tool appear; it cannot choose or alter the shortlist.
-- Public condition search uses a versioned 19-group bilingual query bridge: exact curated terms become a Traditional Chinese TFDA query and an English ClinicalTrials.gov query, while unrecognized detailed terms pass through unchanged without inferred subtype, stage, or biomarker.
-- Registry receipts distinguish a live query, process-memory cache, and validated scheduled file with the true snapshot load time. Production can run `npm run sync:tfda-snapshot` against shared durable storage; every artifact is source-locked, count- and SHA-256-validated, atomically replaced, fresh for 24 hours, and rejected beyond seven days.
-- UI, guided chat/matching, and WebMCP public search share one persistent public Trial Index. Development uses a local SQLite file; production uses Turso (libSQL) through `@libsql/client` with a read-only token, so serverless functions query a multi-GB index without bundling a database or native driver. A PostgreSQL store is implemented but not deployed. The index falls back to a live registry per source only for a source it cannot serve yet, `TFDA_LIVE_FALLBACK=false` keeps hosted functions from downloading the 175 MB TFDA export inside a request, and `/data-health` shows source freshness, ingestion receipts, and whether the index itself was reachable. Patient notes never enter this index.
-- Each public registry has an independent 20-second response deadline. The visible search and WebMCP output report per-source latency and complete/partial/unavailable coverage; one timeout does not erase verified results from another registry.
-- Imperative WebMCP cancellation propagates from either the agent execution signal or TrialBridge's visible human stop through browser fetch, the Next.js request, matching, and each registry adapter. Running controls disappear on completion, and route/capability cleanup cancels unfinished work. A cancelled caller stops immediately without destroying a shared TFDA snapshot refresh that another request may still need.
-- Public discovery is fail-closed: canonical links, page-specific social metadata, a local-font Open Graph card, a manifest, and dynamic robots/sitemap routes are present, but indexing activates only with an explicit non-loopback HTTPS deployment profile after readiness approval.
-- The `/webmcp` page starts with a four-step judge runbook. Exact broad cancer aliases can use shareable `/trials?condition=...` links in the same visible declarative form; a fixed `/match?demo=synthetic` link opens the fictional case at the protected workflow boundary without skipping masking, organization, confirmation, clarification, or matching. Neither route stores patient-authored content in the URL.
-- The `/webmcp` page also shows a dated, source-linked implementation landscape for ChatGPT Desktop, Chrome, and Brave. Those cards are explicitly source-reported ecosystem evidence, not a claim that the current browser completed TrialBridge TW's runtime or Inspector checks.
-- A compact judge conformance matrix keeps repository verification, recorded browser runtime, partial stock Inspector runtime, recorded model evaluation, and the remaining manual Inspector gate distinct. `/webmcp/evidence.json` exposes the same static, source-linked bundle with artifact digests and no current-browser-session or medical-workflow data; it is competition evidence, not a WebMCP protocol endpoint.
-- An optional one-click competition preflight checks the fixed cloud probe, TFDA, and ClinicalTrials.gov in parallel before a judge enters the protected workflow. It is body-free, cancellable, shares the three-per-ten-minute cloud limit, returns no trial records or model content, and labels partial dependencies instead of collapsing them into one green score.
-- A live, fixed-input Agent Rehearsal lets judges ask `gpt-oss:120b-cloud` to choose among the capabilities available in four synthetic page states. It includes Traditional Chinese search, shortlist comparison, and forbidden enrollment abstention; returns only selected tool metadata and bounded finding codes; executes no tool; stores no model prose or thinking; and remains explicitly separate from Chrome Inspector evidence.
-- After the Traditional Chinese rehearsal selects the expected public-search capability, a separate explicit action can execute only the fixed public condition `胃癌` through the current browser's `document.modelContext.executeTool()`. The 25-second, cancellable result is reduced to a volatile bilingual-query/source receipt; it accepts no free text or patient context and is labelled site-orchestrated evidence rather than Inspector or external-agent proof.
-- Cloud organization now leaves a volatile, metadata-only receipt beside confirmation: requested/provider-reported model labels, localhost-proxy/remote-cloud transport, actual server latency, and TrialBridge non-persistence. Failures show a bounded code, elapsed time, and retry/edit path without copying medical or model content.
+- **Live app:** <https://trialbridge-tw.netlify.app/>
+- **Three-minute WebMCP demo:** <https://trialbridge-tw.netlify.app/webmcp/quickstart>
+- **Full evidence lab:** <https://trialbridge-tw.netlify.app/webmcp>
+- **Repository:** <https://github.com/erichuang777777/TrialBridge-TW>
 
-## Delivery plan
+No login or patient data is required for the public demo.
 
-The independently verifiable milestones are defined in [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md). Product, security, data-flow, schema, chat-state, and WebMCP contracts live under `docs/`.
+### Judge path
 
-For evaluation, start at the built-in [`/webmcp/quickstart`](http://localhost:3000/webmcp/quickstart) three-minute route, then inspect the machine-readable [`/llms.txt`](http://localhost:3000/llms.txt), [agent guide](http://localhost:3000/webmcp/agent-guide.md), full [`/webmcp`](http://localhost:3000/webmcp) evidence lab, [recorded Chrome lifecycle receipt](evals/webmcp-browser-runtime-acceptance.json), [recorded stock Inspector partial receipt](evals/webmcp-inspector-extension-runtime.json), [recorded Agentic Browsing summary](evals/webmcp-lighthouse-agentic-acceptance.json), and static [`/webmcp/contracts.json`](http://localhost:3000/webmcp/contracts.json) contract artifact. Then see [Why WebMCP is essential to TrialBridge TW](docs/WEBMCP_JUDGE_GUIDE.md), the [recorded cloud-model selection baseline](docs/WEBMCP_SELECTION_EVAL.md), and the [production Lighthouse audit](docs/LIGHTHOUSE_AUDIT.md). The quick route is concise current-browser evidence; three Inspector cases remain separate manual gates.
+1. Open the quickstart URL in Chrome 149+ with WebMCP enabled through the Origin Trial.
+2. Confirm the two public tools: `search_public_cancer_trials` and `trialbridge_method`.
+3. In the Model Context Tool Inspector, enter: `Find currently recruiting breast cancer trials.`
+4. Confirm the agent selects the search tool and returns structured public registry results.
+5. Open `/trials` to try the same search through the visible human interface.
+
+The production Origin Trial and Chrome runtime were verified with Chrome 152. Inspector natural-language selection was tested with Gemini 3 Flash Preview. ChatGPT native WebMCP invocation is not claimed as part of the evidence.
+
+## Why WebMCP fits
+
+Clinical-trial search has structured inputs, public sources, and important safety boundaries. WebMCP lets an agent call the same public search capability that the person can see, while the site keeps control of permissions and human confirmation.
+
+The public agent surface is intentionally small:
+
+- Search public trial records with a general cancer condition.
+- Explain the site's Taiwan-first search and privacy method.
+
+No WebMCP tool can enroll someone, send a message, book an appointment, change treatment, or receive raw medical notes. Patient-context tools only appear after a visible, human-confirmed workflow state.
+
+## What is built
+
+- Taiwan-first bilingual query bridge for TFDA and ClinicalTrials.gov.
+- Shared public trial index: Turso/libSQL in production, SQLite locally, with SQLite FTS5 search.
+- Read-only public WebMCP tools registered through `document.modelContext`.
+- Human-visible cancellation, permission-gated capabilities, and `toolchange` lifecycle handling.
+- Remote-only Ollama Cloud model transport for approved, minimized workflows.
+- No patient-note persistence in the public index or WebMCP output.
+
+## Technology
+
+Next.js · React · TypeScript · Node.js · WebMCP · Chrome Origin Trial · Turso/libSQL · SQLite FTS5 · Netlify · GitHub Actions · Ollama Cloud API · ClinicalTrials.gov API · TFDA data · Zod · Playwright
 
 ## Local development
 
@@ -59,7 +54,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` for the single-screen landing page. Guided matching starts after the user enters `/match`; `/trials` provides direct public-registry browsing without medical intake; `/data-health` shows the shared public index; `/webmcp/quickstart` is the concise judge entrance; `/webmcp` provides the complete browser-specific competition evidence lab.
+Open <http://localhost:3000>. Useful routes: `/trials` (public search), `/match` (protected workflow), `/webmcp/quickstart` (browser test), `/webmcp` (evidence lab), and `/api/health` (deployment health).
 
 ## Verification
 
@@ -67,24 +62,20 @@ Open `http://localhost:3000` for the single-screen landing page. Guided matching
 npm test
 npm run typecheck
 npm run verify:webmcp
-npm run verify:webmcp:receipts -- <browser-diagnostic.json> [manual-inspector.json]
-npm run eval:webmcp:live -- --repetitions 5 --timeout-ms 60000
 npm run build
 npm run verify:http
 ```
 
-After the application is running, `npm run verify:cloud` is an explicit live provider check. It sends one fixed synthetic prompt, no request body or medical content, and prints metadata only; it is deliberately excluded from deterministic CI because it incurs a real cloud request.
+Browser evidence and media are in [`evals/webmcp-browser-runtime-acceptance.json`](evals/webmcp-browser-runtime-acceptance.json), [`evals/webmcp-inspector-extension-runtime.json`](evals/webmcp-inspector-extension-runtime.json), [`artifacts/webmcp-youtube/trialbridge-webmcp-demo-1080p-v2.mp4`](artifacts/webmcp-youtube/trialbridge-webmcp-demo-1080p-v2.mp4), and [`docs/WEBMCP_VERIFICATION.md`](docs/WEBMCP_VERIFICATION.md).
 
-Production TFDA ingestion is a separate scheduled operation: set one absolute `TFDA_SNAPSHOT_PATH`, then run `npm run sync:tfda-snapshot` at least daily. It downloads a large public registry export and is intentionally not part of the ordinary local or CI verification block. A metadata-only live proof is retained at [evals/tfda-snapshot-ingestion.json](evals/tfda-snapshot-ingestion.json); the 175 MB temporary snapshot itself was validated and removed, not committed.
+## Deployment shape
 
-For the shared public index, run `npm run sync:trial-index -- --source=all`. The default SQLite database is ignored under `var/trial-index`. To publish an existing local index to Turso, export a subset with `npm run export:trial-index-subset -- --from=var/trial-index/trials.sqlite --to=var/trial-index/trials-demo.sqlite --profile=demo` (Taiwan/Asia plus worldwide open records) or `--profile=full`, upload the file with `turso db import`, then set `TRIAL_INDEX_BACKEND=libsql`, `TRIAL_INDEX_LIBSQL_URL`, and a read-only `TRIAL_INDEX_LIBSQL_AUTH_TOKEN` on the host. A small, versioned NCI Thesaurus cancer-group snapshot is bundled under `data/public`; run `npm run sync:nci-terminology` to refresh it deliberately. The scheduled workflow requires the `TRIAL_INDEX_LIBSQL_URL` and read-write `TRIAL_INDEX_LIBSQL_AUTH_TOKEN` repository secrets and fails rather than pretending an ephemeral runner database is durable; set the `TRIAL_INDEX_PROFILE` repository variable to `demo` when the hosted index is the subset.
+The multi-gigabyte source index is not bundled into Netlify or GitHub. Production functions query the remote Turso/libSQL index with a read-only token. GitHub Actions owns scheduled ingestion with a separate read-write token. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-`verify:webmcp:receipts` validates a schema-1.1 user-downloaded runtime diagnostic against the current two-public-tool, security-header, and six-check lifecycle contract. A second Inspector receipt is accepted only when all six manual checks are marked Pass; the verifier still labels it `manual_self_attestation`, never browser-generated proof.
+## Safety boundary
 
-`GET /api/health` provides a payload-free configuration check, including bounded TFDA snapshot state without its path or records. `POST /api/cloud/probe` is the separate 30-second live check, limited to three attempts per 10 minutes. Public and model-backed routes have process-local request limits for the MVP; a multi-instance deployment must use the shared-store and trusted-proxy gates in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
-The default build remains `noindex`. After every gate in `docs/READINESS.md` is approved, a reviewed public deployment must set both `SITE_URL=https://your-exact-origin.example` and `SITE_INDEXING_ENABLED=true`; either missing or unsafe value fails closed.
+TrialBridge is an informational navigation aid, not medical advice or a final eligibility decision. Registry records describe research plans and do not prove benefit. Outreach and discussion documents are drafts only; the site never sends them automatically.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [`LICENSE`](LICENSE).
