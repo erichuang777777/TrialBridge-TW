@@ -376,7 +376,9 @@ export class LibsqlTrialIndexStore implements TrialIndexStore {
     const client = await this.client();
     const terms = normalizedSearchTerms(input.terms);
     const ftsQuery = terms.map((term) => searchTermTokens(term).map((token) => `"${token.replaceAll('"', '""')}"*`).join(" AND ")).filter(Boolean).map((group) => `(${group})`).join(" OR ");
-    const limit = Math.max(input.pageSize * 4, input.pageSize);
+    // Keep remote libSQL payloads small enough for serverless request limits.
+    // Deduplication/ranking still runs on the bounded candidate window.
+    const limit = input.pageSize;
     const recruitmentFilter = input.includeNotOpen ? "" : ` AND recruitment_category IN (${acceptingCategorySql})`;
     const result = ftsQuery
       ? await client.execute({
