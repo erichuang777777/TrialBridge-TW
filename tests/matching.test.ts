@@ -102,3 +102,31 @@ test("closed recruitment is shown separately and does not create a clinical mism
   assert.equal(closedMatch.status, openMatch.status);
   assert.equal(closedMatch.assessments.find((item) => item.key === "recruitment")?.outcome, "possibly_not_met");
 });
+
+test("a female patient does not pass a male-only trial through substring matching", () => {
+  const sexDraft = profileDraftSchema.parse({
+    ...draft,
+    facts: [...draft.facts, { id: "fact_sex_1", domain: "sex_eligibility", value: "female", displayZhHant: "女性", displayEn: "Female", source: "user_statement", confidence: 1, confirmed: false }],
+  });
+  const sexProfile = confirmProfile(sexDraft, {}, "patient", "2026-09-01T00:00:00.000Z");
+  const maleOnly = { ...trial, eligibility: { ...trial.eligibility, sex: "MALE" } };
+  const femaleOnly = { ...trial, eligibility: { ...trial.eligibility, sex: "FEMALE" } };
+  assert.equal(assessTrial(sexProfile, maleOnly).assessments.find((item) => item.key === "sex")?.outcome, "possibly_not_met");
+  assert.equal(assessTrial(sexProfile, maleOnly).status, "unlikely_based_on_public_record");
+  assert.equal(assessTrial(sexProfile, femaleOnly).assessments.find((item) => item.key === "sex")?.outcome, "possibly_met");
+  assert.equal(assessTrial(sexProfile, trial).assessments.find((item) => item.key === "sex")?.outcome, "possibly_met");
+});
+
+test("Traditional Chinese condition terms overlap registry titles without word boundaries", () => {
+  const cjkDraft = profileDraftSchema.parse({
+    ...draft,
+    facts: [{ id: "fact_cancer_2", domain: "cancer_type", value: "非小細胞肺癌", displayZhHant: "非小細胞肺癌", displayEn: "Non-small cell lung cancer", source: "masked_note", confidence: 0.9, confirmed: false }],
+  });
+  const cjkProfile = confirmProfile(cjkDraft, {}, "patient", "2026-09-01T00:00:00.000Z");
+  const tfdaTrial = normalizeTfdaRecord(tfdaFixture, "2026-09-01T00:00:00.000Z");
+  const lungTrial = { ...tfdaTrial, title: "肺癌臨床試驗", officialTitle: undefined, conditions: ["肺癌"] };
+  const condition = assessTrial(cjkProfile, lungTrial).assessments.find((item) => item.key === "condition");
+  assert.equal(condition?.outcome, "possibly_met");
+  const breastTrial = { ...tfdaTrial, title: "乳癌臨床試驗", officialTitle: undefined, conditions: ["乳癌"] };
+  assert.equal(assessTrial(cjkProfile, breastTrial).assessments.find((item) => item.key === "condition")?.outcome, "possibly_not_met");
+});

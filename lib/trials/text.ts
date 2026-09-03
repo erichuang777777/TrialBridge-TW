@@ -35,6 +35,16 @@ export function containsCjk(value: string): boolean {
   return /[\u3400-\u9fff]/u.test(value);
 }
 
+/** Overlapping two-character windows for every CJK run, so `\u975e\u5c0f\u7d30\u80de\u80ba\u764c` shares `\u80ba\u764c` with `\u80ba\u764c\u81e8\u5e8a\u8a66\u9a57`. */
+export function cjkBigrams(value: string): string[] {
+  const bigrams = (value.match(/[\u3400-\u9fff]+/gu) ?? []).flatMap((run) => {
+    const characters = [...run];
+    if (characters.length < 2) return [];
+    return characters.slice(0, -1).map((character, index) => `${character}${characters[index + 1]}`);
+  });
+  return [...new Set(bigrams)];
+}
+
 export function normalizeIdentifier(value: string): string {
   return value.trim().toUpperCase().replace(/\s+/g, "");
 }

@@ -82,6 +82,8 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
   const [shortlistedTrialIds, setShortlistedTrialIds] = useState<string[]>([]);
   const [matching, setMatching] = useState(false);
   const [outreach, setOutreach] = useState<{ subject: string; body: string; sent: false }>();
+  const [matchError, setMatchError] = useState<string>();
+  const [matchesLoaded, setMatchesLoaded] = useState(false);
   const [discussionBrief, setDiscussionBrief] = useState<TrialDiscussionBrief>();
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<AssistantMessage[]>([]);
@@ -191,6 +193,8 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     setOutreach(undefined);
     setDiscussionBrief(undefined);
     setClarificationQuestions([]);
+    setMatchError(undefined);
+    setMatchesLoaded(false);
     try {
       const response = await fetch("/api/matches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profile }) });
       const payload = await response.json() as { matches?: TrialMatch[]; error?: string };
@@ -201,10 +205,11 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
         setClarificationQuestions(questions);
       } else {
         setMatches(payload.matches);
+        setMatchesLoaded(true);
       }
     } catch (error) {
       setMatches([]);
-      setOutreach({ subject: "Error", body: error instanceof Error ? error.message : "Matching failed.", sent: false });
+      setMatchError(error instanceof Error ? error.message : "Matching failed.");
     } finally { setMatching(false); }
   }
 
@@ -356,6 +361,8 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
         <div className="post-confirmation-controls"><label className="confirm-check webmcp-consent"><input type="checkbox" checked={webMcpConsent} onChange={(event) => setWebMcpConsent(event.target.checked)} />{state.language === "en" ? "Allow WebMCP to use the confirmed summary and current results." : "允許 WebMCP 使用確認摘要與目前結果。"}</label><button onClick={clearAnonymousConversation}>{t.clear}</button></div>
         {matching && <div className="matching-progress" role="status">{state.language === "en" ? "Checking public trial requirements…" : "正在檢查公開試驗條件…"}</div>}
         {clarificationQuestions.length > 0 && <ClarificationPanel questions={clarificationQuestions} language={state.language} answers={clarificationAnswers} onAnswersChange={setClarificationAnswers} onConfirm={confirmClarifications} />}
+        {matchError && <div className="error-panel" role="alert"><strong>{state.language === "en" ? "Matching stopped" : "配對已停止"}</strong><p>{matchError}</p><button type="button" onClick={() => void loadMatches(state.confirmedProfile!, false)}>{state.language === "en" ? "Try again" : "重試"}</button></div>}
+        {!matching && !matchError && matchesLoaded && matches.length === 0 && clarificationQuestions.length === 0 && <div className="empty-results" role="status"><strong>{state.language === "en" ? "No public record matched the confirmed summary" : "沒有公開紀錄符合已確認的摘要"}</strong><p>{state.language === "en" ? "The public index returned no trial for the confirmed cancer terms. This is a search limit, not an eligibility decision. Edit the summary to use a broader cancer type, or browse the public database directly." : "公開索引沒有找到符合已確認癌症用語的試驗。這是搜尋範圍限制，不是資格判定。可修改摘要改用較廣的癌症類型，或直接瀏覽公開資料庫。"}</p><div className="empty-results-actions"><button type="button" onClick={() => dispatch({ type: "BACK_TO_CAPTURE" })}>{state.language === "en" ? "Edit summary" : "修改摘要"}</button><a href="/trials">{state.language === "en" ? "Browse public trials" : "瀏覽公開試驗"}</a></div></div>}
         {matches.length > 0 && <div className="visual-results" aria-live="polite">
           <div className="results-title-row"><div><p className="eyebrow">Visual comparison</p><h3>{state.language === "en" ? "Source-traceable trial results" : "來源可追溯的試驗結果"}</h3></div><div className="results-controls"><MatchLegend language={state.language} /><div className="view-switcher" role="group" aria-label={state.language === "en" ? "Result view" : "結果顯示方式"}><button aria-pressed={resultView === "cards"} onClick={() => setResultView("cards")}>{state.language === "en" ? "Cards" : "卡片"}</button><button aria-pressed={resultView === "list"} onClick={() => setResultView("list")}>{state.language === "en" ? "List" : "條列"}</button></div></div></div>
           <details className="result-utilities"><summary><span><strong>{state.language === "en" ? "Saved trials and care-team tools" : "已儲存試驗與照護團隊工具"}</strong><small>{state.language === "en" ? "Compare saved trials or create a local discussion brief" : "比較已儲存試驗，或建立本機討論摘要"}</small></span><b>{shortlistedTrialIds.length}/3</b></summary><div className="result-utilities-body"><div className="results-export-row"><div><strong>{state.language === "en" ? "Take the comparison to your care team" : "將比較結果帶給照護團隊"}</strong><p>{state.language === "en" ? "Create a local brief in the current language from confirmed facts and up to five source-linked trials." : "使用已確認資料與最多五項可追溯試驗，以目前語言建立本機討論摘要。"}</p></div><button type="button" onClick={() => setDiscussionBrief(createTrialDiscussionBrief(state.confirmedProfile!, matches, state.language))}>{state.language === "en" ? "Create discussion brief" : "建立討論摘要"}</button></div><TrialShortlistPanel matches={resolveShortlistedMatches(matches, shortlistedTrialIds)} language={state.language} onRemove={toggleShortlist} onClear={() => setShortlistedTrialIds([])} /></div></details>

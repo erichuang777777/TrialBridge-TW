@@ -80,7 +80,7 @@ export default function WebMcpProofPage() {
       <aside className="recorded-runtime-proof" aria-label="Recorded Chrome WebMCP runtime evidence">
         <span><i aria-hidden="true" />Recorded Chrome evidence</span>
         <div><strong>{webMcpJudgeBundle.recordedBrowserRuntime.checksPassed}/{webMcpJudgeBundle.recordedBrowserRuntime.checksTotal} lifecycle checks passed in Chrome for Testing {webMcpJudgeBundle.recordedBrowserRuntime.browser.version}</strong><p>Two public tools remained after cleanup · temporary probe absent · {webMcpJudgeBundle.recordedBrowserRuntime.consoleErrors} console errors · no health information.</p></div>
-        <a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-browser-runtime-acceptance.json" target="_blank" rel="noreferrer">Inspect receipt</a>
+        <a href="https://github.com/erichuang777777/OpenAI-webMCP-hackthon/blob/main/evals/webmcp-browser-runtime-acceptance.json" target="_blank" rel="noreferrer">Inspect receipt</a>
       </aside>
       <details id="origin-trial-readiness" className={`origin-trial-readiness origin-trial-${originTrial.status}`}>
         <summary><span><i aria-hidden="true" />Origin Trial deployment</span><strong>{originTrialTitle}</strong><small>Inspect boundary</small></summary>
@@ -124,7 +124,7 @@ export default function WebMcpProofPage() {
       </ul>
       <div className="recorded-inspector-boundary">
         <p><strong>No Gemini call · no health information.</strong> The stock natural-language path requires a Gemini key, while its execution path passes no cancellation signal. TrialBridge adds a visible human stop that reaches the actual request, but does not count it as an Inspector pass. Three checks and production Origin Trial validation remain separate.</p>
-        <div><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-inspector-extension-runtime.json" target="_blank" rel="noreferrer">Inspect metadata receipt</a><a href={webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.repository} target="_blank" rel="noreferrer">Open pinned Inspector source</a></div>
+        <div><a href="https://github.com/erichuang777777/OpenAI-webMCP-hackthon/blob/main/evals/webmcp-inspector-extension-runtime.json" target="_blank" rel="noreferrer">Inspect metadata receipt</a><a href={webMcpJudgeBundle.recordedInspectorExtensionRuntime.inspector.repository} target="_blank" rel="noreferrer">Open pinned Inspector source</a></div>
       </div>
     </aside>
 
@@ -207,7 +207,7 @@ export default function WebMcpProofPage() {
         <article><span>What this records</span><strong>Single-turn model-to-tool selection</strong><p>Expected tool name, synthetic arguments, safe abstention, model identity, and latency across {selectionBaseline.summary.samples} calls.</p></article>
         <article><span>What remains separate</span><strong>Chrome Inspector and clinical validation</strong><p>This does not execute tools or prove browser registration, permissions, multi-turn recovery, clinical safety, fairness, or eligibility accuracy.</p></article>
       </div>
-      <div className="selection-receipt"><p><strong>Recorded {selectionBaseline.evaluatedAt.slice(0, 10)} UTC</strong><span>Dataset <code>{selectionBaseline.datasetDigestSha256.slice(0, 12)}…</code> · Tool contract <code>{selectionBaseline.toolContractDigestSha256.slice(0, 12)}…</code></span></p><a href="https://github.com/erichuang777777/TrialBridge-TW/blob/main/evals/webmcp-selection-baseline.json" target="_blank" rel="noreferrer">Inspect the full JSON artifact</a></div>
+      <div className="selection-receipt"><p><strong>Recorded {selectionBaseline.evaluatedAt.slice(0, 10)} UTC</strong><span>Dataset <code>{selectionBaseline.datasetDigestSha256.slice(0, 12)}…</code> · Tool contract <code>{selectionBaseline.toolContractDigestSha256.slice(0, 12)}…</code></span></p><a href="https://github.com/erichuang777777/OpenAI-webMCP-hackthon/blob/main/evals/webmcp-selection-baseline.json" target="_blank" rel="noreferrer">Inspect the full JSON artifact</a></div>
     </section>
 
     <section className="proof-section proof-guardrails" aria-labelledby="guardrails-title">
@@ -221,6 +221,6 @@ export default function WebMcpProofPage() {
       <Link className="secondary-action action-link" href="/match#private-chat">Open the guided workflow receipt</Link>
     </section>
 
-    <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation, human-controlled execution cancellation, current-browser lifecycle, and one recorded fictional permission transition. Stock agent cancellation, natural-language selection, and production Origin Trial behavior still require external Chrome validation.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/TrialBridge-TW/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
+    <aside className="proof-next-step" aria-label="Judge verification boundary"><strong>Final judge gate</strong><p>This page proves the implementation, human-controlled execution cancellation, current-browser lifecycle, and one recorded fictional permission transition. Stock agent cancellation, natural-language selection, and production Origin Trial behavior still require external Chrome validation.</p><div><Link href="/trials">Try the declarative trial form</Link><a href="https://developer.chrome.com/docs/ai/webmcp" target="_blank" rel="noreferrer">Open Chrome WebMCP documentation</a><a href="https://github.com/erichuang777777/OpenAI-webMCP-hackthon/actions" target="_blank" rel="noreferrer">View GitHub CI evidence</a></div></aside>
   </main>;
 }

@@ -60,8 +60,11 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
     case "MASK_COMPLETE":
       return state.stage === "capture" ? { ...state, maskResult: event.result, stage: "mask_review" } : state;
     case "BACK_TO_CAPTURE":
-      return state.stage === "mask_review" || state.stage === "confirmation"
-        ? { ...state, stage: "capture", rawText: state.stage === "confirmation" ? state.maskResult?.maskedText ?? "" : state.rawText, maskResult: undefined, draft: undefined }
+      // From review, confirmation, or an empty result set, return to an editable note.
+      // rawText is cleared when extraction starts, so fall back to the masked text
+      // instead of dropping the person into an empty textarea.
+      return state.stage === "mask_review" || state.stage === "confirmation" || state.stage === "ready"
+        ? { ...state, stage: "capture", rawText: state.rawText.trim() ? state.rawText : state.maskResult?.maskedText ?? "", maskResult: undefined, draft: undefined, confirmedProfile: undefined, error: undefined }
         : state;
     case "EXTRACTION_START":
       return state.stage === "mask_review" && state.maskResult

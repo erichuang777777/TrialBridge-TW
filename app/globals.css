@@ -408,6 +408,10 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .post-confirmation-controls > button { flex: 0 0 auto; }
 .webmcp-consent { padding: 10px 12px; border-radius: 8px; background: var(--paper); font-size: 0.9rem; }
 .matching-progress { padding: 16px; border-radius: 10px; color: var(--primary-strong); background: var(--mint); font-weight: 800; }
+.empty-results { margin-top: 18px; padding: 18px 20px; border: 1px solid var(--line); border-left: 4px solid var(--primary-strong); border-radius: 10px; background: var(--mint); }
+.empty-results p { margin: 6px 0 14px; }
+.empty-results-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.empty-results-actions a { font-weight: 700; }
 .clarification-panel { margin-top: 24px; padding: 22px; border: 2px solid var(--primary); border-radius: 14px; background: #f3faf8; }
 .clarification-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .clarification-heading h3 { margin-top: 2px; font-size: 1.35rem; }

@@ -2,6 +2,7 @@ import { confirmedProfileSchema, type ConfirmedProfile } from "../profile/schema
 import { searchTrialRegistries } from "../trials/search.ts";
 import { searchTrialCatalog } from "../trials/index/catalog.ts";
 import { publishedSiteRegion } from "../trials/presentation.ts";
+import { cjkBigrams } from "../trials/text.ts";
 import type { NormalizedTrial, TrialRegistryAdapter } from "../trials/types.ts";
 import { deriveDetailedCriterionEvidence, derivePotentialInterventionExclusions, type DetailedCriterionEvidence, type PotentialExclusionSignal } from "./criterionEvidence.ts";
 
@@ -29,7 +30,19 @@ function factsFor(profile: ConfirmedProfile, domains: string[]) {
 }
 
 function normalizedTerms(value: string): string[] {
-  return value.toLocaleLowerCase("en").split(/[^\p{L}\p{N}+]+/u).filter((term) => term.length >= 2);
+  const lowered = value.normalize("NFKC").toLocaleLowerCase("en");
+  const words = lowered.split(/[^\p{L}\p{N}+]+/u).filter((term) => term.length >= 2);
+  // CJK has no word boundaries: add overlapping bigrams so 非小細胞肺癌 and 肺癌 share 肺癌.
+  return [...new Set([...words, ...cjkBigrams(lowered)])];
+}
+
+function normalizedSex(value?: string): "MALE" | "FEMALE" | "ALL" | undefined {
+  const normalized = value?.normalize("NFKC").trim().toLocaleLowerCase("en");
+  if (!normalized) return undefined;
+  if (/^(all|any|both|不限|男女)$/u.test(normalized)) return "ALL";
+  if (/^(f|female|woman|women|女|女性)$/u.test(normalized)) return "FEMALE";
+  if (/^(m|male|man|men|男|男性)$/u.test(normalized)) return "MALE";
+  return undefined;
 }
 
 export function deriveConditionQuery(profileInput: ConfirmedProfile): string {
@@ -63,11 +76,12 @@ export function assessTrial(profileInput: ConfirmedProfile, trial: NormalizedTri
   const ageKnown = age.age !== undefined && (minimumAge !== undefined || maximumAge !== undefined);
   const ageWithin = !ageKnown || ((minimumAge === undefined || age.age! >= minimumAge) && (maximumAge === undefined || age.age! <= maximumAge));
   const sexFacts = factsFor(profile, ["sex_eligibility"]);
-  const patientSex = sexFacts[0]?.value.toLocaleUpperCase("en");
-  const registrySex = trial.eligibility.sex?.toLocaleUpperCase("en");
+  // Exact enum comparison: substring checks let "FEMALE" pass a MALE-only trial.
+  const patientSex = normalizedSex(sexFacts[0]?.value) ?? normalizedSex(sexFacts[0]?.displayEn);
+  const registrySex = normalizedSex(trial.eligibility.sex);
   const sexUnrestricted = registrySex === "ALL";
   const sexKnown = Boolean(patientSex && registrySex && !sexUnrestricted);
-  const sexWithin = sexKnown && patientSex!.includes(registrySex!);
+  const sexWithin = sexKnown && patientSex === registrySex;
   const travelFacts = factsFor(profile, ["travel_preference"]);
   const travelText = travelFacts.map((fact) => `${fact.value} ${fact.displayZhHant} ${fact.displayEn}`).join(" ").toLocaleLowerCase("en");
   const allowsWorldwide = /全球|world|global/.test(travelText);
