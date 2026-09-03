@@ -33,6 +33,8 @@ measurement. The production site is https://trialbridge-tw.netlify.app/.
 - [x] Scheduled sync workflow targets Turso with a read-write token; Node 22 everywhere.
 - [x] Turso database created; Netlify reads it with a read-only token and the `sync-trial-index` workflow writes with a read-write token from GitHub secrets (first successful scheduled run took about 40 minutes, so FTS5 writes over HTTPS work).
 - [x] `search()` fetches identifiers for a ranked window of up to 200 rows and transfers `payload_json` only for the rows that can fill the page, so `/trials` shows 20 records again without exceeding Netlify's synchronous budget.
+- [x] `TRIAL_SEARCH_DEADLINE_MS=7000` on Netlify: a catalog search that outlives its budget answers with `SOURCE_TIMEOUT` failures (and skips the live fallback) instead of the platform's 504. `/api/data-health` then reports `index_timeout`.
+- [ ] Read `sources[].durationMs` from a few `POST /api/trials/search` responses on the live site for broad terms (`breast cancer`, `lung cancer`); if the index regularly needs more than about 4 s, lower `/trials` `pageSize` or move the search route to a background/edge function.
 - [ ] Decide between the demo subset and the full 4 GB (free tier is 5 GB including FTS).
 - [ ] Publish the full SQLite file as a GitHub Release asset with a fetch script for contributors.
 

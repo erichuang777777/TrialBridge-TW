@@ -18,6 +18,10 @@
   TRIAL_INDEX_LIBSQL_READ_ONLY = "true"
   TFDA_LIVE_FALLBACK = "false"
   RATE_LIMIT_PROFILE = "demo"
+  # Synchronous functions are cut off at 10 s with an opaque 504. Answer a
+  # registry search inside that limit: a slow Turso query becomes a visible
+  # SOURCE_TIMEOUT failure instead, and no live fallback starts without budget.
+  TRIAL_SEARCH_DEADLINE_MS = "7000"
   # Keep one extraction well inside the platform ceiling; the route streams so
   # headers go out immediately either way.
   CLOUD_EXTRACTION_TIMEOUT_MS = "55000"

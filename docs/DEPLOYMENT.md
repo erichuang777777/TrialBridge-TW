@@ -37,7 +37,7 @@ Environment variables (secrets in the Netlify UI, never in `netlify.toml`):
 | `TRIAL_INDEX_LIBSQL_AUTH_TOKEN` | Turso token created with `--read-only` | Secret. The read-write token lives only in GitHub secrets. |
 | `SITE_URL` | `https://<custom domain>` | Exact origin, no path; drives canonical links and the Origin Trial token. Leave unset on deploy previews. |
 | `WEBMCP_ORIGIN_TRIAL_TOKEN` | Chrome Origin Trial token for that origin | Optional until registered. |
-| `TRIAL_INDEX_BACKEND`, `TRIAL_INDEX_LIBSQL_READ_ONLY`, `TFDA_LIVE_FALLBACK`, `RATE_LIMIT_PROFILE`, `CLOUD_EXTRACTION_TIMEOUT_MS` | set in `netlify.toml` | `libsql`, `true`, `false`, `demo`, `55000`. |
+| `TRIAL_INDEX_BACKEND`, `TRIAL_INDEX_LIBSQL_READ_ONLY`, `TFDA_LIVE_FALLBACK`, `RATE_LIMIT_PROFILE`, `TRIAL_SEARCH_DEADLINE_MS`, `CLOUD_EXTRACTION_TIMEOUT_MS` | set in `netlify.toml` | `libsql`, `true`, `false`, `demo`, `7000`, `55000`. The search deadline stays under Netlify's 10 s synchronous limit so a slow index answers with `SOURCE_TIMEOUT` rather than a 504. |
 
 Publishing the local index:
 
