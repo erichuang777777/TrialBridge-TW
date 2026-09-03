@@ -3,7 +3,7 @@ import { chromium } from "file:///C:/Users/TaiHao/AppData/Roaming/npm/node_modul
 const browser = await chromium.launch({ headless: true, executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on("console", (message) => console.log(`[console:${message.type()}] ${message.text()}`));
-await page.goto("https://trialbridge-tw.netlify.app/webmcp/quickstart", { waitUntil: "networkidle", timeout: 60000 });
+await page.goto("https://trialbridge-tw.netlify.app/webmcp/quickstart?probe=a8044d7", { waitUntil: "networkidle", timeout: 60000 });
 const result = await page.evaluate(async () => {
   const modelContext = document.modelContext;
   const tools = await modelContext.getTools({ fromOrigins: [location.origin] });
