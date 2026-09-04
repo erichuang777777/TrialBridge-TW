@@ -100,8 +100,11 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     setRegistrationState("registering");
     void (async () => {
       try {
-        await Promise.all(tools.map((tool) => modelContext.registerTool(tool, { signal: controller.signal, exposedTo: [location.origin] })));
-        const discoverable = await modelContext.getTools({ fromOrigins: [location.origin] });
+        // This surface is entirely same-origin. Chrome discovers same-origin
+        // tools by default; exposedTo/fromOrigins are only needed when a tool
+        // crosses an iframe origin boundary.
+        await Promise.all(tools.map((tool) => modelContext.registerTool(tool, { signal: controller.signal })));
+        const discoverable = await modelContext.getTools();
         if (!active) return;
         const expectedNames = new Set(tools.map((tool) => tool.name));
         const verifiedNames = [...new Set(discoverable.map((tool) => tool.name).filter((name) => expectedNames.has(name)))];
@@ -282,7 +285,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     <span className="webmcp-live-mark" aria-hidden="true" />
     <span><strong>{language === "en" ? "For AI agents · WebMCP" : "提供 AI Agent 使用 · WebMCP"}</strong><small>{language === "en" ? "Call trialbridge_method first, then search_public_cancer_trials." : "先呼叫 trialbridge_method，再使用 search_public_cancer_trials。"}</small></span>
     <a href="/webmcp">{language === "en" ? "Usage & proof" : "使用方法與證據"}</a>
-    <em role="status" aria-atomic="true">{visibleActivity ? (allActiveExecutionsCancelling ? copy.cancelling : copy.activity[visibleActivity.state]) : copy.state[registrationState]}</em>
+    <em role="status" aria-atomic="true">{visibleActivity ? (allActiveExecutionsCancelling ? copy.cancelling : copy.activity[visibleActivity.state]) : registrationState === "error" && errorMessage ? `${copy.state.error}: ${errorMessage}` : copy.state[registrationState]}</em>
     {activeExecutions.length > 0 && <button className="webmcp-agent-cancel" type="button" disabled={allActiveExecutionsCancelling} onClick={cancelActiveExecutions}>{allActiveExecutionsCancelling ? copy.cancelling : cancelLabel}</button>}
   </aside>;
 

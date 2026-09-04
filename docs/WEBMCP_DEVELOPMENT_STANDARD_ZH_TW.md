@@ -168,8 +168,7 @@ if (document.modelContext) {
       return response.json();
     }
   }, {
-    signal: controller.signal,
-    exposedTo: [location.origin]
+    signal: controller.signal
   });
 
   // Component/page cleanup:
@@ -191,7 +190,7 @@ const result = await document.modelContext.executeTool(
 );
 ```
 
-Chrome 版本間的 `executeTool()` input 型態曾有變動；以當下 Chrome 官方文件與型別為準，不要只靠 polyfill 行為判定 conformance。
+同源工具直接使用 `getTools()`；只有跨來源 frame 才使用 `exposedTo` 和 `getTools({ fromOrigins: [...] })`。Chrome 版本間的 `executeTool()` input 型態曾有變動；以當下 Chrome 官方文件與型別為準，不要只靠 polyfill 行為判定 conformance。
 
 ### 4.3 錯誤範例
 
@@ -437,4 +436,3 @@ Invoke-WebRequest `
 - [WebMCP source and declarative explainer](https://github.com/webmachinelearning/webmcp)
 - [MDN CORS guide](https://developer.mozilla.org/docs/Web/HTTP/Guides/CORS)
 - [MDN CORS errors](https://developer.mozilla.org/docs/Web/HTTP/CORS/Errors)
-
