@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { createPageMetadata, getSiteConfig, siteDescription, siteName } from "@/lib/site/metadata";
 import { getWebMcpOriginTrialMetaToken } from "@/lib/webmcp/originTrial";
+import { WebMcpNavigatorAlias } from "./components/WebMcpNavigatorAlias";
 import "./globals.css";
 
 const siteConfig = getSiteConfig();
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       </head>
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
+        <WebMcpNavigatorAlias />
         {children}
       </body>
     </html>
