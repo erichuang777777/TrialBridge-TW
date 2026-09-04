@@ -383,7 +383,7 @@ for (const marker of ["Live cloud model smoke test", "It never reads the note, p
 check(cloudProbeVerifier.includes('method: "POST"') && !cloudProbeVerifier.includes("body:"), "Explicit cloud verifier must send a body-free POST.");
 
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
-for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt", "sensitiveConsent, agentIntake, language, onActivity"]) {
+for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "registerTool(tool, { signal: controller.signal })", "createWebMcpSessionReceipt", "Download JSON receipt", "sensitiveConsent, agentIntake, language, onActivity"]) {
   check(bridge.includes(marker), `Imperative bridge is missing ${marker}.`);
 }
 for (const marker of ["onExecutionControl", "Cancel active agent tool", "cancelActiveExecutions", 'role="status" aria-atomic="true"']) {
