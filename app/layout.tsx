@@ -14,11 +14,34 @@ export const metadata: Metadata = {
   applicationName: "TrialBridge TW",
   category: "health",
   manifest: "/manifest.webmanifest",
-  robots: {
-    index: siteConfig.indexingEnabled,
-    follow: siteConfig.indexingEnabled,
-    googleBot: { index: siteConfig.indexingEnabled, follow: siteConfig.indexingEnabled },
-  },
+};
+
+const semanticSiteGraph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${siteConfig.origin}/#website`,
+      url: siteConfig.origin,
+      name: siteName,
+      description: siteDescription,
+      inLanguage: ["en", "zh-Hant"],
+      potentialAction: {
+        "@type": "SearchAction",
+        target: `${siteConfig.origin}/trials?condition={search_term_string}`,
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${siteConfig.origin}/#application`,
+      name: "TrialBridge TW",
+      applicationCategory: "HealthApplication",
+      operatingSystem: "Web",
+      isAccessibleForFree: true,
+      featureList: ["Public clinical-trial search", "Browser-native WebMCP tools"],
+    },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -28,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <head>
         {originTrialToken ? <meta httpEquiv="origin-trial" content={originTrialToken} /> : null}
         <link rel="describedby" href="/llms.txt" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(semanticSiteGraph) }} />
       </head>
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>

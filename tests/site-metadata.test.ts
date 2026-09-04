@@ -29,9 +29,9 @@ test("every public route can declare a canonical and shareable page identity", (
   assert.match(JSON.stringify(metadata.twitter), /summary_large_image/);
 });
 
-test("Next metadata routes replace the unconditional public robots file", async () => {
+test("public metadata routes do not publish a robots.txt blocker", async () => {
   const root = process.cwd();
-  const files = ["app/robots.ts", "app/sitemap.ts", "app/manifest.ts", "app/opengraph-image.tsx", "app/twitter-image.tsx"];
+  const files = ["app/layout.tsx", "app/sitemap.ts", "app/manifest.ts", "app/opengraph-image.tsx", "app/twitter-image.tsx"];
   const source = (await Promise.all(files.map((file) => readFile(path.join(root, file), "utf8")))).join("\n");
   assert.match(source, /SITE_INDEXING_ENABLED|indexingEnabled/);
   assert.match(source, /MetadataRoute\.Sitemap/);

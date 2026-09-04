@@ -7,7 +7,7 @@ import { webMcpBrowserSetupContract, webMcpLocalTestingFlag } from "../lib/webmc
 test("browser setup separates the standard, native preview, site, and optional Inspector", () => {
   assert.equal(webMcpLocalTestingFlag, "chrome://flags/#enable-webmcp-testing");
   assert.equal(webMcpBrowserSetupContract.visitorInstallRequired, false);
-  assert.equal(webMcpBrowserSetupContract.localTesting.minimumChromeMajor, 149);
+  assert.equal(webMcpBrowserSetupContract.localTesting.minimumChromeMajor, 146);
   assert.equal(webMcpBrowserSetupContract.localTesting.flagAddress, webMcpLocalTestingFlag);
   assert.deepEqual(webMcpBrowserSetupContract.layers.map((layer) => layer.id), ["specification", "browser", "trialbridge"]);
   assert.equal(webMcpBrowserSetupContract.inspector.separateFromWebMcp, true);
