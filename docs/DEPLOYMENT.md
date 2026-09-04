@@ -132,7 +132,7 @@ The token is public by design once emitted in `<head>`, but the server-only vari
 
 ### Public discovery profile
 
-The default build emits `noindex` metadata and does not publish a `/robots.txt` blocker. It still provides canonical/page metadata, `/manifest.webmanifest`, and local-font social preview images so the release surface can be inspected without pretending to be a clinical service.
+The default build emits `noindex` metadata and publishes `/robots.txt` with `/api/` excluded. It still provides canonical/page metadata, `/manifest.webmanifest`, and local-font social preview images so the release surface can be inspected without pretending to be a clinical service.
 
 Only after every required readiness, legal, governance, monitoring, and incident-response gate is approved may deployment set both:
 
@@ -141,6 +141,6 @@ SITE_URL=https://the-exact-reviewed-origin.example
 SITE_INDEXING_ENABLED=true
 ```
 
-`SITE_URL` accepts an origin only—no path, query, credentials, or fragment. Indexing requires non-loopback HTTPS; an unsafe or malformed requested profile fails the build instead of silently becoming public. The generated sitemap lists only the six human-facing routes, including `/webmcp/quickstart`; API routes remain undiscoverable through the sitemap.
+`SITE_URL` accepts an origin only—no path, query, credentials, or fragment. Indexing requires non-loopback HTTPS; an unsafe or malformed requested profile fails the build instead of silently becoming public. The generated sitemap lists only the six human-facing routes, including `/webmcp/quickstart`; `/robots.txt` excludes `/api/`.
 
 No deployment may enable automated outreach, enrollment, booking, consent, or treatment recommendations.
