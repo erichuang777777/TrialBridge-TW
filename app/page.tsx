@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandMark } from "./components/BrandMark";
 import { HeroConstellation } from "./components/HeroConstellation";
 import { WebMcpBridge } from "./components/WebMcpBridge";
+import { LandingTrialSearch } from "./components/LandingTrialSearch";
 
 export default function Home() {
   return (
@@ -40,6 +41,8 @@ export default function Home() {
         </div>
         <HeroConstellation />
       </section>
+
+      <LandingTrialSearch />
 
       <footer>
         <p>TrialBridge TW organizes information for care discussions. It does not provide medical advice or replace eligibility review by a study team.</p>
