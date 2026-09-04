@@ -57,3 +57,17 @@ export async function POST(request: Request) {
     headers: { "Cache-Control": "no-store" },
   }), request);
 }
+
+// Some agent inspectors probe a declarative form's endpoint with GET before
+// invoking it. Return the same bounded public search instead of framework 405.
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const condition = url.searchParams.get("condition")?.trim() || "cancer";
+  const includeNotOpen = url.searchParams.get("includeNotOpen") !== "false";
+  const pageSize = Math.min(Number(url.searchParams.get("pageSize") || 5) || 5, 5);
+  const input = trialSearchRequestSchema.safeParse({ condition, includeNotOpen, pageSize });
+  if (!input.success) return withCors(Response.json({ error: "Invalid trial search condition." }, { status: 400 }), request);
+  const queryPlan = createRegistryQueryPlan(input.data.condition);
+  const result = await searchTrialCatalog(input.data, queryPlan.registryConditions, { signal: request.signal });
+  return withCors(Response.json({ ...result, queryPlan, searchOrder: ["taiwan", "asia", "world", "unknown"], disclaimer: "Trial registries describe research plans. They do not prove benefit or determine final eligibility." }), request);
+}

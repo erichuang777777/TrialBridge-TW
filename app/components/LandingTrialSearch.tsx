@@ -28,7 +28,7 @@ export function LandingTrialSearch() {
 
   return (
     <section className="database-shell landing-tool" aria-labelledby="landing-search-title">
-      <form id="landing-public-trial-search-form" method="get" toolname={publicTrialFormContractCore.name} tooldescription={publicTrialFormContractCore.description} toolautosubmit="" onSubmit={submit}>
+      <form id="landing-public-trial-search-form" method="get" toolname={publicTrialFormContractCore.name} tooldescription={publicTrialFormContractCore.description} toollocation="/" toolaction="search-public-trial-records" toolautosubmit="" onSubmit={submit}>
         <div className="search-heading"><div><p className="eyebrow">Agent-ready public search</p><h2 id="landing-search-title">Find public trial records</h2></div><span className="webmcp-form-pill">Declarative WebMCP</span></div>
         <label htmlFor="landing-trial-condition">Cancer type or condition</label>
         <div className="search-row">
