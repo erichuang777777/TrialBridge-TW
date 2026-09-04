@@ -44,6 +44,7 @@ export default function Home() {
 
       <footer>
         <p>TrialBridge TW organizes information for care discussions. It does not provide medical advice or replace eligibility review by a study team.</p>
+        <Link href="/webmcp/quickstart">WebMCP testing guide</Link>
       </footer>
     </main>
   );

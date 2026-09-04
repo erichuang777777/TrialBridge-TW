@@ -31,9 +31,19 @@ export async function POST(request: Request) {
   if (!limit.allowed) return withCors(rateLimitResponse(limit), request);
   let body: unknown;
   try {
-    body = await request.json();
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    if (contentType.includes("application/json")) {
+      body = await request.json();
+    } else {
+      const form = await request.formData();
+      body = {
+        condition: String(form.get("condition") ?? ""),
+        includeNotOpen: form.has("includeNotOpen"),
+        pageSize: 5,
+      };
+    }
   } catch {
-    return withCors(Response.json({ error: "Request body must be valid JSON." }, { status: 400 }), request);
+    return withCors(Response.json({ error: "Request body must be valid JSON or form data." }, { status: 400 }), request);
   }
 
   const parsed = trialSearchRequestSchema.safeParse(body);

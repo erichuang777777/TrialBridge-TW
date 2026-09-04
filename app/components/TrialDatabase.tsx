@@ -222,7 +222,7 @@ export function TrialDatabase() {
 
   return (
     <section className="database-shell" aria-labelledby="database-search-title">
-      <form id="public-trial-search-form" method="get" className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription={publicTrialFormContractCore.description} toollocation="/trials" toolaction="search-public-trial-records" toolautosubmit="" onSubmit={submitSearch}>
+      <form id="public-trial-search-form" action="/api/trials/search" method="post" className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription={publicTrialFormContractCore.description} toolautosubmit="" onSubmit={submitSearch}>
         <div className="search-heading">
           <div><p className="eyebrow">Direct registry search</p><h2 id="database-search-title">What condition are you looking for?</h2></div>
           <div className="source-stack"><span className="source-pill">TFDA + ClinicalTrials.gov</span><span className="webmcp-form-pill">Declarative WebMCP</span></div>
