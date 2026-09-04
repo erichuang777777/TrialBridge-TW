@@ -5,31 +5,35 @@ import { consumeRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const corsHeaders = (request?: Request) => {
+  const origin = request?.headers.get("origin");
+  return {
+  "Access-Control-Allow-Origin": origin || "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   Vary: "Origin",
+  ...(origin ? { "Access-Control-Allow-Credentials": "true" } : {}),
+};
 };
 
-function withCors(response: Response) {
+function withCors(response: Response, request?: Request) {
   const headers = new Headers(response.headers);
-  Object.entries(corsHeaders).forEach(([key, value]) => headers.set(key, value));
+  Object.entries(corsHeaders(request)).forEach(([key, value]) => headers.set(key, value));
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
-export function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders });
+export function OPTIONS(request: Request) {
+  return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
 
 export async function POST(request: Request) {
   const limit = consumeRateLimit(request, { bucket: "trial-search", limit: 60, windowMs: 5 * 60_000 });
-  if (!limit.allowed) return withCors(rateLimitResponse(limit));
+  if (!limit.allowed) return withCors(rateLimitResponse(limit), request);
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return withCors(Response.json({ error: "Request body must be valid JSON." }, { status: 400 }));
+    return withCors(Response.json({ error: "Request body must be valid JSON." }, { status: 400 }), request);
   }
 
   const parsed = trialSearchRequestSchema.safeParse(body);
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
     return withCors(Response.json({
       error: "Invalid trial search request.",
       fields: parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })),
-    }, { status: 400 }));
+    }, { status: 400 }), request);
   }
 
   const queryPlan = createRegistryQueryPlan(parsed.data.condition);
@@ -51,5 +55,5 @@ export async function POST(request: Request) {
   }, {
     status,
     headers: { "Cache-Control": "no-store" },
-  }));
+  }), request);
 }
