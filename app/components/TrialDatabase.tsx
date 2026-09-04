@@ -222,7 +222,7 @@ export function TrialDatabase() {
 
   return (
     <section className="database-shell" aria-labelledby="database-search-title">
-      <form className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription={publicTrialFormContractCore.description} toollocation="/trials" toolaction="search-public-trial-records" toolautosubmit="" onSubmit={submitSearch}>
+      <form id="public-trial-search-form" action="/api/trials/search" method="post" className={`database-search${declarativeActive ? " agent-tool-active" : ""}`} toolname={declarativeToolName} tooldescription={publicTrialFormContractCore.description} toolautosubmit="" onSubmit={submitSearch}>
         <div className="search-heading">
           <div><p className="eyebrow">Direct registry search</p><h2 id="database-search-title">What condition are you looking for?</h2></div>
           <div className="source-stack"><span className="source-pill">TFDA + ClinicalTrials.gov</span><span className="webmcp-form-pill">Declarative WebMCP</span></div>
@@ -232,7 +232,7 @@ export function TrialDatabase() {
         <label htmlFor="trial-condition">Cancer type or condition</label>
         <div className="search-row">
           <input id="trial-condition" name="condition" type="search" value={query} onChange={(event) => setQuery(event.target.value)} minLength={2} maxLength={120} required toolparamdescription={publicTrialFormContractCore.inputSchema.properties.condition.description} />
-          <button className="primary-action" disabled={loading || query.trim().length < 2}>{loading ? "Searching…" : "Search trials"}</button>
+          <button className="primary-action" type="submit" disabled={loading || query.trim().length < 2}>{loading ? "Searching…" : "Search trials"}</button>
         </div>
         <div className="suggestion-row" aria-label="Suggested searches">
           {suggestions.map((suggestion) => <button type="button" key={suggestion.condition} onClick={() => { setQuery(suggestion.condition); void search(suggestion.condition); }}>{suggestion.label}</button>)}

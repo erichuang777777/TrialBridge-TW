@@ -21,6 +21,19 @@ export function WebMcpNavigatorAlias() {
       // Older browsers may expose a non-extensible Navigator; feature
       // detection remains available through document.modelContext.
     }
+
+    const windowWithAi = window as Window & { ai?: { modelContext?: unknown } };
+    if (!("ai" in windowWithAi)) {
+      try {
+        Object.defineProperty(windowWithAi, "ai", {
+          configurable: true,
+          enumerable: false,
+          get: () => ({ modelContext: document.modelContext }),
+        });
+      } catch {
+        // Keep the native document.modelContext path when Window is locked.
+      }
+    }
   }, []);
   return null;
 }

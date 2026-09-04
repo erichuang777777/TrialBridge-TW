@@ -21,10 +21,8 @@ export default async function MatchWorkspace({ searchParams }: { searchParams: P
           <span><strong>TrialBridge TW</strong><small>Matching workspace</small></span>
         </Link>
         <nav aria-label="Workspace navigation">
-          <Link href="/">Home</Link>
+          <Link href="/">Demo</Link>
           <Link href="/trials">Trial database</Link>
-          <Link href="/data-health">Data health</Link>
-          <Link href="/privacy">Privacy</Link>
         </nav>
       </header>
       <section className="workspace-intro" aria-labelledby="workspace-title">
