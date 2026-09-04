@@ -425,6 +425,64 @@ Invoke-WebRequest `
 - [ ] 不把實驗性／相容 alias 宣稱為正式標準。
 - [ ] Demo video 保存 Website → Browser → Agent → Tool → Result 證據鏈。
 
+## 11. 專案實戰歸納（TrialBridge TW，2026-09-03 至 09-04）
+
+以下是把本規範套到真實部署後，實際踩到並修掉的問題。每一條都對應一次紅燈或一次「工具不見了」。
+
+### 11.1 工具數量：少而精，每一個都要有 gate 與理由
+
+- 公開工具維持兩個（`trialbridge_method`、`search_public_cancer_trials`）。評審在 quickstart 只看到兩個是刻意的能力分層，不是功能不足。
+- 需要「深入」時加參數或加一個工具，不要為了數量加 `filter_by_*`、`list_*` 這類拆分工具；模型選錯率會跟著上升，selection eval 會掉。
+- 唯一會改變頁面狀態的工具（`organize_deidentified_summary`）必須：`readOnlyHint: false`、只在可見開關開啟時註冊、沒有 profile 時才存在、整理一開始就消失。誠實標示比「全部 read-only」的漂亮數字重要。
+- 接受醫療文字的工具，識別碼（email、電話、身分證、病歷號、標示的姓名、生日、地址）在進頁面前就拒收並回報種類，不要默默遮蔽。回傳只給計數，不回顯原文。
+
+### 11.2 Origin Trial 與「工具不見了」
+
+- Origin Trial token 綁定精確 origin。Netlify Deploy Preview（`deploy-preview-N--site.netlify.app`）不在 token 範圍內，`document.modelContext` 會是 `undefined`，所有工具都不會出現。要在 preview 測，只能開 `chrome://flags/#enable-webmcp-testing`。
+- Console 出現 `Origin trial controlled feature not enabled: 'tools'`，代表 token 被 Chrome 拒絕或過期，不是程式碼問題。
+- 兩個版本號不要混用：本機 flag 從 Chrome 146 可用；Origin Trial 從 Chrome 149 開始。程式碼、測試、`/.well-known` 文件要引用同一個常數，否則測試與實作會各自改成不同數字而讓 CI 轉紅。
+- 頁面可以自我診斷：`meta[http-equiv="origin-trial"]` 是否存在，加上 `document.featurePolicy.features()` 是否列出 `tools`，就能區分「token 生效」「token 有送但被拒」「只靠本機 flag」「都沒有」。把它放在 quickstart 上，評審不用開 DevTools。
+
+### 11.3 同源註冊
+
+- 同源工具用 `registerTool(tool, { signal })` 與 `getTools()` 即可；`exposedTo` 與 `fromOrigins` 留給跨來源 frame。
+- 改了註冊方式，驗證腳本的 marker 也要同步改，否則 CI 會在 `verify:webmcp` 失敗而不是在測試失敗，較難一眼看出。
+
+### 11.4 Declarative form
+
+- `toolname` 與 `tooldescription` 要同時存在；不要發明 `toolaction`、`toollocation` 這類非標準屬性，瀏覽器會忽略。
+- 病歷這種需要人審的表單不要加 `toolautosubmit`；Agent 填入，人按送出，送出鍵本身就是 gate。
+- React controlled textarea 被 Agent 直接寫入 DOM 時，React state 不一定同步。送出時用 `new FormData(form)` 讀實際值，再回填 state。
+- `respondWith()` 要回傳有限、可序列化的結果；整理若超過等待預算，回 `organizing` 讓 Agent 停止等待，而不是讓 Promise 懸著。
+
+### 11.5 Imperative execute 的輸入型態
+
+- Chrome 目前的 Origin Trial 可能把 `executeTool` 的 input 當 JSON 字串送進來，draft API 則是物件。`execute` 開頭先正規化：`typeof input === "string" ? JSON.parse(input) : input`。
+- 執行時把 `options.signal` 一路傳到 `fetch`、route、matching、registry adapter；取消與失敗要分開呈現。
+
+### 11.6 Serverless 時間預算（504 的真正原因）
+
+- Netlify 同步函式 10 秒上限，超過就是不透明的 504，前端拿不到 JSON。縮小結果數只減少傳輸量，不會限制時間。
+- 正解是整段搜尋共用一個 deadline（`TRIAL_SEARCH_DEADLINE_MS=7000`）：索引查詢逾時就回 `SOURCE_TIMEOUT` 的 JSON，剩餘預算不足就不啟動 live fallback，`/api/data-health` 標記 `index_timeout`。
+- 遠端 libSQL 用兩階段查詢：先抓識別欄位的排序視窗（最多 200 列），再只抓能進頁面的 `payload_json`。召回率回來了，傳輸量仍有上限。
+- 部署後看 `sources[].durationMs`；索引常超過 4 秒就先降 `pageSize`，不要調高 deadline。
+
+### 11.7 CORS 與探測
+
+- `Access-Control-Allow-Origin: *` 只適合完全公開、不帶 credential 的 API，且不要搭配 `Vary: Origin`。需要 credential 就回顯 allowlist 內的精確 origin。
+- 每個 API route 都要有 `OPTIONS` handler，否則 Inspector 探測會拿到 405。
+- 405 在 `/trials` 與 405 在 `/api/trials/search` 是兩件事；先看 Network 的 exact Request URL。
+
+### 11.8 驗證與證據
+
+- 把契約集中在一個來源（`toolContractCore.ts`），catalog、capability states、agent guide、`contracts.json`、`evidence.json` 全部由它衍生；加一個工具要同步更新的計數才不會散落各處。
+- 錄製過的證據（Inspector 3/6、Lighthouse 2/2、selection baseline 55/55）不要為了新工具改數字；新工具另開章節，舊證據標明日期。
+- 每次改 WebMCP 相關程式碼都跑 `npm test`、`npm run typecheck`、`npm run verify:webmcp`、`npm run build`；本機綠、CI 紅時先看是不是 `npm audit` 的 registry 503 這類外部服務問題，再決定重跑或修。
+
+### 11.9 直接推 main 的代價
+
+- 本專案兩次 main 轉紅都來自直接 push：一次是測試改了常數但實作沒改，一次是註冊方式改了但驗證 marker 沒改。走 PR 讓 CI 先跑一次，成本只有幾分鐘。
+
 ## 10. 官方參考資料
 
 - [Chrome WebMCP overview](https://developer.chrome.com/docs/ai/webmcp)

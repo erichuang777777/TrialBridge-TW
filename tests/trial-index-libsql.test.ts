@@ -10,7 +10,8 @@ import { resolveTrialIndexProfile, trialIndexProfileSqlPredicate, trialMatchesIn
 import { createTrialIndexStore, resolveTrialIndexBackend } from "../lib/trials/index/store.ts";
 import { ctgovFixture, tfdaFixture } from "./fixtures/registry.ts";
 
-const timestamp = "2026-09-03T00:00:00.000Z";
+// One hour ago: source freshness is judged against the wall clock, so a fixed date would turn stale.
+const timestamp = new Date(Date.now() - 60 * 60_000).toISOString();
 
 async function temporaryStore(options: { readOnly?: boolean } = {}) {
   const directory = await mkdtemp(path.join(tmpdir(), "trialbridge-libsql-"));
