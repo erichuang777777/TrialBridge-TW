@@ -14,6 +14,11 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 - `trialbridge_method` explains the Taiwan-first method, privacy boundaries, sources, and limitations.
 - `search_public_cancer_trials` searches public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic and returns the same visible bilingual registry query provenance as the human form. Its bounded output reports `complete`, `partial`, or `unavailable` coverage; completed sources include counts, elapsed milliseconds, query times, and live/fresh-cache/stale-cache snapshot state, while failed sources include a bounded code and latency. Cached, timed-out, or partial results therefore cannot appear live and complete.
 
+### Intake-gated tools (visible switch at the note step)
+
+- `organize_summary_form` makes the manual note form on `/match` agent-discoverable only while the person has switched on "Allow a WebMCP agent to add a de-identified summary". It never autosubmits: the agent fills the visible textarea and only the person's click starts organization. `SubmitEvent.respondWith()` returns the bounded outcome (`awaiting_confirmation`, `organizing`, or `failed`) with counts only.
+- `organize_deidentified_summary` is the one imperative tool that changes page state, so its `readOnlyHint` is `false`. It exists only behind the same switch and only before any profile exists. It rejects text containing a direct identifier (email, phone, Taiwan ID, record number, labelled name, birth date, or address) before anything enters the page, naming the kinds to remove. Accepted text is appended to the visible note, masked in the browser, and organized by the same cloud step a person would start; the tool waits at most eight seconds and otherwise answers `organizing`. It never confirms a fact, matches, enrolls, or sends, and it disappears once organization starts.
+
 ### Sensitive contextual tools
 
 - `review_trial_followups` reads the current registry-derived missing-question list and returns an actionable workflow state. It cannot record, infer, or confirm an answer.
@@ -24,7 +29,7 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 
 ## Security invariants
 
-- No tool accepts or returns raw medical-record text, uploaded documents, direct identifiers, model prompts, cookies, or server tokens.
+- No tool returns raw medical-record text, uploaded documents, direct identifiers, model prompts, cookies, or server tokens, and the page never hands its note to an agent. The only tool that accepts medical context is the switch-gated intake tool; it takes a de-identified summary supplied by the agent, rejects direct identifiers before anything enters the page, and returns counts only.
 - Sensitive tools read only an in-memory, confirmed, de-identified summary and require active consent for each execution context.
 - Registry output is tagged as untrusted external content and length-bounded.
 - Tools never send messages, submit forms, enroll, schedule, consent, change treatment, or perform background surveillance.
@@ -39,13 +44,13 @@ WebMCP is a primary product interface, not an add-on. The site uses both Chrome'
 
 ## Canonical contract evidence
 
-The visible declarative form and all seven imperative tools import their names, descriptions, input schemas, and imperative annotations from `lib/webmcp/toolContractCore.ts`. Imperative human-facing `title` values follow the current English or Traditional Chinese page language, as recommended by the draft, while machine-facing names, descriptions, schemas, annotations, and authority remain stable. The derived catalog adds only explanatory metadata: registration style, availability, data boundary, human control, recovery, output trust, and measured Chrome guidance budgets. `/webmcp` renders that catalog as a searchable disclosure interface, while `/webmcp/contracts.json` exposes the same static no-health-data representation.
+Both visible declarative forms and all eight imperative tools import their names, descriptions, input schemas, and imperative annotations from `lib/webmcp/toolContractCore.ts`. Imperative human-facing `title` values follow the current English or Traditional Chinese page language, as recommended by the draft, while machine-facing names, descriptions, schemas, annotations, and authority remain stable. The derived catalog adds only explanatory metadata: registration style, availability, data boundary, human control, recovery, output trust, and measured Chrome guidance budgets. `/webmcp` renders that catalog as a searchable disclosure interface, while `/webmcp/contracts.json` exposes the same static no-health-data representation.
 
 This eliminates a separate hand-maintained judge schema that could drift from runtime authority. It does not turn the catalog into a protocol endpoint or prove current-browser registration, tool selection, execution, cancellation, or cleanup.
 
-The derived four-state capability model documents the registration boundary without medical data: public `2`, confirmed-but-locked `2`, permission-enabled `6`, and visible-shortlist `7`. Deterministic tests build the matching runtime context for each state and require exact name equality. The in-product simulator executes no tool; Chrome Inspector remains responsible for proving the corresponding transitions in a supported browser.
+The derived five-state capability model documents the registration boundary without medical data: public `2`, intake-permitted `3`, confirmed-but-locked `2`, permission-enabled `6`, and visible-shortlist `7`. Deterministic tests build the matching runtime context for each state and require exact name equality. The in-product simulator executes no tool; Chrome Inspector remains responsible for proving the corresponding transitions in a supported browser.
 
-The separate explicit browser lifecycle suite uses one temporary `trialbridge_runtime_probe`, not an eighth product capability. It is fixed, read-only, same-origin, no-network, and accepts only one diagnostic enum. The suite checks register/discover, metadata, bounded public-method execution, execution cancellation, `toolchange`, and registration cleanup, then requires the probe to be absent. Its receipt stores only check outcomes and remains runtime metadata rather than Inspector or clinical evidence.
+The separate explicit browser lifecycle suite uses one temporary `trialbridge_runtime_probe`, not a product capability. It is fixed, read-only, same-origin, no-network, and accepts only one diagnostic enum. The suite checks register/discover, metadata, bounded public-method execution, execution cancellation, `toolchange`, and registration cleanup, then requires the probe to be absent. Its receipt stores only check outcomes and remains runtime metadata rather than Inspector or clinical evidence.
 
 ## Verification target
 

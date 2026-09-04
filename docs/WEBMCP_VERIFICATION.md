@@ -33,13 +33,13 @@ Changing profile, pending questions, matching state, results, consent, or visibl
 
 ## Canonical contract catalog
 
-`lib/webmcp/toolContractCore.ts` is the shared source for the visible declarative form and all seven imperative runtime definitions. `lib/webmcp/toolContractCatalog.ts` adds availability, authority, human-control, recovery, output-trust, and measured-budget metadata without changing execution. The `/webmcp` Tool Contract Explorer derives from that catalog, and force-static `/webmcp/contracts.json` exposes the same eight entries for offline review. Tests compare each built runtime tool against the canonical description, schema, and annotations, require `additionalProperties: false`, enforce the current character/output guidance, and reject write-like authority.
+`lib/webmcp/toolContractCore.ts` is the shared source for both visible declarative forms and all eight imperative runtime definitions. `lib/webmcp/toolContractCatalog.ts` adds availability, authority, human-control, recovery, output-trust, and measured-budget metadata without changing execution. The `/webmcp` Tool Contract Explorer derives from that catalog, and force-static `/webmcp/contracts.json` exposes the same eight entries for offline review. Tests compare each built runtime tool against the canonical description, schema, and annotations, require `additionalProperties: false`, enforce the current character/output guidance, and reject write-like authority.
 
 The JSON artifact is implementation evidence only. It contains no current-browser result, request, workflow state, note, profile, trial result, prompt, argument, output, or health information, and it does not claim protocol metadata or Inspector completion.
 
 ## State-scoped registration model
 
-`lib/webmcp/capabilityStates.ts` derives public, permission-gated, and shortlist-dependent names from the canonical catalog, then defines four synthetic human states. `tests/webmcp-capability-states.test.ts` constructs each equivalent runtime context and requires exact tool-name equality with `buildTrialBridgeTools()`: two public tools, still two after confirmation with permission off, six with visible permission, and seven after two visible shortlist selections. The `/webmcp` simulator exposes this as an accessible button group and one atomic status sentence.
+`lib/webmcp/capabilityStates.ts` derives public, intake-gated, permission-gated, and shortlist-dependent names from the canonical catalog, then defines five synthetic human states. `tests/webmcp-capability-states.test.ts` constructs each equivalent runtime context and requires exact tool-name equality with `buildTrialBridgeTools()`: two public tools, still two after confirmation with permission off, six with visible permission, and seven after two visible shortlist selections. The `/webmcp` simulator exposes this as an accessible button group and one atomic status sentence.
 
 The model contains tool names and public boundary copy only. It executes no tool, reads no browser or medical workflow state, persists nothing, and remains distinct from the runtime diagnostic and manual Inspector gate.
 

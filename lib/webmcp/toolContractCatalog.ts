@@ -1,7 +1,7 @@
 import { maxWebMcpOutputChars } from "./output.ts";
-import { publicTrialFormContractCore, webMcpImperativeContractCore } from "./toolContractCore.ts";
+import { organizeSummaryFormContractCore, publicTrialFormContractCore, webMcpImperativeContractCore } from "./toolContractCore.ts";
 
-export type WebMcpAvailabilityGroup = "public" | "permission" | "shortlist";
+export type WebMcpAvailabilityGroup = "public" | "intake" | "permission" | "shortlist";
 export type WebMcpToolKind = "Declarative" | "Imperative";
 
 type ContractCore = {
@@ -27,6 +27,10 @@ type ContractMetadata = {
   recovery: string;
   untrustedOutput: boolean;
   sourceFile: string;
+  /** False only for the gated intake tool, which starts a visible workflow step. */
+  readOnlyBehavior?: boolean;
+  /** Plain description of the page state a non-read-only tool changes. */
+  stateEffect?: string;
 };
 
 function buildCatalogEntry(core: ContractCore, metadata: ContractMetadata) {
@@ -47,7 +51,8 @@ function buildCatalogEntry(core: ContractCore, metadata: ContractMetadata) {
     ...core,
     ...metadata,
     parameters,
-    readOnlyBehavior: true,
+    readOnlyBehavior: metadata.readOnlyBehavior ?? true,
+    stateEffect: metadata.stateEffect ?? null,
     browserHints: metadata.kind === "Imperative" ? {
       readOnlyHint: core.annotations?.readOnlyHint === true,
       untrustedContentHint: core.annotations?.untrustedContentHint === true,
@@ -84,6 +89,20 @@ export const webMcpToolContractCatalog = [
     recovery: "Returns per-registry timeout/unavailable state and a visible-search fallback.", untrustedOutput: true,
     sourceFile: "lib/webmcp/tools.ts",
   }),
+  buildCatalogEntry(organizeSummaryFormContractCore, {
+    kind: "Declarative", registration: "visible_form", availabilityGroup: "intake", availability: "Note step · agent intake permission on",
+    boundary: "De-identified summary only · masked in the browser", humanControl: "The agent may fill the visible note; only the person starts organization and confirms every fact.",
+    recovery: "The person can edit the note, retry, or switch off agent intake permission at any time.", untrustedOutput: false,
+    sourceFile: "app/components/TrialBridgeChat.tsx",
+    readOnlyBehavior: false, stateEffect: "Fills the visible note; organization starts only on the person's submit.",
+  }),
+  buildCatalogEntry(webMcpImperativeContractCore.organize_deidentified_summary, {
+    kind: "Imperative", registration: "registerTool", availabilityGroup: "intake", availability: "Note step · agent intake permission on",
+    boundary: "Direct identifiers rejected before anything enters the page", humanControl: "Starts cloud organization only; every extracted fact still needs human confirmation, and no match, enrollment, or message follows.",
+    recovery: "Names the identifier kinds to remove, or returns organizing/failed states with the visible workflow as the fallback.", untrustedOutput: false,
+    sourceFile: "lib/webmcp/tools.ts",
+    readOnlyBehavior: false, stateEffect: "Appends the summary to the visible note and starts the masked cloud organization step; disappears once organization starts.",
+  }),
   buildCatalogEntry(webMcpImperativeContractCore.review_trial_followups, {
     kind: "Imperative", registration: "registerTool", availabilityGroup: "permission", availability: "Permission-gated",
     boundary: "Questions only · never records answers", humanControl: "Answers and unknown choices remain in the visible form.",
@@ -118,8 +137,8 @@ export const webMcpToolContractCatalog = [
 
 export const webMcpToolContractBundle = {
   schemaVersion: "1.0",
-  contractVersion: "2026-09-02.1",
-  auditedAt: "2026-09-02",
+  contractVersion: "2026-09-04.1",
+  auditedAt: "2026-09-04",
   artifactClass: "tool_contract_catalog_not_protocol_metadata",
   standardProfile: {
     imperativeApi: "https://developer.chrome.com/docs/ai/webmcp/imperative-api",
@@ -137,6 +156,8 @@ export const webMcpToolContractBundle = {
     declarative: webMcpToolContractCatalog.filter((item) => item.kind === "Declarative").length,
     imperative: webMcpToolContractCatalog.filter((item) => item.kind === "Imperative").length,
     readOnlyBehavior: webMcpToolContractCatalog.filter((item) => item.readOnlyBehavior).length,
+    /** Tools that change visible page state (the gated intake pair); none has external write authority. */
+    stateChanging: webMcpToolContractCatalog.filter((item) => !item.readOnlyBehavior).length,
     writeAuthority: 0,
     untrustedOutput: webMcpToolContractCatalog.filter((item) => item.untrustedOutput).length,
     withinChromeGuidance: webMcpToolContractCatalog.filter((item) => item.budgets.withinGuidance).length,

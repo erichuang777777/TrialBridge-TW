@@ -74,7 +74,7 @@ export default function WebMcpProofPage() {
       <Link className="back-link" href="/">← Back home</Link>
       <p className="eyebrow">Competition evidence</p>
       <h1>WebMCP, visible and testable.</h1>
-      <p className="lead">TrialBridge TW combines one declarative form tool with up to seven imperative tools. The human interface remains complete when WebMCP is unavailable, while compatible browser agents receive typed, origin-scoped, read-only capabilities that follow visible page state.</p>
+      <p className="lead">TrialBridge TW combines two declarative form tools with up to eight imperative tools, only one of which changes page state and only behind a visible intake switch. The human interface remains complete when WebMCP is unavailable, while compatible browser agents receive typed, origin-scoped, read-only capabilities that follow visible page state.</p>
       <p className="proof-quickstart-link"><Link className="primary-action action-link" href="/webmcp/quickstart">Open the three-minute judge demo</Link><span>New here? Start with the concise path, then return for the complete evidence appendix.</span></p>
       <div className="proof-summary" aria-label="WebMCP implementation summary"><span><strong>1</strong> declarative tool</span><span><strong>7</strong> maximum imperative tools</span><span><strong>{baselineJourneyCount}</strong> journey eval cases</span><span><strong>19</strong> bilingual cancer groups</span><span><strong>0</strong> send or enrollment tools</span></div>
       <aside className="recorded-runtime-proof" aria-label="Recorded Chrome WebMCP runtime evidence">

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildTrialBridgeTools } from "@/lib/webmcp/tools";
-import type { WebMcpActivity, WebMcpExecutionControl, WebMcpExecutionControlEvent } from "@/lib/webmcp/tools";
+import type { WebMcpActivity, WebMcpAgentIntake, WebMcpExecutionControl, WebMcpExecutionControlEvent } from "@/lib/webmcp/tools";
 import { appendCapabilitySet, appendRuntimeState, appendToolExecution, createWebMcpSessionReceipt } from "@/lib/webmcp/receipt";
 import type { WebMcpReceiptEvent } from "@/lib/webmcp/receipt";
 import type { TrialMatch } from "@/lib/matching/engine";
@@ -14,6 +14,7 @@ type RegistrationState = "checking" | "unsupported" | "registering" | "ready" | 
 type Language = "zh-Hant" | "en";
 
 const publicToolNames = ["trialbridge_method", "search_public_cancer_trials"];
+const intakeToolNames = ["organize_deidentified_summary"];
 const contextualToolNames = ["review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief", "compare_shortlisted_trials"];
 
 const judgePrompts = {
@@ -33,7 +34,7 @@ const judgePrompts = {
   ],
 };
 
-export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language, compact = false }: { profile?: ConfirmedProfile; matches: TrialMatch[]; shortlistedTrialIds: string[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; language: Language; compact?: boolean }) {
+export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, agentIntake, language, compact = false }: { profile?: ConfirmedProfile; matches: TrialMatch[]; shortlistedTrialIds: string[]; pendingQuestions: FollowUpQuestion[]; matching: boolean; sensitiveConsent: boolean; agentIntake?: WebMcpAgentIntake; language: Language; compact?: boolean }) {
   const [registrationState, setRegistrationState] = useState<RegistrationState>("checking");
   const [registeredNames, setRegisteredNames] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -62,7 +63,7 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     setActiveExecutions([...executionControls.current.values()]);
     if (event.type === "cleared") setCancellingExecutionIds((current) => current.filter((id) => id !== event.executionId));
   }, []);
-  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language, onActivity: recordActivity, onExecutionControl: recordExecutionControl }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, language, recordActivity, recordExecutionControl]);
+  const tools = useMemo(() => buildTrialBridgeTools({ profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, agentIntake, language, onActivity: recordActivity, onExecutionControl: recordExecutionControl }), [profile, matches, shortlistedTrialIds, pendingQuestions, matching, sensitiveConsent, agentIntake, language, recordActivity, recordExecutionControl]);
   const contextualUnlocked = Boolean(profile && sensitiveConsent);
 
   useEffect(() => {
@@ -141,12 +142,14 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     title: "WebMCP Live",
     summary: "Inspect the agent capability layer",
     publicTitle: "Public tools",
+    intakeTitle: "Intake tool (visible switch)",
     contextualTitle: "Confirmed-context tools",
     active: "Active",
     locked: "Locked until confirmed summary permission",
+    intakeLocked: "Locked until agent intake permission at the note step",
     shortlistLocked: "Select 2 trials to activate",
     unavailable: "Requires a WebMCP-enabled browser",
-    safety: "All tools are read-only. Raw and masked notes are never exposed. Public registry content is marked untrusted.",
+    safety: "Every tool is read-only except the intake tool, which only starts the visible organization step behind a switch you control and rejects direct identifiers. The page never hands a note to an agent. Public registry content is marked untrusted.",
     tryTitle: "Judge prompts",
     copyPrompt: "Copy prompt",
     copied: "Copied",
@@ -184,12 +187,14 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     title: "WebMCP 即時狀態",
     summary: "檢查 Agent 能力層",
     publicTitle: "公開工具",
+    intakeTitle: "病況輸入工具（可見開關）",
     contextualTitle: "確認摘要工具",
     active: "已啟用",
     locked: "確認摘要並授權後啟用",
+    intakeLocked: "在病況輸入步驟開啟 Agent 輸入授權後啟用",
     shortlistLocked: "選擇 2 項試驗後啟用",
     unavailable: "需要支援 WebMCP 的瀏覽器",
-    safety: "全部工具均為唯讀；原始與遮蔽病歷不會公開，公開登錄內容會標示為不受信任資料。",
+    safety: "除病況輸入工具外，全部工具均為唯讀；該工具只會在您開啟的開關後啟動可見的整理步驟，並拒絕含識別碼的內容。頁面不會把病歷交給 Agent；公開登錄內容會標示為不受信任資料。",
     tryTitle: "評審測試語句",
     copyPrompt: "複製語句",
     copied: "已複製",
@@ -252,10 +257,11 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     window.setTimeout(() => setReceiptDownloaded(false), 4_000);
   }
 
-  function toolState(name: string, contextual: boolean) {
+  function toolState(name: string, group: "public" | "intake" | "contextual") {
     if (registrationState === "unsupported") return { label: copy.unavailable, className: "tool-unavailable" };
     if (registrationState === "ready" && registeredNames.includes(name)) return { label: copy.active, className: "tool-active" };
-    if (contextual && !contextualUnlocked) return { label: copy.locked, className: "tool-locked" };
+    if (group === "intake" && !agentIntake) return { label: copy.intakeLocked, className: "tool-locked" };
+    if (group === "contextual" && !contextualUnlocked) return { label: copy.locked, className: "tool-locked" };
     if (name === "compare_shortlisted_trials" && shortlistedTrialIds.length < 2) return { label: copy.shortlistLocked, className: "tool-locked" };
     return { label: copy.state[registrationState], className: "tool-pending" };
   }
@@ -288,8 +294,9 @@ export function WebMcpBridge({ profile, matches, shortlistedTrialIds, pendingQue
     </summary>
     <div className="webmcp-live-body">
       <div className="webmcp-tool-groups">
-        <ToolGroup title={copy.publicTitle} names={publicToolNames} getState={(name) => toolState(name, false)} />
-        <ToolGroup title={copy.contextualTitle} names={contextualToolNames} getState={(name) => toolState(name, true)} />
+        <ToolGroup title={copy.publicTitle} names={publicToolNames} getState={(name) => toolState(name, "public")} />
+        <ToolGroup title={copy.intakeTitle} names={intakeToolNames} getState={(name) => toolState(name, "intake")} />
+        <ToolGroup title={copy.contextualTitle} names={contextualToolNames} getState={(name) => toolState(name, "contextual")} />
       </div>
       {registrationState === "unsupported" && <section className="webmcp-setup-note" aria-labelledby="webmcp-setup-title">
         <div><strong id="webmcp-setup-title">{copy.setupTitle}</strong><p>{unsupportedReason === "insecure" ? copy.setupInsecure : copy.setupPreview}</p></div>

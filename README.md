@@ -2,7 +2,7 @@
 
 **A Taiwan-first clinical-trial search experience that people and AI agents can use together.**
 
-TrialBridge helps people find public cancer-trial records across Taiwan, Asia, and worldwide registries. Its WebMCP layer gives compatible browser agents small, typed, read-only tools instead of making them guess from the DOM.
+TrialBridge helps people find public cancer-trial records across Taiwan, Asia, and worldwide registries. Its WebMCP layer gives compatible browser agents small, typed tools instead of making them guess from the DOM; all are read-only except one switch-gated intake tool that only starts the visible organization step.
 
 ## Try the live demo
 
@@ -32,7 +32,7 @@ The public agent surface is intentionally small:
 - Search public trial records with a general cancer condition.
 - Explain the site's Taiwan-first search and privacy method.
 
-No WebMCP tool can enroll someone, send a message, book an appointment, change treatment, or receive raw medical notes. Patient-context tools only appear after a visible, human-confirmed workflow state.
+No WebMCP tool can enroll someone, send a message, book an appointment, or change treatment, and the page never hands its note to an agent. For the demo, an agent may offer a de-identified summary at the note step, but only after the person switches on agent intake permission there: text with names, contact details, ID or record numbers, birth dates, or addresses is rejected before it enters the page, the browser masks the rest, and every extracted fact still needs human confirmation. Patient-context tools only appear after that visible, human-confirmed workflow state.
 
 ## What is built
 

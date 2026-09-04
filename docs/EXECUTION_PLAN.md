@@ -52,6 +52,7 @@ measurement. The production site is https://trialbridge-tw.netlify.app/.
 - [x] `WEBMCP_ORIGIN_TRIAL_TOKEN` is served as `<meta http-equiv="origin-trial">` on the live site.
 - [ ] Confirm Chrome accepts the token: the quickstart console's "WebMCP enablement" check must read "Origin Trial token active" without the local flag. A headless capture logged `Origin trial controlled feature not enabled: 'tools'`, which is what a rejected or expired token looks like.
 - [ ] Test in the ChatGPT desktop browser (GPT-5.6 Sol or Terra): method, public search, declarative form, shortlist comparison, forbidden enrollment; record results in `lib/webmcp/implementationLandscape.ts`.
+- [x] Demo intake through WebMCP: `organize_summary_form` (declarative, no autosubmit) and `organize_deidentified_summary` (imperative, `readOnlyHint: false`) exist only behind the visible agent-intake switch at the note step, reject direct identifiers, and hand off to the same masked cloud organization and human confirmation.
 - [ ] Add a public read-only `get_public_trial_details` tool so agents can drill into one record.
 
 Browser capture scripts (`scripts/capture-webmcp-promo.mjs`,

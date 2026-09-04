@@ -11,12 +11,12 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.privacyBoundary.readsCurrentBrowserSession, false);
   assert.equal(webMcpJudgeBundle.privacyBoundary.readsMedicalWorkflowState, false);
-  assert.equal(webMcpJudgeBundle.summary.declarativeTools, 1);
-  assert.equal(webMcpJudgeBundle.summary.imperativeTools, 7);
+  assert.equal(webMcpJudgeBundle.summary.declarativeTools, 2);
+  assert.equal(webMcpJudgeBundle.summary.imperativeTools, 8);
   assert.equal(webMcpJudgeBundle.summary.writeOrEnrollmentTools, 0);
   assert.equal(webMcpJudgeBundle.summary.manualInspectorCases, 6);
-  assert.equal(webMcpJudgeBundle.summary.toolContracts, 8);
-  assert.equal(webMcpJudgeBundle.summary.capabilityStates, 4);
+  assert.equal(webMcpJudgeBundle.summary.toolContracts, 10);
+  assert.equal(webMcpJudgeBundle.summary.capabilityStates, 5);
   assert.equal(webMcpJudgeBundle.summary.runtimeAcceptanceChecks, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed, 6);
   assert.equal(webMcpJudgeBundle.summary.recordedInspectorExtensionChecksPassed, 3);
@@ -45,9 +45,9 @@ test("judge bundle is deterministic, source-linked, and contains no workflow pay
   assert.equal(webMcpJudgeBundle.fixedPublicBrowserExecution.behavior.acceptsFreeText, false);
   assert.equal(webMcpJudgeBundle.fixedPublicBrowserExecution.behavior.changesWorkflowState, false);
   assert.equal(webMcpJudgeBundle.fixedPublicBrowserExecution.privacyBoundary.containsHealthInformation, false);
-  assert.deepEqual(webMcpJudgeBundle.toolContractCatalog, { route: "/webmcp/contracts.json", contractVersion: "2026-09-02.1", tools: 8, withinChromeGuidance: 8, containsHealthInformation: false });
+  assert.deepEqual(webMcpJudgeBundle.toolContractCatalog, { route: "/webmcp/contracts.json", contractVersion: "2026-09-04.1", tools: 10, withinChromeGuidance: 10, containsHealthInformation: false });
   assert.equal(webMcpJudgeBundle.capabilityStateModel.artifactClass, "synthetic_capability_state_model_not_runtime_evidence");
-  assert.deepEqual(webMcpJudgeBundle.capabilityStateModel.states.map((state) => state.activeImperativeToolNames.length), [2, 2, 6, 7]);
+  assert.deepEqual(webMcpJudgeBundle.capabilityStateModel.states.map((state) => state.activeImperativeToolNames.length), [2, 3, 2, 6, 7]);
   assert.equal(webMcpJudgeBundle.capabilityStateModel.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpJudgeBundle.runtimeAcceptanceProfile.artifactClass, "browser_runtime_suite_definition_not_runtime_result");
   assert.equal(webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length, 6);
@@ -122,9 +122,9 @@ test("conformance matrix has unique evidence IDs and an explicit unclaimed Inspe
   }
 });
 
-test("capability inventory has one declarative and seven unique imperative names", () => {
-  assert.equal(new Set(webMcpCapabilityInventory.map((tool) => tool.name)).size, 8);
-  assert.equal(webMcpCapabilityInventory.filter((tool) => tool.kind === "Declarative").length, 1);
-  assert.equal(webMcpCapabilityInventory.filter((tool) => tool.kind === "Imperative").length, 7);
+test("capability inventory has two declarative and eight unique imperative names", () => {
+  assert.equal(new Set(webMcpCapabilityInventory.map((tool) => tool.name)).size, 10);
+  assert.equal(webMcpCapabilityInventory.filter((tool) => tool.kind === "Declarative").length, 2);
+  assert.equal(webMcpCapabilityInventory.filter((tool) => tool.kind === "Imperative").length, 8);
   assert.equal(webMcpCapabilityInventory.some((tool) => /send|enroll|book|consent|treatment_change/.test(tool.name)), false);
 });

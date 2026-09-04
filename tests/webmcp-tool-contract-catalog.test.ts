@@ -7,17 +7,28 @@ import type { TrialMatch } from "../lib/matching/engine.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
 import { webMcpToolContractBundle, webMcpToolContractCatalog } from "../lib/webmcp/toolContractCatalog.ts";
-import { publicTrialFormContractCore, webMcpImperativeContractCore, webMcpZhHantToolTitles } from "../lib/webmcp/toolContractCore.ts";
+import { organizeSummaryFormContractCore, publicTrialFormContractCore, webMcpImperativeContractCore, webMcpZhHantToolTitles } from "../lib/webmcp/toolContractCore.ts";
+
+const intakeToolName = "organize_deidentified_summary";
+const agentIntake = { submit: async () => ({ state: "unavailable" as const, reason: "catalog test" }) };
 
 const draft = profileDraftSchema.parse({ schemaVersion: "1.0", language: "en", subjectRole: "patient", facts: [{ id: "fact_contract_test", domain: "cancer_type", value: "synthetic cancer", displayZhHant: "虛構癌症", displayEn: "Synthetic cancer", source: "user_statement", confidence: 1, confirmed: false }], missingQuestions: [], safetyNote: "Synthetic contract fixture." });
 const profile = confirmProfile(draft, {}, "patient", "2026-09-02T00:00:00.000Z");
 
 test("canonical catalog covers the visible declarative form and every imperative tool", () => {
   const syntheticMatches = [{ trial: { canonicalId: "synthetic:contract-1" } }, { trial: { canonicalId: "synthetic:contract-2" } }] as TrialMatch[];
-  const actualTools = buildTrialBridgeTools({ profile, matches: syntheticMatches, sensitiveConsent: true, shortlistedTrialIds: syntheticMatches.map((match) => match.trial.canonicalId) });
-  assert.equal(actualTools.length, 7);
+  const shortlistTools = buildTrialBridgeTools({ profile, matches: syntheticMatches, sensitiveConsent: true, shortlistedTrialIds: syntheticMatches.map((match) => match.trial.canonicalId) });
+  const intakeTools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, agentIntake });
+  assert.equal(shortlistTools.length, 7);
+  assert.equal(intakeTools.length, 3);
+  // The intake tool exists only before a profile; the union covers every contract.
+  const actualTools = [...shortlistTools, ...intakeTools.filter((tool) => tool.name === intakeToolName)];
   assert.deepEqual(actualTools.map((tool) => tool.name).sort(), Object.keys(webMcpImperativeContractCore).sort());
-  assert.deepEqual(webMcpToolContractCatalog.map((contract) => contract.name), [publicTrialFormContractCore.name, ...actualTools.map((tool) => tool.name)]);
+  assert.deepEqual(webMcpToolContractCatalog.map((contract) => contract.name), [
+    publicTrialFormContractCore.name, "trialbridge_method", "search_public_cancer_trials",
+    organizeSummaryFormContractCore.name, intakeToolName,
+    "review_trial_followups", "explain_confirmed_matches", "draft_trial_outreach", "draft_trial_discussion_brief", "compare_shortlisted_trials",
+  ]);
   for (const tool of actualTools) {
     const contract = webMcpToolContractCatalog.find((item) => item.name === tool.name);
     assert.ok(contract);
@@ -49,21 +60,23 @@ test("human-facing WebMCP titles follow the page language without changing machi
 });
 
 test("all tool contracts meet Chrome character and authority boundaries", () => {
-  assert.equal(webMcpToolContractCatalog.length, 8);
-  assert.equal(new Set(webMcpToolContractCatalog.map((contract) => contract.name)).size, 8);
-  assert.equal(webMcpToolContractCatalog.every((contract) => contract.readOnlyBehavior), true);
+  assert.equal(webMcpToolContractCatalog.length, 10);
+  assert.equal(new Set(webMcpToolContractCatalog.map((contract) => contract.name)).size, 10);
+  const intakeContracts = new Set([organizeSummaryFormContractCore.name, intakeToolName]);
+  assert.equal(webMcpToolContractCatalog.every((contract) => contract.readOnlyBehavior === !intakeContracts.has(contract.name)), true, "only the switch-gated intake surfaces change page state");
+  assert.equal(webMcpToolContractCatalog.filter((contract) => intakeContracts.has(contract.name)).every((contract) => contract.availabilityGroup === "intake" && typeof contract.stateEffect === "string"), true);
   assert.equal(webMcpToolContractCatalog.every((contract) => contract.budgets.withinGuidance), true);
   assert.equal(webMcpToolContractCatalog.every((contract) => contract.name.length <= 30 && contract.description.length <= 500), true);
   assert.equal(webMcpToolContractCatalog.every((contract) => contract.parameters.every((parameter) => parameter.name.length <= 30 && parameter.description.length <= 150)), true);
   assert.equal(webMcpToolContractCatalog.every((contract) => contract.inputSchema.additionalProperties === false), true);
-  assert.equal(webMcpToolContractCatalog.filter((contract) => contract.kind === "Imperative").every((contract) => contract.browserHints?.readOnlyHint), true);
-  assert.equal(webMcpToolContractCatalog.filter((contract) => contract.name !== "trialbridge_method").every((contract) => contract.untrustedOutput), true);
+  assert.equal(webMcpToolContractCatalog.filter((contract) => contract.kind === "Imperative").every((contract) => contract.browserHints?.readOnlyHint === (contract.name !== intakeToolName)), true);
+  assert.equal(webMcpToolContractCatalog.filter((contract) => contract.name !== "trialbridge_method" && !intakeContracts.has(contract.name)).every((contract) => contract.untrustedOutput), true);
   assert.equal(webMcpToolContractCatalog.some((contract) => /send|enroll|book|consent|treatment_change/.test(contract.name)), false);
 });
 
 test("downloadable contract bundle is static, metadata-only, and not a protocol claim", async () => {
   assert.equal(webMcpToolContractBundle.artifactClass, "tool_contract_catalog_not_protocol_metadata");
-  assert.deepEqual(webMcpToolContractBundle.summary, { tools: 8, declarative: 1, imperative: 7, readOnlyBehavior: 8, writeAuthority: 0, untrustedOutput: 7, withinChromeGuidance: 8 });
+  assert.deepEqual(webMcpToolContractBundle.summary, { tools: 10, declarative: 2, imperative: 8, readOnlyBehavior: 8, stateChanging: 2, writeAuthority: 0, untrustedOutput: 7, withinChromeGuidance: 10 });
   assert.equal(webMcpToolContractBundle.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpToolContractBundle.privacyBoundary.readsCurrentBrowserSession, false);
   assert.equal(webMcpToolContractBundle.privacyBoundary.readsMedicalWorkflowState, false);

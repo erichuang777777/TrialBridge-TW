@@ -1,7 +1,7 @@
 export const webMcpCriticalJourney = {
   userGoal: "Find source-linked cancer trials and prepare a focused care-team discussion without giving an agent enrollment authority.",
   initialState: "The person starts with no confirmed health context. Public search is available; protected tools are absent.",
-  boundary: "The visible page remains the source of truth. Raw notes never enter WebMCP, confirmation stays human-controlled, and no tool can enroll, send, book, consent, or change treatment.",
+  boundary: "The visible page remains the source of truth. The page never hands a note to an agent; an agent may only offer a de-identified summary through a visibly permitted intake step, confirmation stays human-controlled, and no tool can enroll, send, book, consent, or change treatment.",
   steps: [
     {
       id: "discover", number: "01", title: "Discover public options", state: "Public · no health context",
@@ -11,11 +11,11 @@ export const webMcpCriticalJourney = {
       recovery: "An unavailable registry returns a source code and retry guidance without hiding results from another source.",
     },
     {
-      id: "confirm", number: "02", title: "Build confirmed context", state: "Protected intake · tools intentionally absent",
-      goal: "Organize a masked note and correct every extracted fact.",
-      tools: [],
-      siteReaction: "Masking, cloud organization, and human confirmation stay in the visible workflow.",
-      recovery: "The person can cancel, edit the note, retry extraction, or switch between Agent and Manual mode.",
+      id: "confirm", number: "02", title: "Build confirmed context", state: "Protected intake · gated intake tools only",
+      goal: "Organize a masked note and correct every extracted fact; an agent may offer a de-identified summary only after the person switches agent intake permission on.",
+      tools: ["organize_summary_form", "organize_deidentified_summary"],
+      siteReaction: "Direct identifiers are rejected before anything enters the page; masking, cloud organization, and human confirmation stay in the visible workflow, and the intake tools disappear once organization starts.",
+      recovery: "The person can cancel, edit the note, retry extraction, switch off agent intake permission, or switch between Agent and Manual mode.",
     },
     {
       id: "clarify", number: "03", title: "Resolve missing criteria", state: "Confirmed profile · permission on · questions pending",

@@ -16,7 +16,7 @@ export function CapabilityStateSimulator() {
       <div className="proof-section-heading">
         <p className="eyebrow">State-scoped capability simulator</p>
         <h2 id="capability-state-title">See why the agent&apos;s tool set changes with human action.</h2>
-        <p>Switch between four synthetic page states. The model makes no request, reads no medical workflow, and is tested against the same runtime function that registers TrialBridge tools.</p>
+        <p>Switch between {webMcpCapabilityStates.length} synthetic page states. The model makes no request, reads no medical workflow, and is tested against the same runtime function that registers TrialBridge tools.</p>
       </div>
       <div className="capability-state-score" aria-label={`${selected.activeImperativeToolNames.length} of ${imperativeContracts.length} imperative tools active`}>
         <strong>{selected.activeImperativeToolNames.length}/{imperativeContracts.length}</strong>
@@ -26,11 +26,11 @@ export function CapabilityStateSimulator() {
 
     <div className="capability-state-selector" role="group" aria-label="Choose a synthetic capability state">
       {webMcpCapabilityStates.map((state) => <button type="button" key={state.key} aria-pressed={state.key === selected.key} onClick={() => setSelectedKey(state.key)}>
-        <span>{state.step}</span><strong>{state.shortLabel}</strong><small>{state.activeImperativeToolNames.length}/7</small>
+        <span>{state.step}</span><strong>{state.shortLabel}</strong><small>{state.activeImperativeToolNames.length}/{imperativeContracts.length}</small>
       </button>)}
     </div>
 
-    <p className="capability-state-status" role="status" aria-atomic="true">State {selected.step} of {webMcpCapabilityStates.length}: {selected.activeImperativeToolNames.length} of {imperativeContracts.length} imperative tools register. The visible declarative form remains available on /trials.</p>
+    <p className="capability-state-status" role="status" aria-atomic="true">State {selected.step} of {webMcpCapabilityStates.length}: {selected.activeImperativeToolNames.length} of {imperativeContracts.length} imperative tools register. The public declarative form stays on /trials; the note-step form appears only with agent intake permission.</p>
 
     <div className="capability-state-board">
       <article className="capability-state-context">

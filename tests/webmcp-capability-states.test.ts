@@ -5,7 +5,7 @@ import type { TrialMatch } from "../lib/matching/engine.ts";
 import { confirmProfile, profileDraftSchema } from "../lib/profile/schema.ts";
 import { webMcpCapabilityStateBundle, webMcpCapabilityStates } from "../lib/webmcp/capabilityStates.ts";
 import { buildTrialBridgeTools } from "../lib/webmcp/tools.ts";
-import { publicTrialFormContractCore } from "../lib/webmcp/toolContractCore.ts";
+import { organizeSummaryFormContractCore, publicTrialFormContractCore } from "../lib/webmcp/toolContractCore.ts";
 
 const syntheticDraft = profileDraftSchema.parse({
   schemaVersion: "1.0", language: "en", subjectRole: "patient",
@@ -24,16 +24,18 @@ test("capability-state model exactly matches runtime tool construction", () => {
       profile: state.confirmedContext ? syntheticProfile : undefined,
       matches: syntheticMatches,
       sensitiveConsent: state.visiblePermission,
+      agentIntake: state.intakePermission ? { submit: async () => ({ state: "unavailable" as const, reason: "state model" }) } : undefined,
       shortlistedTrialIds: syntheticMatches.slice(0, state.shortlistSelections).map((match) => match.trial.canonicalId),
     }).map((tool) => tool.name);
     assert.deepEqual(actual, [...state.activeImperativeToolNames], state.key);
   }
-  assert.deepEqual(webMcpCapabilityStates.map((state) => state.activeImperativeToolNames.length), [2, 2, 6, 7]);
+  assert.deepEqual(webMcpCapabilityStates.map((state) => state.activeImperativeToolNames.length), [2, 3, 2, 6, 7]);
+  assert.deepEqual(webMcpCapabilityStates[1].activeImperativeToolNames.at(-1), "organize_deidentified_summary");
 });
 
 test("state simulator remains static, no-PHI evidence with a visible declarative path", () => {
-  assert.deepEqual(webMcpCapabilityStateBundle.declarativeToolNames, [publicTrialFormContractCore.name]);
-  assert.equal(webMcpCapabilityStateBundle.imperativeToolCount, 7);
+  assert.deepEqual(webMcpCapabilityStateBundle.declarativeToolNames, [publicTrialFormContractCore.name, organizeSummaryFormContractCore.name]);
+  assert.equal(webMcpCapabilityStateBundle.imperativeToolCount, 8);
   assert.equal(webMcpCapabilityStateBundle.privacyBoundary.containsHealthInformation, false);
   assert.equal(webMcpCapabilityStateBundle.privacyBoundary.executesTools, false);
   assert.equal(webMcpCapabilityStateBundle.privacyBoundary.readsCurrentBrowserSession, false);

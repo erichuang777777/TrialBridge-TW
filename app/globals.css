@@ -407,6 +407,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .post-confirmation-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .post-confirmation-controls > button { flex: 0 0 auto; }
 .webmcp-consent { padding: 10px 12px; border-radius: 8px; background: var(--paper); font-size: 0.9rem; }
+.agent-intake-consent { margin-bottom: 14px; border: 1px dashed var(--line); }
 .matching-progress { padding: 16px; border-radius: 10px; color: var(--primary-strong); background: var(--mint); font-weight: 800; }
 .empty-results { margin-top: 18px; padding: 18px 20px; border: 1px solid var(--line); border-left: 4px solid var(--primary-strong); border-radius: 10px; background: var(--mint); }
 .empty-results p { margin: 6px 0 14px; }
