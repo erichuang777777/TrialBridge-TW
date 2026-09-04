@@ -8,6 +8,7 @@ type ContractFilter = "all" | WebMcpAvailabilityGroup;
 const filters: Array<{ value: ContractFilter; label: string }> = [
   { value: "all", label: "All tools" },
   { value: "public", label: "Public" },
+  { value: "intake", label: "Intake-gated" },
   { value: "permission", label: "Permission-gated" },
   { value: "shortlist", label: "Shortlist" },
 ];
@@ -92,7 +93,7 @@ export function ToolContractExplorer() {
           </div>
 
           <div className="tool-contract-hints" aria-label={`Security and budget profile for ${contract.name}`}>
-            <span><b>Read only</b> {contract.readOnlyBehavior ? "Yes" : "No"}</span>
+            <span><b>Read only</b> {contract.readOnlyBehavior ? "Yes" : `No · ${contract.stateEffect ?? "changes visible page state"}`}</span>
             <span><b>readOnlyHint</b> {contract.browserHints ? String(contract.browserHints.readOnlyHint) : "Declarative form"}</span>
             <span><b>untrustedContentHint</b> {contract.browserHints ? String(contract.browserHints.untrustedContentHint) : "Not exposed by form markup"}</span>
             <span><b>Name</b> {contract.budgets.nameCharacters}/30</span>
@@ -123,7 +124,7 @@ export function ToolContractExplorer() {
     </div>}
 
     <div className="tool-contract-download">
-      <div><strong>Download all eight contracts</strong><p>Static implementation metadata only—no browser session, note, profile, results, chat, or tool output. This is a review artifact, not a protocol endpoint.</p></div>
+      <div><strong>Download all {webMcpToolContractCatalog.length} contracts</strong><p>Static implementation metadata only—no browser session, note, profile, results, chat, or tool output. This is a review artifact, not a protocol endpoint.</p></div>
       <a className="secondary-action action-link" href="/webmcp/contracts.json" download={`trialbridge-webmcp-tool-contracts-${webMcpToolContractBundle.auditedAt}.json`}>Download contracts JSON</a>
     </div>
   </section>;

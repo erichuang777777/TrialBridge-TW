@@ -1,17 +1,32 @@
-import { chromium } from "file:///C:/Users/TaiHao/AppData/Roaming/npm/node_modules/playwright/index.mjs";
+/**
+ * Executes the two public WebMCP tools through the browser's
+ * `document.modelContext.executeTool` and prints the outcome. See
+ * scripts/lib/webmcp-browser.mjs for the environment variables that select
+ * the origin and the Chrome build.
+ *
+ *   node scripts/probe-webmcp-execution.mjs
+ */
+import { launchChromium, siteUrl } from "./lib/webmcp-browser.mjs";
 
-const browser = await chromium.launch({ headless: true, executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
+const browser = await launchChromium();
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on("console", (message) => console.log(`[console:${message.type()}] ${message.text()}`));
-await page.goto("https://trialbridge-tw.netlify.app/webmcp/quickstart?probe=a8044d7", { waitUntil: "networkidle", timeout: 60000 });
+await page.goto(siteUrl(`/webmcp/quickstart?probe=${Date.now().toString(36)}`), { waitUntil: "networkidle", timeout: 60000 });
 const result = await page.evaluate(async () => {
   const modelContext = document.modelContext;
+  if (!modelContext || typeof modelContext.getTools !== "function") {
+    return { error: "document.modelContext is unavailable in this browser; enable the WebMCP preview or serve a valid origin-trial token." };
+  }
   const tools = await modelContext.getTools({ fromOrigins: [location.origin] });
   const output = {};
   for (const name of ["trialbridge_method", "search_public_cancer_trials"]) {
     const tool = tools.find((candidate) => candidate.name === name);
+    if (!tool) {
+      output[name] = { ok: false, error: "tool not discovered" };
+      continue;
+    }
+    const input = name === "trialbridge_method" ? {} : { condition: "breast cancer" };
     try {
-      const input = name === "trialbridge_method" ? {} : { condition: "breast cancer" };
       const value = await modelContext.executeTool(tool, JSON.stringify(input));
       output[name] = { ok: true, value };
     } catch (error) {

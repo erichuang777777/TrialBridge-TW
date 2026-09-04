@@ -47,5 +47,7 @@ test("foundation specifications lock the approved trust boundaries", async () =>
   assert.match(product, /patient-confirmed/);
   assert.match(dataFlow, /localhost.*Ollama/i);
   assert.match(dataFlow, /does not use `localStorage`/);
-  assert.match(webmcp, /No tool accepts or returns raw medical-record text/);
+  assert.match(webmcp, /No tool returns raw medical-record text/);
+  assert.match(webmcp, /the page never hands its note to an agent/);
+  assert.match(webmcp, /rejects direct identifiers before anything enters the page/);
 });

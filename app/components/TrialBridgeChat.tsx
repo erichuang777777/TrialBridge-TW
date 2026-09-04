@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
 import { chatReducer, initialChatState, removeSyntheticDemoSearch, syntheticCompetitionNote, type ChatState } from "@/lib/chat/state";
 import { maskDirectIdentifiers } from "@/lib/privacy/mask";
 import { createCloudExtractionReceipt, type CloudExtractionReceipt } from "@/lib/llm/extractionReceipt";
-import { confirmProfile, profileDraftSchema, setCloudUseApproval, type ConfirmedProfile } from "@/lib/profile/schema";
+import { confirmProfile, profileDraftSchema, setCloudUseApproval, type ConfirmedProfile, type ProfileDraft } from "@/lib/profile/schema";
+import { organizeSummaryFormContractCore } from "@/lib/webmcp/toolContractCore";
+import type { WebMcpAgentIntake, WebMcpAgentIntakeOutcome } from "@/lib/webmcp/tools";
 import { createOutreachDraft } from "@/lib/matching/outreach";
 import { createTrialDiscussionBrief, type TrialDiscussionBrief } from "@/lib/matching/discussionBrief";
 import type { TrialMatch } from "@/lib/matching/engine";
@@ -20,6 +22,15 @@ import { TrialShortlistPanel } from "./TrialShortlistPanel";
 import { trialMatchesFilters, type TrialPhaseFilter, type TrialRecruitmentFilter, type TrialRegionFilter } from "@/lib/trials/presentation";
 
 type AssistantMessage = { id: string; role: "user" | "assistant"; content: string };
+type ExtractionOutcome = { ok: true; draft: ProfileDraft } | { ok: false; message: string };
+
+const agentIntakePrivacyNote = "The browser masked the text before cloud organization; no fact is confirmed and no contextual tool exists until the person confirms on the page.";
+
+function intakeOutcomeFromExtraction(result: ExtractionOutcome): WebMcpAgentIntakeOutcome {
+  return result.ok
+    ? { state: "awaiting_confirmation", extractedFacts: result.draft.facts.length, pendingQuestions: result.draft.missingQuestions.length }
+    : { state: "failed", reason: result.message };
+}
 
 const copy = {
   "zh-Hant": {
@@ -125,6 +136,9 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
   const [chatBusy, setChatBusy] = useState(false);
   const [clarificationAnswers, setClarificationAnswers] = useState<Record<string, string>>({});
   const [webMcpConsent, setWebMcpConsent] = useState(false);
+  // Visible switch at the note step; while on, an agent may offer a
+  // de-identified summary (declarative form plus one imperative tool).
+  const [agentIntakeConsent, setAgentIntakeConsent] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [extractionReceipt, setExtractionReceipt] = useState<CloudExtractionReceipt>();
   const [streamedCharacters, setStreamedCharacters] = useState(0);
@@ -146,9 +160,9 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     return () => window.clearInterval(timer);
   }, [state.stage]);
 
-  async function extract(maskResultOverride?: ReturnType<typeof maskDirectIdentifiers>) {
+  async function extract(maskResultOverride?: ReturnType<typeof maskDirectIdentifiers>): Promise<ExtractionOutcome> {
     const maskResult = maskResultOverride ?? state.maskResult;
-    if (!maskResult || !state.subjectRole) return;
+    if (!maskResult || !state.subjectRole) return { ok: false, message: "The note step is not ready for organization." };
     extractionController.current?.abort();
     const controller = new AbortController();
     extractionController.current = controller;
@@ -182,12 +196,42 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
       if (payload.receipt) setExtractionReceipt(payload.receipt);
       setEdits(Object.fromEntries(draft.facts.map((fact) => [fact.id, fact.value])));
       dispatch({ type: "EXTRACTION_SUCCESS", draft });
+      return { ok: true, draft };
     } catch (error) {
-      if (controller.signal.aborted) return;
-      dispatch({ type: "EXTRACTION_FAILURE", message: error instanceof Error ? error.message : "Extraction failed." });
+      if (controller.signal.aborted) return { ok: false, message: "Cloud organization was cancelled on the page." };
+      const message = error instanceof Error ? error.message : "Extraction failed.";
+      dispatch({ type: "EXTRACTION_FAILURE", message });
+      return { ok: false, message };
     } finally {
       if (extractionController.current === controller) extractionController.current = null;
     }
+  }
+
+  // The intake tool is registered once per consent change, so it reads the
+  // latest note state through a ref instead of re-registering on every keystroke.
+  const latestIntake = useRef({ stage: state.stage, rawText: state.rawText, extract });
+  latestIntake.current = { stage: state.stage, rawText: state.rawText, extract };
+  const submitAgentSummary = useCallback(async ({ summary }: { summary: string }): Promise<WebMcpAgentIntakeOutcome> => {
+    const current = latestIntake.current;
+    if (current.stage !== "capture") return { state: "unavailable", reason: "The visible workflow has moved past the note step." };
+    const combined = [current.rawText.trim(), summary].filter(Boolean).join("\n");
+    dispatch({ type: "SET_RAW_TEXT", value: combined });
+    return intakeOutcomeFromExtraction(await current.extract(maskDirectIdentifiers(combined)));
+  }, []);
+  const agentIntake = useMemo<WebMcpAgentIntake | undefined>(
+    () => agentIntakeConsent && state.stage === "capture" ? { submit: submitAgentSummary } : undefined,
+    [agentIntakeConsent, state.stage, submitAgentSummary],
+  );
+
+  function submitManualNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    // Read the form itself: a declarative agent fill lands in the DOM before React state.
+    const submitted = String(new FormData(event.currentTarget).get("summary") ?? state.rawText).trim();
+    if (submitted.length < 20) return;
+    if (submitted !== state.rawText) dispatch({ type: "SET_RAW_TEXT", value: submitted });
+    const outcome = extract(maskDirectIdentifiers(submitted)).then((result) => ({ ...intakeOutcomeFromExtraction(result), privacy: agentIntakePrivacyNote }));
+    const declarativeEvent = event.nativeEvent as SubmitEvent;
+    if (declarativeEvent.agentInvoked && declarativeEvent.respondWith) declarativeEvent.respondWith(outcome);
   }
 
   function cancelExtraction() {
@@ -214,6 +258,7 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     setChatMessages([]);
     setIntakeMode("agent");
     setWebMcpConsent(false);
+    setAgentIntakeConsent(false);
     const nextSearch = removeSyntheticDemoSearch(window.location.search);
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
     dispatch({ type: "RESET" });
@@ -284,6 +329,7 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
     setIntakeMode(target === "start" ? "agent" : "manual");
     setChecked({});
     setWebMcpConsent(false);
+    setAgentIntakeConsent(false);
     const base: ChatState = { stage: "capture", language: state.language, subjectRole: "patient", rawText: "Synthetic development note: stage IV gastric cancer, HER2 negative, age 62, prior FOLFOX." };
     if (target === "start") return dispatch({ type: "RESET" });
     if (target === "capture") return dispatch({ type: "DEV_SET_STATE", state: base });
@@ -395,13 +441,13 @@ export function TrialBridgeChat({ initialSyntheticDemo = false }: { initialSynth
         { number: 3, en: "Compare", zh: "比較" },
       ].map((item) => <li key={item.number} className={step === item.number ? "current" : step > item.number ? "complete" : ""} aria-current={step === item.number ? "step" : undefined}><span aria-hidden="true">{step > item.number ? "✓" : item.number}</span><strong>{state.language === "en" ? item.en : item.zh}</strong></li>)}</ol>
       {process.env.NODE_ENV === "development" && <details className="dev-stage-switcher"><summary><strong>Development shortcuts</strong><span>Synthetic data only</span></summary><div role="group" aria-label="Development stage shortcuts">{(["start", "capture", "mask", "confirmation", "results"] as const).map((target) => <button key={target} onClick={() => void jumpToDevelopmentStage(target)}>{target === "start" ? "Start" : target === "capture" ? "Enter note" : target === "mask" ? "Mask review" : target === "confirmation" ? "Confirm summary" : "Trial cards"}</button>)}</div></details>}
-      <WebMcpBridge profile={state.confirmedProfile} matches={matches} shortlistedTrialIds={shortlistedTrialIds} pendingQuestions={clarificationQuestions} matching={matching} sensitiveConsent={webMcpConsent} language={state.language} />
+      <WebMcpBridge profile={state.confirmedProfile} matches={matches} shortlistedTrialIds={shortlistedTrialIds} pendingQuestions={clarificationQuestions} matching={matching} sensitiveConsent={webMcpConsent} agentIntake={agentIntake} language={state.language} />
       <div className="chat-workspace">
       <div className="workflow-pane">
       {state.stage === "mode" && <div className="chat-turn mode-onboarding"><div className="language-switch" aria-label="Language"><button className={state.language === "en" ? "selected" : ""} onClick={() => dispatch({ type: "SET_LANGUAGE", language: "en" })}>English</button><button className={state.language === "zh-Hant" ? "selected" : ""} onClick={() => dispatch({ type: "SET_LANGUAGE", language: "zh-Hant" })}>繁中</button></div><p className="eyebrow">{state.language === "en" ? "One note, two ways in" : "同一份病況，兩種輸入方式"}</p><h3>{state.language === "en" ? "Talk naturally or paste what you already have" : "直接對談，或貼上手邊已有的病歷"}</h3><p>{state.language === "en" ? "Both paths build the same note and lead to the same patient-confirmed review. In Guided chat, Chat is the main interface." : "兩種入口都會建立同一份病況內容，並進入相同的病人確認流程；選擇對談引導時，Chat 就是主要介面。"}</p><div className="entry-paths"><button className="primary-action" onClick={() => { setIntakeMode("agent"); dispatch({ type: "START_INTAKE" }); }}>{state.language === "en" ? "Start guided chat" : "開始對談引導"}</button><button onClick={() => { setIntakeMode("manual"); dispatch({ type: "START_INTAKE" }); }}>{state.language === "en" ? "Paste a note instead" : "改為貼上病歷"}</button></div><div className="synthetic-demo-entry"><button type="button" onClick={() => { setIntakeMode("manual"); dispatch({ type: "START_SYNTHETIC_DEMO" }); }}>{state.language === "en" ? "Try a synthetic case" : "試用虛構案例"}</button><small>{state.language === "en" ? "Fictional data · real masking, cloud extraction, confirmation, questions, and matching" : "虛構資料 · 真實執行遮蔽、雲端整理、確認、補問與配對"}</small></div></div>}
       {(state.stage === "privacy" || state.stage === "capture") && state.rawText === syntheticCompetitionNote && <div className="synthetic-demo-banner" role="status" aria-live="polite"><strong>{state.language === "en" ? "Synthetic competition case ready" : "競賽虛構案例已準備"}</strong><span>{state.language === "en" ? "No real patient data. Privacy, masking, cloud organization, confirmation, and questions still run in order." : "不含真實病人資料；隱私、遮蔽、雲端整理、確認與補問仍會依序執行。"}</span></div>}
       {state.stage === "privacy" && <div className="chat-turn"><p>{t.privacy}</p><button className="primary-action" onClick={() => dispatch({ type: "ACCEPT_PRIVACY" })}>{t.accept}</button></div>}
-      {state.stage === "capture" && <div className="chat-turn intake-entry">{intakeMode === "agent" ? <div className="chat-intake-summary"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Agent mode · Chat is everything" : "代理模式 · 以對談完成全部流程"}</p><h3>{state.language === "en" ? "Build the note through the assistant" : "透過助手建立病況內容"}</h3></div><span>{state.rawText.trim().length} {state.language === "en" ? "characters collected" : "字已蒐集"}</span></div><div className="agent-note-preview" aria-live="polite">{state.rawText.trim() || (state.language === "en" ? "Start in the chat panel. Medical answers will appear here as one shared note." : "請從右側對談開始；醫療相關回答會整理成同一份病況內容。")}</div><p className="field-helper">{state.language === "en" ? "Tell the assistant when the note is complete. It can start masking and extraction for you." : "內容完整後請告訴助手；它可以為您啟動遮蔽與雲端整理。"}</p></div> : <div className="note-intake"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Manual mode" : "手動模式"}</p><h3>{state.language === "en" ? "Enter the note, then extract" : "輸入病歷後執行整理"}</h3></div><span>{state.language === "en" ? "You control each step" : "自行控制每一步"}</span></div><label htmlFor="medical-note">{t.prompt}</label><textarea id="medical-note" value={state.rawText} onChange={(event) => dispatch({ type: "SET_RAW_TEXT", value: event.target.value })} aria-describedby="note-helper" rows={9} /><p id="note-helper" className="field-helper">{t.helper}</p><button className="primary-action" disabled={state.rawText.trim().length < 20} onClick={() => void extract(maskDirectIdentifiers(state.rawText))}>{t.review}</button></div>}</div>}
+      {state.stage === "capture" && <div className="chat-turn intake-entry"><label className="confirm-check webmcp-consent agent-intake-consent"><input type="checkbox" checked={agentIntakeConsent} onChange={(event) => setAgentIntakeConsent(event.target.checked)} />{state.language === "en" ? "Allow a WebMCP agent to add a de-identified summary at this note step. Text with names, contact details, ID or record numbers, birth dates, or addresses is rejected; you still review and confirm every fact." : "允許 WebMCP Agent 在此病況輸入步驟提供去識別化摘要。含姓名、聯絡方式、身分證或病歷號、生日或地址的內容會被拒絕；每項資料仍由您確認。"}</label>{intakeMode === "agent" ? <div className="chat-intake-summary"><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Agent mode · Chat is everything" : "代理模式 · 以對談完成全部流程"}</p><h3>{state.language === "en" ? "Build the note through the assistant" : "透過助手建立病況內容"}</h3></div><span>{state.rawText.trim().length} {state.language === "en" ? "characters collected" : "字已蒐集"}</span></div><div className="agent-note-preview" aria-live="polite">{state.rawText.trim() || (state.language === "en" ? "Start in the chat panel. Medical answers will appear here as one shared note." : "請從右側對談開始；醫療相關回答會整理成同一份病況內容。")}</div><p className="field-helper">{state.language === "en" ? "Tell the assistant when the note is complete. It can start masking and extraction for you." : "內容完整後請告訴助手；它可以為您啟動遮蔽與雲端整理。"}</p></div> : <form className="note-intake" toolname={agentIntake ? organizeSummaryFormContractCore.name : undefined} tooldescription={agentIntake ? organizeSummaryFormContractCore.description : undefined} onSubmit={submitManualNote}><div className="intake-entry-heading"><div><p className="eyebrow">{state.language === "en" ? "Manual mode" : "手動模式"}</p><h3>{state.language === "en" ? "Enter the note, then extract" : "輸入病歷後執行整理"}</h3></div><span>{state.language === "en" ? "You control each step" : "自行控制每一步"}</span></div><label htmlFor="medical-note">{t.prompt}</label><textarea id="medical-note" name="summary" value={state.rawText} onChange={(event) => dispatch({ type: "SET_RAW_TEXT", value: event.target.value })} aria-describedby="note-helper" rows={9} toolparamdescription={organizeSummaryFormContractCore.inputSchema.properties.summary.description} /><p id="note-helper" className="field-helper">{t.helper}</p><button className="primary-action" type="submit" disabled={state.rawText.trim().length < 20}>{t.review}</button></form>}</div>}
       {state.stage === "mask_review" && state.maskResult && <div className="chat-turn"><h3>{state.language === "en" ? "Cloud organization needs attention" : "雲端整理需要處理"}</h3><pre className="masked-preview">{state.maskResult.maskedText}</pre><p className="field-helper">{state.language === "en" ? "Masked items" : "已遮蔽項目"}: {state.maskResult.findings.length}.</p><div className="cloud-transfer-note"><strong>{state.language === "en" ? "Cloud organization" : "雲端整理"}</strong><p>{t.cloudNotice}</p></div>{state.error && <div className="error-panel" role="alert"><strong>{state.language === "en" ? "Cloud extraction stopped" : "雲端整理已停止"}</strong><p>{state.error}</p>{extractionReceipt?.status === "failed" && <dl className="extraction-failure-receipt"><div><dt>{state.language === "en" ? "Code" : "代碼"}</dt><dd>{extractionReceipt.failureCode ?? "CLOUD_MODEL_ERROR"}</dd></div><div><dt>{state.language === "en" ? "Stopped after" : "停止時間"}</dt><dd>{(extractionReceipt.latencyMs / 1_000).toFixed(1)}s</dd></div><div><dt>{state.language === "en" ? "Next step" : "下一步"}</dt><dd>{state.language === "en" ? "Retry or edit the note" : "重試或修改內容"}</dd></div></dl>}</div>}<div className="action-row"><button onClick={() => dispatch({ type: "BACK_TO_CAPTURE" })}>{t.back}</button><button className="primary-action" onClick={() => void extract()}>{t.extract}</button></div></div>}
       {state.stage === "extracting" && <div className="chat-turn extraction-progress" role="status" aria-live="polite" aria-atomic="true"><div className="progress-track" aria-hidden="true"><span /></div><div className="progress-copy"><strong>{t.cloudWorking}</strong><span className="elapsed-time">{t.elapsed}: {elapsedSeconds}s</span></div><p>{elapsedSeconds < 30 ? t.waiting : t.timeoutHint}</p><p className="eta-copy">{t.expected}</p>{streamedCharacters > 0 && <p className="stream-progress">{state.language === "en" ? `Structured draft arriving… ${streamedCharacters} characters received (validated before display).` : `整理結果傳送中… 已收到 ${streamedCharacters} 字元（顯示前會先驗證）。`}</p>}<p className="deadline-copy">{t.remaining} <strong>{Math.max(0, 120 - elapsedSeconds)}s</strong></p><p className="field-helper">gpt-oss:120b-cloud · Remote cloud via localhost proxy · 120s hard limit</p><button onClick={cancelExtraction}>{t.cancel}</button></div>}
       {(state.stage === "confirmation" || state.stage === "ready") && state.draft && state.maskResult && <SummaryConfirmation completed={state.stage === "ready"} draft={state.draft} maskResult={state.maskResult} language={state.language} receipt={extractionReceipt?.status === "completed" ? extractionReceipt : undefined} edits={edits} checked={checked} onEdit={(id, value) => { setEdits((current) => ({ ...current, [id]: value })); setChecked((current) => ({ ...current, [id]: false })); }} onCheck={(id, value) => setChecked((current) => ({ ...current, [id]: value }))} onCheckAll={() => setChecked(Object.fromEntries(state.draft!.facts.map((fact) => [fact.id, true])))} onBack={() => dispatch({ type: "BACK_TO_CAPTURE" })} onFinish={() => void finishConfirmation()} />}

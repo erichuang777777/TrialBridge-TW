@@ -23,6 +23,30 @@ export const publicTrialFormContractCore = {
   },
 } as const;
 
+/**
+ * Declarative twin of the note step. It renders only while the person has
+ * switched agent intake permission on; there is no autosubmit, so the person
+ * reviews the filled note and starts organization with the visible button.
+ */
+export const organizeSummaryFormContractCore = {
+  name: "organize_summary_form",
+  title: "Organize a de-identified note",
+  description: "Fill the visible TrialBridge note with a de-identified cancer summary (no names, contact details, ID or record numbers, birth dates, or addresses). The person reviews the note and starts cloud organization; the browser masks identifiers first and every extracted fact still needs human confirmation.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      summary: {
+        type: "string",
+        description: "De-identified cancer summary in English or Traditional Chinese; the person still reviews and submits it.",
+        minLength: 20,
+        maxLength: 4000,
+      },
+    },
+    required: ["summary"],
+    additionalProperties: false,
+  },
+} as const;
+
 export const webMcpImperativeContractCore = {
   trialbridge_method: {
     name: "trialbridge_method", title: "Explain TrialBridge TW method",
@@ -35,6 +59,13 @@ export const webMcpImperativeContractCore = {
     description: "Search public TFDA and ClinicalTrials.gov records by a non-sensitive cancer topic. Returns at most five source-linked records.",
     inputSchema: { type: "object", properties: { condition: { type: "string", description: "General non-sensitive cancer condition; never include a medical record.", minLength: 2, maxLength: 120 } }, required: ["condition"], additionalProperties: false },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
+  },
+  organize_deidentified_summary: {
+    name: "organize_deidentified_summary", title: "Organize a de-identified summary",
+    description: "Call only when the person asked to organize their own de-identified cancer summary and the visible note step shows agent intake permission on. Accepts summary text without names, contact details, ID or record numbers, birth dates, or addresses; any direct identifier is rejected before it enters the page. Starts the same masked cloud organization the person would start; every extracted fact still needs human confirmation. Never confirms facts, matches, enrolls, or sends.",
+    inputSchema: { type: "object", properties: { summary: { type: "string", description: "De-identified summary (English or Traditional Chinese): diagnosis, stage, biomarkers, treatments, age band, travel range. No identifiers.", minLength: 20, maxLength: 4000 } }, required: ["summary"], additionalProperties: false },
+    // Starts a visible workflow step, so it must not claim to be read-only.
+    annotations: { readOnlyHint: false, untrustedContentHint: false },
   },
   review_trial_followups: {
     name: "review_trial_followups", title: "Review pending trial questions",
@@ -74,6 +105,7 @@ export type WebMcpDisplayLanguage = "en" | "zh-Hant";
 export const webMcpZhHantToolTitles = {
   trialbridge_method: "說明 TrialBridge TW 方法",
   search_public_cancer_trials: "搜尋公開癌症臨床試驗",
+  organize_deidentified_summary: "整理去識別化病況摘要",
   review_trial_followups: "檢視待確認的試驗問題",
   explain_confirmed_matches: "說明已確認資料的試驗配對",
   draft_trial_outreach: "建立試驗團隊聯絡草稿",

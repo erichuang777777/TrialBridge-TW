@@ -2,6 +2,7 @@ import { ClinicalTrialsGovAdapter } from "../adapters/clinicalTrialsGov.ts";
 import { TfdaAdapter } from "../adapters/tfda.ts";
 import { deduplicateTrials } from "../dedupe.ts";
 import { rankTrials } from "../regions.ts";
+import { formatRegistryDuration, registrySourceTimeoutMs, resolveTrialSearchDeadlineMs } from "../reliability.ts";
 import { searchTrialRegistries, type FederatedTrialSearchResult } from "../search.ts";
 import type { RegistryName, TrialRegistryAdapter, TrialSearchInput } from "../types.ts";
 import { expandWithNciTerminology } from "../terminology/nci.ts";
@@ -36,7 +37,12 @@ export function getTrialIndexAccessState(): TrialIndexAccessState {
   return indexAccessState;
 }
 
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "TimeoutError";
+}
+
 function classifyIndexFailure(error: unknown): string {
+  if (isTimeoutError(error)) return "index_timeout";
   const message = error instanceof Error ? error.message : "";
   if (/read-only|readonly/iu.test(message)) return "index_read_only_write_attempted";
   if (/schema|migrat/iu.test(message)) return "index_schema_mismatch";
@@ -65,6 +71,39 @@ function defaultLiveAdapter(registry: IndexedRegistryName): TrialRegistryAdapter
   return registry === "TFDA" ? new TfdaAdapter() : new ClinicalTrialsGovAdapter();
 }
 
+/** Below this remaining budget a live registry query cannot finish; fail fast instead. */
+const minimumLiveFallbackBudgetMs = 1_000;
+
+/**
+ * Resolves `work` or rejects with a `TimeoutError` DOMException once
+ * `timeoutMs` elapses (or the caller's signal aborts). The underlying index
+ * request is abandoned, not cancelled: the point is to answer the HTTP
+ * request before the hosting platform cuts it off.
+ */
+function withDeadline<T>(work: () => Promise<T>, timeoutMs: number, outer?: AbortSignal): Promise<T> {
+  const deadline = new AbortController();
+  const signal = outer ? AbortSignal.any([outer, deadline.signal]) : deadline.signal;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      deadline.abort(new DOMException(`The public index did not respond within ${formatRegistryDuration(timeoutMs)}`, "TimeoutError"));
+    }, timeoutMs);
+    const settle = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => {
+      settle();
+      reject(signal.reason);
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    work().then((value) => { settle(); resolve(value); }, (error) => { settle(); reject(error); });
+  });
+}
+
 /**
  * Searches the shared public index and, per registry, falls back to a live
  * registry query only for sources the index cannot serve yet. One synchronized
@@ -79,25 +118,36 @@ export async function searchTrialCatalog(
 ): Promise<FederatedTrialSearchResult> {
   if (adapters) return searchTrialRegistries(input, adapters, registryConditions, runtime);
 
+  const now = runtime.now ?? (() => performance.now());
+  const deadlineMs = Math.max(1, Math.round(runtime.timeoutMs ?? resolveTrialSearchDeadlineMs()));
+  const startedAt = now();
+  const elapsedMs = () => Math.max(0, Math.round(now() - startedAt));
   let health: TrialIndexHealth | undefined;
   let indexed: TrialIndexSearchResult | undefined;
   let indexDurationMs = 0;
+  let indexTimedOut = false;
   try {
     const store = runtime.store ?? getTrialIndexStore();
-    health = await store.health();
-    if (health.totalRecords > 0) {
-      const startedAt = performance.now();
-      indexed = await store.search({
+    const outcome = await withDeadline(async () => {
+      const currentHealth = await store.health();
+      if (currentHealth.totalRecords === 0) return { health: currentHealth, searched: undefined };
+      const searched = await store.search({
         ...input,
         terms: [input.condition, ...Object.values(registryConditions), ...(await expandWithNciTerminology(registryConditions["ClinicalTrials.gov"] ?? input.condition))].filter((term): term is string => Boolean(term)),
       });
-      indexDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
-    }
+      return { health: currentHealth, searched };
+    }, deadlineMs, runtime.signal);
+    health = outcome.health;
+    indexed = outcome.searched;
+    indexDurationMs = elapsedMs();
     if (indexAccessState.status !== "ok") indexAccessState = { status: "ok" };
   } catch (error) {
-    // A missing or temporarily unavailable index must not erase the bounded
-    // live fallback, but the fallback must not be silent either.
-    recordIndexProblem(error);
+    // A missing, slow, or temporarily unavailable index must not erase the
+    // bounded live fallback, but the fallback must not be silent either.
+    if (!runtime.signal?.aborted) {
+      recordIndexProblem(error);
+      indexTimedOut = isTimeoutError(error);
+    }
     health = undefined;
     indexed = undefined;
   }
@@ -127,8 +177,23 @@ export async function searchTrialCatalog(
 
   const liveRegistries = trackedRegistries.filter((registry) => !servedByIndex.has(registry));
   const tfdaLive = runtime.tfdaLiveFallback ?? tfdaLiveFallbackEnabled();
+  const remainingMs = Math.max(0, deadlineMs - elapsedMs());
   const liveAdapters: TrialRegistryAdapter[] = [];
   for (const registry of liveRegistries) {
+    // The whole request shares one deadline: after a slow index there is no
+    // budget left for a live registry round trip, so say so instead of
+    // letting the hosting platform return an opaque 504.
+    if (indexTimedOut || remainingMs < minimumLiveFallbackBudgetMs) {
+      failures.push({
+        registry,
+        message: indexTimedOut
+          ? `The public index did not respond within ${formatRegistryDuration(deadlineMs)}; no live registry query fits in the remaining request budget.`
+          : `The public index used this request's ${formatRegistryDuration(deadlineMs)} budget; no live registry query was attempted.`,
+        code: "SOURCE_TIMEOUT",
+        durationMs: elapsedMs(),
+      });
+      continue;
+    }
     if (registry === "TFDA" && !tfdaLive) {
       failures.push({
         registry,
@@ -141,7 +206,10 @@ export async function searchTrialCatalog(
     liveAdapters.push((runtime.liveAdapterFactory ?? defaultLiveAdapter)(registry));
   }
   if (liveAdapters.length > 0) {
-    const live = await searchTrialRegistries(input, liveAdapters, registryConditions, runtime);
+    const live = await searchTrialRegistries(input, liveAdapters, registryConditions, {
+      ...runtime,
+      timeoutMs: Math.min(runtime.timeoutMs ?? registrySourceTimeoutMs, remainingMs),
+    });
     trials.push(...live.trials);
     sources.push(...live.sources);
     failures.push(...live.failures);

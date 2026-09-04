@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
 import { normalizeTfdaRecord } from "../lib/trials/adapters/tfda.ts";
-import { LibsqlTrialIndexStore } from "../lib/trials/index/libsql.ts";
+import { LibsqlTrialIndexStore, maxCandidateWindow, selectPayloadRowIds } from "../lib/trials/index/libsql.ts";
 import { resolveTrialIndexProfile, trialIndexProfileSqlPredicate, trialMatchesIndexProfile } from "../lib/trials/index/profile.ts";
 import { createTrialIndexStore, resolveTrialIndexBackend } from "../lib/trials/index/store.ts";
 import { ctgovFixture, tfdaFixture } from "./fixtures/registry.ts";
@@ -100,6 +100,50 @@ test("libsql search pushes the recruitment filter into SQL so closed Taiwan reco
     const all = await store.search({ condition: "gastric cancer", terms: ["gastric cancer"], pageSize: 2, includeNotOpen: true });
     assert.equal(all.trials.length, 2);
   } finally { await store.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
+test("libsql search ranks a wide identifier window but only fetches the payloads that can fill the page", async () => {
+  const { directory, store } = await temporaryStore();
+  try {
+    // 30 distinct worldwide records, then one Taiwan record inserted last so a
+    // window limited to `pageSize` rows (ordered by recency) would miss it.
+    const trials = Array.from({ length: 30 }, (_, index) => {
+      const study = structuredClone(ctgovFixture);
+      study.protocolSection.identificationModule.nctId = `NCT0000${String(index + 100).padStart(4, "0")}`;
+      study.protocolSection.identificationModule.orgStudyIdInfo = { id: `ORG-W-${index}` };
+      study.protocolSection.identificationModule.secondaryIdInfos = [{ id: `SEC-W-${index}` }];
+      study.protocolSection.statusModule.overallStatus = "RECRUITING";
+      return normalizeClinicalTrialsGovStudy(study, timestamp);
+    });
+    await store.markSyncing("ClinicalTrials.gov", timestamp);
+    await store.replaceSource({ registry: "ClinicalTrials.gov", trials, startedAt: timestamp, finishedAt: timestamp, durationMs: 1 });
+    await store.markSyncing("TFDA", timestamp);
+    await store.replaceSource({ registry: "TFDA", trials: [normalizeTfdaRecord(tfdaFixture, timestamp)], startedAt: timestamp, finishedAt: timestamp, durationMs: 1 });
+
+    const page = await store.search({ condition: "gastric cancer", terms: ["gastric cancer", "胃癌"], pageSize: 5, includeNotOpen: true });
+    assert.equal(page.trials.length, 5, "the page is filled");
+    assert.equal(page.trials[0].regionTier, "taiwan", "Taiwan-first ranking survives the bounded payload fetch");
+    const wide = await store.search({ condition: "gastric cancer", terms: ["gastric cancer"], pageSize: 20, includeNotOpen: true });
+    assert.equal(wide.trials.length, 20, "twenty distinct records fill a twenty-record page");
+    assert.equal(new Set(wide.trials.map((trial) => trial.canonicalId)).size, 20);
+  } finally { await store.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
+test("selectPayloadRowIds keeps every row of the leading canonical ids plus a bounded margin", () => {
+  const candidates = [
+    { rowid: 1, canonicalId: "a" },
+    { rowid: 2, canonicalId: "a" },
+    { rowid: 3, canonicalId: "b" },
+    { rowid: 4, canonicalId: "c" },
+    { rowid: 5, canonicalId: "d" },
+    { rowid: 6, canonicalId: "e" },
+    { rowid: 7, canonicalId: "a" },
+  ];
+  // pageSize 2 → budget 3 canonical ids (a, b, c); every "a" row is kept.
+  assert.deepEqual(selectPayloadRowIds(candidates, 2), [1, 2, 3, 4, 7]);
+  assert.deepEqual(selectPayloadRowIds([], 5), []);
+  assert.equal(selectPayloadRowIds(Array.from({ length: 300 }, (_, index) => ({ rowid: index, canonicalId: String(index) })), 100).length, 110, "the margin is capped at ten extra ids");
+  assert.equal(maxCandidateWindow, 200);
 });
 
 test("a read-only libsql store serves searches but refuses every write", async () => {

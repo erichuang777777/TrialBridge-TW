@@ -5,8 +5,9 @@ import path from "node:path";
 import test from "node:test";
 import { normalizeClinicalTrialsGovStudy } from "../lib/trials/adapters/clinicalTrialsGov.ts";
 import { normalizeTfdaRecord } from "../lib/trials/adapters/tfda.ts";
-import { searchTrialCatalog, tfdaLiveFallbackEnabled } from "../lib/trials/index/catalog.ts";
+import { getTrialIndexAccessState, searchTrialCatalog, tfdaLiveFallbackEnabled } from "../lib/trials/index/catalog.ts";
 import { LibsqlTrialIndexStore } from "../lib/trials/index/libsql.ts";
+import { registrySourceTimeoutMs, resolveTrialSearchDeadlineMs } from "../lib/trials/reliability.ts";
 import type { TrialRegistryAdapter } from "../lib/trials/types.ts";
 import { ctgovFixture, tfdaFixture } from "./fixtures/registry.ts";
 
@@ -80,6 +81,35 @@ test("catalog falls back to every live source when the index is empty or unreach
   const { getTrialIndexAccessState } = await import("../lib/trials/index/catalog.ts");
   assert.equal(getTrialIndexAccessState().status, "unavailable");
   assert.equal(getTrialIndexAccessState().message, "index_unreachable");
+});
+
+test("catalog answers with SOURCE_TIMEOUT inside its deadline when the index hangs, without starting a live fallback", async () => {
+  const calls: string[] = [];
+  const hanging = { health: () => new Promise<never>(() => undefined) } as unknown as LibsqlTrialIndexStore;
+  const startedAt = performance.now();
+  const result = await searchTrialCatalog({ condition: "gastric cancer", pageSize: 5, includeNotOpen: true }, {}, {
+    store: hanging,
+    timeoutMs: 120,
+    liveAdapterFactory: (registry) => fakeAdapter(registry, calls),
+    tfdaLiveFallback: true,
+  });
+  assert.ok(performance.now() - startedAt < 2_000, "the request returns shortly after the deadline");
+  assert.deepEqual(calls, [], "no live registry query starts after the budget is spent");
+  assert.equal(result.sources.length, 0);
+  assert.equal(result.trials.length, 0);
+  assert.deepEqual(result.failures.map((failure) => [failure.registry, failure.code]).sort(), [["ClinicalTrials.gov", "SOURCE_TIMEOUT"], ["TFDA", "SOURCE_TIMEOUT"]]);
+  assert.match(result.failures[0].message, /did not respond within 120 ms/);
+  assert.equal(getTrialIndexAccessState().status, "unavailable");
+  assert.equal(getTrialIndexAccessState().message, "index_timeout");
+});
+
+test("the search deadline defaults to the registry deadline and only accepts sane overrides", () => {
+  assert.equal(resolveTrialSearchDeadlineMs({}), registrySourceTimeoutMs);
+  assert.equal(resolveTrialSearchDeadlineMs({ TRIAL_SEARCH_DEADLINE_MS: "7000" }), 7_000);
+  assert.equal(resolveTrialSearchDeadlineMs({ TRIAL_SEARCH_DEADLINE_MS: " 9000 " }), 9_000);
+  assert.equal(resolveTrialSearchDeadlineMs({ TRIAL_SEARCH_DEADLINE_MS: "10" }), registrySourceTimeoutMs, "too short to answer anything");
+  assert.equal(resolveTrialSearchDeadlineMs({ TRIAL_SEARCH_DEADLINE_MS: "abc" }), registrySourceTimeoutMs);
+  assert.equal(resolveTrialSearchDeadlineMs({ TRIAL_SEARCH_DEADLINE_MS: "999999" }), registrySourceTimeoutMs);
 });
 
 test("TFDA live fallback flag defaults on and accepts explicit off values", () => {

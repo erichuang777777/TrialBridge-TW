@@ -244,3 +244,53 @@ test("WebMCP output is bounded before it returns to an agent", () => {
   assert.equal(JSON.stringify(output).length <= maxWebMcpOutputChars + 32, true);
   assert.equal((output as { truncated?: boolean }).truncated, true);
 });
+
+test("the intake tool registers only behind the visible switch, rejects identifiers, and reports the note step's outcome", async () => {
+  const intakeName = "organize_deidentified_summary";
+  assert.equal(buildTrialBridgeTools({ matches: [], sensitiveConsent: false }).some((tool) => tool.name === intakeName), false);
+  assert.equal(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true, agentIntake: { submit: async () => ({ state: "organizing" }) } }).some((tool) => tool.name === intakeName), false, "never alongside a confirmed profile");
+
+  const received: string[] = [];
+  const tools = buildTrialBridgeTools({
+    matches: [],
+    sensitiveConsent: false,
+    agentIntake: {
+      submit: async ({ summary }) => {
+        received.push(summary);
+        return { state: "awaiting_confirmation", extractedFacts: 4, pendingQuestions: 1 };
+      },
+    },
+  });
+  assert.deepEqual(tools.map((tool) => tool.name), ["trialbridge_method", "search_public_cancer_trials", intakeName]);
+  const tool = tools[2]!;
+  assert.equal(tool.annotations?.readOnlyHint, false);
+  const signal = new AbortController().signal;
+  const summary = "Stage IV gastric adenocarcinoma, HER2 negative, prior FOLFOX, age 62, can travel within Taiwan and Asia.";
+
+  await assert.rejects(() => Promise.resolve(tool.execute({ summary: "too short" }, { signal })), /20-4000 characters/);
+  await assert.rejects(() => Promise.resolve(tool.execute({ summary: `${summary} Contact me at person@example.com or 0912-345-678.` }, { signal })), /Remove these direct identifiers and call again: email, phone/);
+  assert.deepEqual(received, [], "nothing with an identifier reaches the page");
+
+  // Chrome's current Origin Trial delivers executeTool input as a JSON string.
+  const output = await tool.execute(JSON.stringify({ summary }) as unknown as Record<string, unknown>, { signal }) as Record<string, unknown>;
+  assert.deepEqual(received, [summary]);
+  assert.equal(output.state, "awaiting_confirmation");
+  assert.equal(output.extractedFacts, 4);
+  assert.equal(output.acceptedCharacters, summary.length);
+  assert.match(String(output.nextAction), /confirm each extracted fact/);
+  assert.doesNotMatch(JSON.stringify(output), /gastric|FOLFOX/, "the summary text itself is never echoed back");
+});
+
+test("the intake tool answers 'organizing' when the visible step outlives its wait budget", async () => {
+  let resolveSubmit: (() => void) | undefined;
+  const tool = buildTrialBridgeTools({
+    matches: [],
+    sensitiveConsent: false,
+    agentIntake: { waitMs: 30, submit: () => new Promise((resolve) => { resolveSubmit = () => resolve({ state: "failed", reason: "late" }); }) },
+  }).find((candidate) => candidate.name === "organize_deidentified_summary");
+  assert.ok(tool);
+  const output = await tool.execute({ summary: "Stage II breast cancer, ER positive, HER2 negative, after surgery, age band 50s, Taiwan only." }, { signal: new AbortController().signal }) as Record<string, unknown>;
+  assert.equal(output.state, "organizing");
+  assert.match(String(output.nextAction), /still running/);
+  resolveSubmit?.();
+});

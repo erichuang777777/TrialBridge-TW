@@ -114,6 +114,26 @@ CREATE INDEX IF NOT EXISTS ingestion_runs_started ON ingestion_runs(started_at D
 const acceptingCategories = ["open", "opening_soon", "invitation_only"] as const;
 const acceptingCategorySql = acceptingCategories.map((category) => `'${category}'`).join(", ");
 const rankOrderSql = "CASE region_tier WHEN 'taiwan' THEN 0 WHEN 'asia' THEN 1 WHEN 'world' THEN 2 ELSE 3 END, CASE recruitment_category WHEN 'open' THEN 0 WHEN 'opening_soon' THEN 1 WHEN 'invitation_only' THEN 2 ELSE 3 END, source_updated_at DESC";
+const matchesRankOrderSql = rankOrderSql.replaceAll("region_tier", "matches.region_tier").replaceAll("recruitment_category", "matches.recruitment_category").replaceAll("source_updated_at", "matches.source_updated_at");
+/** Upper bound on identifier-only candidate rows fetched per search. */
+export const maxCandidateWindow = 200;
+
+/**
+ * Picks the rowids whose payloads must be fetched so that, after full
+ * deduplication, a page can still be filled: the first `pageSize` distinct
+ * canonical ids in rank order (every row that shares one of those ids, so
+ * cross-registry copies merge) plus a margin for records that dedupe by a
+ * shared secondary identifier rather than by canonical id.
+ */
+export function selectPayloadRowIds(candidates: ReadonlyArray<{ rowid: number; canonicalId: string }>, pageSize: number): number[] {
+  const budget = Math.max(pageSize, 1) + Math.min(Math.ceil(pageSize / 2), 10);
+  const keptCanonicalIds = new Set<string>();
+  for (const candidate of candidates) {
+    if (keptCanonicalIds.size >= budget) break;
+    keptCanonicalIds.add(candidate.canonicalId);
+  }
+  return candidates.filter((candidate) => keptCanonicalIds.has(candidate.canonicalId)).map((candidate) => candidate.rowid);
+}
 
 type Row = Record<string, InValue | bigint | ArrayBuffer | undefined>;
 
@@ -376,17 +396,24 @@ export class LibsqlTrialIndexStore implements TrialIndexStore {
     const client = await this.client();
     const terms = normalizedSearchTerms(input.terms);
     const ftsQuery = terms.map((term) => searchTermTokens(term).map((token) => `"${token.replaceAll('"', '""')}"*`).join(" AND ")).filter(Boolean).map((group) => `(${group})`).join(" OR ");
-    // Keep remote libSQL payloads small enough for serverless request limits.
-    // Deduplication/ranking still runs on the bounded candidate window.
-    const limit = input.pageSize;
     const recruitmentFilter = input.includeNotOpen ? "" : ` AND recruitment_category IN (${acceptingCategorySql})`;
-    const result = ftsQuery
+    // Two phases keep a wide, Taiwan-first candidate window without shipping
+    // hundreds of multi-kilobyte payloads over HTTPS from Turso on every
+    // request (the hosted function has a short synchronous budget):
+    //  1. identifiers only for `candidateWindow` ranked rows;
+    //  2. `payload_json` for just the rows that can still reach the page.
+    const candidateWindow = Math.min(Math.max(input.pageSize * 4, input.pageSize), maxCandidateWindow);
+    const candidates = ftsQuery
       ? await client.execute({
-        sql: `SELECT r.payload_json FROM (SELECT rowid, region_tier, recruitment_category, source_updated_at FROM trial_records_fts_v2 WHERE trial_records_fts_v2 MATCH ?${recruitmentFilter} ORDER BY ${rankOrderSql} LIMIT ?) AS matches JOIN trial_records r ON r.rowid=matches.rowid ORDER BY ${rankOrderSql.replaceAll("region_tier", "matches.region_tier").replaceAll("recruitment_category", "matches.recruitment_category").replaceAll("source_updated_at", "matches.source_updated_at")}`,
-        args: [ftsQuery, limit],
+        sql: `SELECT matches.rowid AS rowid, r.canonical_id FROM (SELECT rowid, region_tier, recruitment_category, source_updated_at FROM trial_records_fts_v2 WHERE trial_records_fts_v2 MATCH ?${recruitmentFilter} ORDER BY ${rankOrderSql} LIMIT ?) AS matches JOIN trial_records r ON r.rowid=matches.rowid ORDER BY ${matchesRankOrderSql}`,
+        args: [ftsQuery, candidateWindow],
       })
-      : await client.execute({ sql: `SELECT payload_json FROM trial_records WHERE 1=1${recruitmentFilter} ORDER BY source_updated_at DESC LIMIT ?`, args: [limit] });
-    const trials = rankTrials(deduplicateTrials(result.rows.map((row) => deserializeTrial(String(row.payload_json)))))
+      : await client.execute({ sql: `SELECT rowid, canonical_id FROM trial_records WHERE 1=1${recruitmentFilter} ORDER BY source_updated_at DESC LIMIT ?`, args: [candidateWindow] });
+    const rowIds = selectPayloadRowIds(candidates.rows.map((row) => ({ rowid: integer(row.rowid), canonicalId: String(row.canonical_id) })), input.pageSize);
+    const payloads = rowIds.length
+      ? await client.execute({ sql: `SELECT payload_json FROM trial_records WHERE rowid IN (${rowIds.map(() => "?").join(", ")})`, args: rowIds })
+      : { rows: [] };
+    const trials = rankTrials(deduplicateTrials(payloads.rows.map((row) => deserializeTrial(String(row.payload_json)))))
       .filter((trial) => input.includeNotOpen || trial.recruitment.acceptingNewParticipants)
       .slice(0, input.pageSize);
     const sources = (await this.allSourceStates()).filter((state) => (trackedRegistries as readonly string[]).includes(state.registry));

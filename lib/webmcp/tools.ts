@@ -8,8 +8,11 @@ import type { TrialDataState } from "../trials/types.ts";
 import { maxShortlistTrials, resolveShortlistedMatches } from "../matching/shortlist.ts";
 import type { ConfirmedProfile } from "../profile/schema.ts";
 import type { RegistryQueryPlan } from "../trials/queryBridge.ts";
+import { locateDirectIdentifiers } from "../privacy/mask.ts";
 import { capWebMcpOutput } from "./output.ts";
 import { createBoundedPublicSearchOutput } from "./publicSearchOutput.ts";
+import { getWebMcpToolTitle, webMcpImperativeContractCore } from "./toolContractCore.ts";
+import type { WebMcpDisplayLanguage, WebMcpImperativeToolName } from "./toolContractCore.ts";
 
 async function readPublicSearchResponse(response: Response): Promise<{
   trials?: TrialMatch["trial"][];
@@ -29,8 +32,6 @@ async function readPublicSearchResponse(response: Response): Promise<{
     throw new Error("Search service returned invalid JSON.");
   }
 }
-import { getWebMcpToolTitle, webMcpImperativeContractCore } from "./toolContractCore.ts";
-import type { WebMcpDisplayLanguage, WebMcpImperativeToolName } from "./toolContractCore.ts";
 
 export type WebMcpActivityState = "running" | "completed" | "failed" | "cancelled";
 
@@ -49,8 +50,31 @@ export type WebMcpExecutionControlEvent =
   | { type: "available"; control: WebMcpExecutionControl }
   | { type: "cleared"; executionId: number };
 
+/** What the visible note step reports back after an agent offered a summary. */
+export type WebMcpAgentIntakeOutcome =
+  | { state: "awaiting_confirmation"; extractedFacts: number; pendingQuestions: number }
+  | { state: "organizing" }
+  | { state: "failed"; reason: string }
+  | { state: "unavailable"; reason: string };
+
+export interface WebMcpAgentIntake {
+  /** Puts an identifier-free summary into the visible note step and starts organization. */
+  submit: (input: { summary: string }, signal: AbortSignal) => Promise<WebMcpAgentIntakeOutcome>;
+  /** How long the tool waits for organization before answering `organizing`. */
+  waitMs?: number;
+}
+
+export const webMcpAgentIntakeWaitMs = 8_000;
+export const webMcpAgentIntakeSummaryLength = { min: 20, max: 4_000 } as const;
+
 export interface WebMcpToolContext {
   profile?: ConfirmedProfile;
+  /**
+   * Present only while the person has switched agent intake permission on at
+   * the visible note step. Its presence is the gate for the one tool that
+   * changes page state.
+   */
+  agentIntake?: WebMcpAgentIntake;
   matches: TrialMatch[];
   pendingQuestions?: FollowUpQuestion[];
   matching?: boolean;
@@ -80,6 +104,64 @@ function combineAbortSignals(primary: AbortSignal, secondary: AbortSignal) {
     cleanup: () => {
       primary.removeEventListener("abort", onPrimaryAbort);
       secondary.removeEventListener("abort", onSecondaryAbort);
+    },
+  };
+}
+
+/** Resolves `undefined` once `ms` elapses so a slow visible step never hangs the agent. */
+function waitBounded<T>(promise: Promise<T>, ms: number, signal?: AbortSignal): Promise<T | undefined> {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => {
+      cleanup();
+      reject(signal?.reason ?? new DOMException("Agent intake aborted.", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve(undefined);
+    }, ms);
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+    promise.then((value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
+  });
+}
+
+const agentIntakeNextAction: Record<WebMcpAgentIntakeOutcome["state"], string> = {
+  awaiting_confirmation: "Ask the person to review and confirm each extracted fact on the visible page, then switch on WebMCP permission there; contextual tools appear only after that.",
+  organizing: "Cloud organization is still running on the visible page (usually 30-90 seconds). Do not call again; the person continues there.",
+  failed: "Cloud organization stopped. The person can edit the note or retry from the visible page; do not resend the summary automatically.",
+  unavailable: "Continue in the visible workflow; this step no longer accepts an agent summary.",
+};
+
+function buildAgentIntakeTool(intake: WebMcpAgentIntake): WebMCP.ModelContextTool {
+  return {
+    ...webMcpImperativeContractCore.organize_deidentified_summary,
+    execute: async (input, options) => {
+      const normalizedInput = typeof input === "string" ? JSON.parse(input) as { summary?: unknown } : input;
+      const summary = typeof normalizedInput.summary === "string" ? normalizedInput.summary.trim() : "";
+      if (summary.length < webMcpAgentIntakeSummaryLength.min || summary.length > webMcpAgentIntakeSummaryLength.max) {
+        throw new Error(`summary must be ${webMcpAgentIntakeSummaryLength.min}-${webMcpAgentIntakeSummaryLength.max} characters of de-identified medical context`);
+      }
+      // Nothing with a direct identifier enters the page: tell the agent what
+      // to remove instead of masking silently.
+      const identifierKinds = [...new Set(locateDirectIdentifiers(summary).map((finding) => finding.kind))];
+      if (identifierKinds.length > 0) {
+        throw new Error(`Remove these direct identifiers and call again: ${identifierKinds.join(", ")}. Keep only diagnosis, stage, biomarkers, treatments, age band, and travel range.`);
+      }
+      const signal = options?.signal ?? new AbortController().signal;
+      const outcome = await waitBounded(intake.submit({ summary }, signal), intake.waitMs ?? webMcpAgentIntakeWaitMs, signal) ?? { state: "organizing" as const };
+      return capWebMcpOutput({
+        ...outcome,
+        acceptedCharacters: summary.length,
+        nextAction: agentIntakeNextAction[outcome.state],
+        privacy: "The browser masked the text before cloud organization; no fact is confirmed and no contextual tool exists until the person confirms on the page.",
+      });
     },
   };
 }
@@ -147,17 +229,16 @@ export function buildTrialBridgeTools(context: WebMcpToolContext): WebMCP.ModelC
           : input;
         const condition = typeof normalizedInput.condition === "string" ? normalizedInput.condition.trim() : "";
         if (condition.length < 2 || condition.length > 120) throw new Error("condition must be 2-120 characters; call again with one general cancer condition");
-        try {
-          const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: true }), signal: options?.signal });
-          const payload = await readPublicSearchResponse(response);
-          if (!response.ok && (payload.failures?.length ?? 0) === 0) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
-          return createBoundedPublicSearchOutput({ query: condition, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
-        } catch (error) {
-          throw error;
-        }
+        const response = await fetcher("/api/trials/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ condition, pageSize: 5, includeNotOpen: true }), signal: options?.signal });
+        const payload = await readPublicSearchResponse(response);
+        if (!response.ok && (payload.failures?.length ?? 0) === 0) throw new Error("Public registry search is unavailable; retry once or continue with the visible /trials search form");
+        return createBoundedPublicSearchOutput({ query: condition, queryPlan: payload.queryPlan, trials: payload.trials ?? [], sources: payload.sources, failures: payload.failures, limitation: payload.disclaimer });
       },
     },
   ];
+  // The visible note step exposes the gated intake tool; it is never combined
+  // with a confirmed profile because organizing a summary replaces one.
+  if (context.agentIntake && !context.profile) tools.push(buildAgentIntakeTool(context.agentIntake));
   if (!context.sensitiveConsent || !context.profile) return tools.map((tool) => prepareToolForPage(tool, context));
   tools.push({
     ...webMcpImperativeContractCore.review_trial_followups,

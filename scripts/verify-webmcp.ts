@@ -53,6 +53,9 @@ const zhHantPublicTools = buildTrialBridgeTools({ matches: [], sensitiveConsent:
 const allTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true });
 const shortlistTools = buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true, shortlistedTrialIds: ["synthetic:trial-001", "synthetic:trial-002"] });
 const names = shortlistTools.map((tool) => tool.name);
+const intakeToolName = "organize_deidentified_summary";
+const intakeTools = buildTrialBridgeTools({ matches: [], sensitiveConsent: false, agentIntake: { submit: async () => ({ state: "unavailable", reason: "verification" }) } });
+const intakeTool = intakeTools.find((tool) => tool.name === intakeToolName);
 const syntheticOriginTrialToken = "A".repeat(128);
 
 function check(condition: boolean, message: string) {
@@ -64,15 +67,18 @@ check(publicTools.length === 2, "Exactly two public imperative tools must remain
 check(zhHantPublicTools.every((tool, index) => tool.name === publicTools[index]?.name && tool.title !== publicTools[index]?.title && tool.description === publicTools[index]?.description), "Traditional Chinese human titles must localize without changing machine contracts.");
 check(allTools.length === 6, "Exactly six imperative tools must be available after confirmed-context permission.");
 check(shortlistTools.length === 7, "Exactly seven imperative tools must be available after two visible shortlist selections.");
-check(webMcpCapabilityStates.length === 4, "Capability simulator must expose four synthetic human-controlled states.");
-check(webMcpCapabilityStates.map((state) => state.activeImperativeToolNames.length).join("|") === "2|2|6|7", "Capability simulator must preserve the 2-2-6-7 registration sequence.");
+check(intakeTools.length === 3 && intakeTools[2]?.name === intakeToolName, "Agent intake permission at the note step must add exactly one intake tool after the two public tools.");
+check(buildTrialBridgeTools({ profile, matches: [], sensitiveConsent: true, agentIntake: { submit: async () => ({ state: "unavailable", reason: "verification" }) } }).every((tool) => tool.name !== intakeToolName), "The intake tool must never coexist with a confirmed profile.");
+check(intakeTool?.annotations?.readOnlyHint === false, "The intake tool starts a visible workflow step and must not claim to be read-only.");
+check(webMcpCapabilityStates.length === 5, "Capability simulator must expose five synthetic human-controlled states.");
+check(webMcpCapabilityStates.map((state) => state.activeImperativeToolNames.length).join("|") === "2|3|2|6|7", "Capability simulator must preserve the 2-3-2-6-7 registration sequence.");
 check(webMcpCapabilityStateBundle.privacyBoundary.containsHealthInformation === false && webMcpCapabilityStateBundle.privacyBoundary.executesTools === false, "Capability simulator must remain static no-health-data evidence.");
 
-for (const tool of shortlistTools) {
+for (const tool of [...shortlistTools, ...(intakeTool ? [intakeTool] : [])]) {
   check(/^[A-Za-z0-9_.-]+$/.test(tool.name), `${tool.name}: name contains unsupported characters.`);
   check(tool.name.length <= 30, `${tool.name}: name exceeds 30 characters.`);
   check(tool.description.length <= 500, `${tool.name}: description exceeds 500 characters.`);
-  check(tool.annotations?.readOnlyHint === true, `${tool.name}: readOnlyHint must be true.`);
+  check(tool.annotations?.readOnlyHint === (tool.name !== intakeToolName), `${tool.name}: readOnlyHint must state whether the tool changes visible page state.`);
   check(!/^(?:send|submit|enroll|book|consent|treat)/i.test(tool.name), `${tool.name}: forbidden side-effect authority.`);
   const schema = tool.inputSchema as { type?: string; properties?: Record<string, { description?: string }>; additionalProperties?: boolean };
   check(schema.type === "object", `${tool.name}: input schema must be an object.`);
@@ -88,7 +94,7 @@ for (const toolName of ["search_public_cancer_trials", "review_trial_followups",
   check(shortlistTools.find((tool) => tool.name === toolName)?.annotations?.untrustedContentHint === true, `${toolName}: registry-derived content must be marked untrusted.`);
 }
 
-const metadata = JSON.stringify(shortlistTools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLocaleLowerCase("en");
+const metadata = JSON.stringify([...shortlistTools, ...intakeTools].map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).toLocaleLowerCase("en");
 check(!metadata.includes("rawnote") && !metadata.includes("maskednote"), "Raw or masked note fields must never enter an imperative tool contract.");
 check(JSON.stringify(capWebMcpOutput("x".repeat(maxWebMcpOutputChars * 2))).length <= maxWebMcpOutputChars + 32, "Tool-output cap is not effective.");
 const bilingualQueryPlan = createRegistryQueryPlan("胃癌");
@@ -105,7 +111,7 @@ check(sessionReceipt.events[1]?.kind === "capability_set" && sessionReceipt.even
 check(!/gastric cancer|fact_conformance|"(?:rawText|maskedText|medicalNote|profileFact|trialResult|prompt|argument|output)"\s*:/i.test(serializedReceipt), "WebMCP receipt contains health content or tool payload fields.");
 
 check(webMcpCriticalJourney.steps.length === 5, "Critical user journey must expose five visible state transitions.");
-check(webMcpCriticalJourney.steps[1]?.tools.length === 0, "Protected intake must intentionally expose no WebMCP tool.");
+check(webMcpCriticalJourney.steps[1]?.tools.join("|") === webMcpToolContractCatalog.filter((tool) => tool.availabilityGroup === "intake").map((tool) => tool.name).join("|"), "Protected intake must expose only the switch-gated intake tools.");
 check(webMcpCriticalJourney.steps.every((step) => step.siteReaction.length > 0 && step.recovery.length > 0), "Every critical journey step must define a visible UI reaction and recovery path.");
 const diagnosticReceipt = createWebMcpDiagnosticReceipt({
   generatedAt: "2026-09-02T00:00:00.000Z", origin: "https://trialbridge.example", browserState: "ready",
@@ -264,6 +270,12 @@ for (const marker of ["const declarativeToolName = publicTrialFormContractCore.n
   check(declarative.includes(marker), `Declarative search form is missing ${marker}.`);
 }
 check((declarative.match(/toolname=/g) ?? []).length === 1, "The public database must expose one visible declarative form tool.");
+const intakeSurface = readFileSync("app/components/TrialBridgeChat.tsx", "utf8");
+for (const marker of ["toolname={agentIntake ? organizeSummaryFormContractCore.name : undefined}", "toolparamdescription={organizeSummaryFormContractCore.inputSchema.properties.summary.description}", "agentIntakeConsent", "declarativeEvent.respondWith", "setAgentIntakeConsent(false)"]) {
+  check(intakeSurface.includes(marker), `Note-step intake surface is missing ${marker}.`);
+}
+check(!intakeSurface.includes("toolautosubmit"), "The note-step form must never autosubmit; only the person starts organization.");
+check(readFileSync("lib/webmcp/tools.ts", "utf8").includes("locateDirectIdentifiers(summary)"), "The intake tool must reject direct identifiers before anything enters the page.");
 check(declarative.includes('addEventListener("toolcanceled"') && declarative.includes('addEventListener("toolcancel"'), "Declarative cancellation must cover the upstream draft and current Chromium event names.");
 
 const compatibility = readFileSync("lib/webmcp/compatibility.ts", "utf8");
@@ -345,8 +357,8 @@ for (const marker of ["Canonical tool contracts", "Copy JSON Schema", "Download 
   check(contractSurface.includes(marker), `Tool contract explorer is missing ${marker}.`);
 }
 check(contractRoute.includes('dynamic = "force-static"') && contractRoute.includes("webMcpToolContractBundle"), "Tool contract artifact must remain static and canonical.");
-check(webMcpToolContractCatalog.length === 8 && webMcpToolContractBundle.summary.withinChromeGuidance === 8, "All eight tool contracts must remain inside Chrome character guidance.");
-check(webMcpToolContractBundle.summary.writeAuthority === 0 && webMcpToolContractBundle.summary.readOnlyBehavior === 8, "Tool catalog must expose eight read-only behaviors and zero write authority.");
+check(webMcpToolContractCatalog.length === 10 && webMcpToolContractBundle.summary.withinChromeGuidance === 10, "All ten tool contracts must remain inside Chrome character guidance.");
+check(webMcpToolContractBundle.summary.writeAuthority === 0 && webMcpToolContractBundle.summary.readOnlyBehavior === 8 && webMcpToolContractBundle.summary.stateChanging === 2, "Tool catalog must expose eight read-only behaviors, the two switch-gated intake surfaces, and zero write authority.");
 check(webMcpToolContractBundle.privacyBoundary.containsHealthInformation === false && webMcpToolContractBundle.privacyBoundary.readsMedicalWorkflowState === false, "Tool contract artifact must remain static and no-health-data.");
 check(webMcpToolContractCatalog[0]?.name === publicTrialFormContractCore.name, "Declarative form contract must lead the canonical catalog.");
 
@@ -371,7 +383,7 @@ for (const marker of ["Live cloud model smoke test", "It never reads the note, p
 check(cloudProbeVerifier.includes('method: "POST"') && !cloudProbeVerifier.includes("body:"), "Explicit cloud verifier must send a body-free POST.");
 
 const bridge = readFileSync("app/components/WebMcpBridge.tsx", "utf8");
-for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt", "sensitiveConsent, language, onActivity"]) {
+for (const marker of ["document.modelContext", "registerTool", "getTools", "controller.abort()", "exposedTo: [location.origin]", "createWebMcpSessionReceipt", "Download JSON receipt", "sensitiveConsent, agentIntake, language, onActivity"]) {
   check(bridge.includes(marker), `Imperative bridge is missing ${marker}.`);
 }
 for (const marker of ["onExecutionControl", "Cancel active agent tool", "cancelActiveExecutions", 'role="status" aria-atomic="true"']) {
@@ -432,8 +444,8 @@ check(webMcpSpecCrosswalk.length === 8 && webMcpSpecCrosswalkBundle.summary.impl
 check(webMcpSpecCrosswalkBundle.upstreamCommit.startsWith(webMcpImplementationLandscape.upstreamCommit), "Specification crosswalk and implementation landscape must reference the same upstream commit.");
 check(webMcpSpecCrosswalk.find((item) => item.id === "S-08")?.standardState.includes("explicitly TODO") === true && webMcpSpecCrosswalkBundle.summary.claimedNormativeDeclarativeConformance === false, "Declarative evidence must not claim normative conformance while the upstream section is TODO.");
 check(webMcpSpecCrosswalk.every((item) => item.specUrl.startsWith("https://webmachinelearning.github.io/webmcp/#") && item.evidence.length > 0), "Every specification crosswalk row needs an exact upstream anchor and repository evidence.");
-check(webMcpCapabilityInventory.length === 8 && webMcpCapabilityInventory.filter((tool) => tool.kind === "Declarative").length === 1, "Judge capability inventory must contain one declarative and seven imperative capabilities.");
-check(webMcpCapabilityInventory.filter((tool) => tool.kind === "Imperative").map((tool) => tool.name).sort().join("|") === [...names].sort().join("|"), "Judge capability inventory must match the executable imperative tool set.");
+check(webMcpCapabilityInventory.length === 10 && webMcpCapabilityInventory.filter((tool) => tool.kind === "Declarative").length === 2, "Judge capability inventory must contain two declarative and eight imperative capabilities.");
+check(webMcpCapabilityInventory.filter((tool) => tool.kind === "Imperative").map((tool) => tool.name).sort().join("|") === [...names, intakeToolName].sort().join("|"), "Judge capability inventory must match the executable imperative tool set.");
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "repository_verified").length === 7, "Judge matrix must expose seven repository-verified conformance items.");
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "recorded_model_eval").length === 1, "Judge matrix must distinguish the recorded model evaluation.");
 check(webMcpConformanceMatrix.filter((item) => item.evidenceClass === "manual_gate").length === 1, "Judge matrix must retain the manual Inspector gate.");
@@ -449,8 +461,8 @@ check(webMcpJudgeBundle.summary.liveAgentRehearsalScenarios === 4 && webMcpJudge
 check(webMcpJudgeBundle.summary.fixedPublicBrowserExecution === true && webMcpJudgeBundle.fixedPublicBrowserExecution.toolName === "search_public_cancer_trials", "Judge bundle must carry the separate fixed public browser-execution contract.");
 check(webMcpJudgeBundle.summary.quickJudgeRoute === quickJudgeDemoContract.route && webMcpJudgeBundle.quickJudgeDemo.targetMinutes === 3, "Judge bundle must carry the three-minute route contract.");
 check(webMcpJudgeBundle.summary.agentDiscoveryRoute === agentDiscoveryContract.routes.agentGuide && webMcpJudgeBundle.agentDiscovery.separateFromWebMcp === true, "Judge bundle must carry the separate agent-discovery contract.");
-check(webMcpJudgeBundle.summary.toolContracts === 8 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 8, "Judge bundle must link all budget-compliant tool contracts.");
-check(webMcpJudgeBundle.summary.capabilityStates === 4 && webMcpJudgeBundle.capabilityStateModel.states.length === 4, "Judge bundle must carry the four-state capability model.");
+check(webMcpJudgeBundle.summary.toolContracts === 10 && webMcpJudgeBundle.toolContractCatalog.withinChromeGuidance === 10, "Judge bundle must link all budget-compliant tool contracts.");
+check(webMcpJudgeBundle.summary.capabilityStates === 5 && webMcpJudgeBundle.capabilityStateModel.states.length === 5, "Judge bundle must carry the five-state capability model.");
 check(webMcpJudgeBundle.summary.runtimeAcceptanceChecks === 6 && webMcpJudgeBundle.runtimeAcceptanceProfile.checks.length === 6, "Judge bundle must carry the six-check runtime suite definition.");
 check(webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.containsHealthInformation === false && webMcpJudgeBundle.runtimeAcceptanceProfile.privacyBoundary.networkRequests === false, "Judge runtime suite profile must remain no-PHI and no-network.");
 check(webMcpJudgeBundle.summary.recordedBrowserRuntimeChecksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksPassed === 6 && webMcpJudgeBundle.recordedBrowserRuntime.checksTotal === 6, "Judge bundle must carry the recorded six-of-six browser runtime result.");
@@ -465,10 +477,10 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    imperativeTools: shortlistTools.length,
+    imperativeTools: webMcpToolContractBundle.summary.imperative,
     confirmedContextTools: allTools.length,
     publicImperativeTools: publicTools.length,
-    declarativeTools: 1,
+    declarativeTools: webMcpToolContractBundle.summary.declarative,
     names,
     journeyEvalCases: webMcpJourneyCases.length,
     selectionBaseline: `${selectionBaseline.summary.passed}/${selectionBaseline.summary.samples}`,

@@ -407,6 +407,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .post-confirmation-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .post-confirmation-controls > button { flex: 0 0 auto; }
 .webmcp-consent { padding: 10px 12px; border-radius: 8px; background: var(--paper); font-size: 0.9rem; }
+.agent-intake-consent { margin-bottom: 14px; border: 1px dashed var(--line); }
 .matching-progress { padding: 16px; border-radius: 10px; color: var(--primary-strong); background: var(--mint); font-weight: 800; }
 .empty-results { margin-top: 18px; padding: 18px 20px; border: 1px solid var(--line); border-left: 4px solid var(--primary-strong); border-radius: 10px; background: var(--mint); }
 .empty-results p { margin: 6px 0 14px; }
@@ -715,7 +716,7 @@ footer { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 
 .quick-console-heading h2 { max-width: 720px; font-size: clamp(1.45rem, 3vw, 2.15rem); }
 .quick-console-heading > span { max-width: 300px; min-height: 34px; display: inline-flex; align-items: center; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--primary-strong); background: var(--mint); font-size: 0.72rem; font-weight: 900; text-align: right; }
 .quick-browser-ready .quick-console-heading > span { color: var(--success-ink); background: var(--success-surface); }
-.quick-check-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
+.quick-check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
 .quick-check-grid li { min-width: 0; display: grid; grid-template-columns: 11px minmax(0, 1fr); gap: 1px 8px; align-content: center; min-height: 82px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
 .quick-check-grid i { grid-row: 1 / span 2; width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--match-missing); }
 .quick-check-grid li.check-pass i { background: var(--match-aligned); }
