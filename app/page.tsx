@@ -16,10 +16,8 @@ export default function Home() {
           </span>
         </Link>
         <nav aria-label="Main navigation">
+          <Link href="/">Demo</Link>
           <Link href="/trials">Trial database</Link>
-          <Link href="/webmcp/quickstart">WebMCP demo</Link>
-          <Link className="nav-optional" href="/method">How it works</Link>
-          <Link href="/privacy">Privacy</Link>
         </nav>
       </header>
 
@@ -35,7 +33,7 @@ export default function Home() {
             <span>Original text is not saved by default</span>
             <span>Matching only after confirmation</span>
           </div>
-          <div className="hero-actions"><Link className="primary-action action-link" href="/match">Explore my trial options</Link><Link className="secondary-action action-link" href="/trials">Browse public trial data</Link></div>
+          <div className="hero-actions"><Link className="primary-action action-link" href="/trials">Search public trials</Link><Link className="secondary-action action-link" href="/match">Explore matching</Link></div>
           <p className="hero-path"><strong>Describe</strong><span aria-hidden="true">→</span><strong>Review your facts</strong><span aria-hidden="true">→</span><strong>Compare trials</strong></p>
           <WebMcpBridge compact matches={[]} shortlistedTrialIds={[]} pendingQuestions={[]} matching={false} sensitiveConsent={false} language="en" />
         </div>

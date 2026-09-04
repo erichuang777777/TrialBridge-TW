@@ -19,11 +19,8 @@ export default function TrialsPage() {
           <span><strong>TrialBridge TW</strong><small>試驗橋</small></span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link href="/">Guided matching</Link>
+          <Link href="/">Demo</Link>
           <Link href="/trials" aria-current="page">Trial database</Link>
-          <Link href="/data-health">Data health</Link>
-          <Link className="nav-optional" href="/method">How it works</Link>
-          <Link href="/privacy">Privacy</Link>
         </nav>
       </header>
 

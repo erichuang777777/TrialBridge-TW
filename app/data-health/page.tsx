@@ -18,7 +18,7 @@ export default async function DataHealthPage() {
   return <main id="main-content" className="data-health-page" tabIndex={-1}>
     <header className="site-header">
       <Link className="brand" href="/" aria-label="TrialBridge TW home"><BrandMark /><span><strong>TrialBridge TW</strong><small>Public data operations</small></span></Link>
-      <nav aria-label="Main navigation"><Link href="/match">Guided matching</Link><Link href="/trials">Trial database</Link><Link href="/data-health" aria-current="page">Data health</Link><Link href="/privacy">Privacy</Link></nav>
+      <nav aria-label="Main navigation"><Link href="/">Demo</Link><Link href="/trials">Trial database</Link></nav>
     </header>
     <section className="data-health-hero" aria-labelledby="data-health-title">
       <div><p className="eyebrow">Public registry index · no patient data</p><h1 id="data-health-title">Know what is local, current, and incomplete.</h1><p>UI, chat, and WebMCP search the same public index. Live registry access is reserved for synchronization and exact-record rechecks.</p></div>
