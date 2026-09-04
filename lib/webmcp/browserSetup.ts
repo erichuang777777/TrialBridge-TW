@@ -6,7 +6,7 @@ export const webMcpBrowserSetupContract = {
   visitorInstallRequired: false,
   browserFeature: "Native experimental WebMCP implementation",
   localTesting: {
-    minimumChromeMajor: 149,
+    minimumChromeMajor: 146,
     flagAddress: webMcpLocalTestingFlag,
     relaunchRequired: true,
     secureContextRequired: true,
@@ -27,7 +27,7 @@ export const webMcpBrowserSetupContract = {
       number: "02",
       label: "Chrome local testing",
       title: "Enable the native preview",
-      detail: "In Chrome 149 or newer, paste the flag address into the address bar, choose Enabled, and relaunch. This is not a Web Store extension.",
+      detail: "In Chrome 146 or newer, paste the flag address into the address bar, choose Enabled, and relaunch. This is not a Web Store extension.",
       actionLabel: "Copy flag address",
     },
     {
